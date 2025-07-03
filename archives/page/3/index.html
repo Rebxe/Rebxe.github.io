@@ -1,0 +1,5624 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="Gridea 静态个人博客">
+<meta name="description" content="Exber&#39;s Blog">
+<meta name="theme-color" content="#000">
+<title>Exber&#39;s Blog</title>
+<link rel="shortcut icon" href="https://124.71.4.244/static/exber/favicon.ico?v=1751546016432">
+<link rel="stylesheet" href="https://124.71.4.244/static/exber/assets/media/css/pisces.css">
+<link rel="stylesheet" href="https://124.71.4.244/static/exber/assets/media/fonts/font-awesome.css">
+<link
+  href="//fonts.loli.net/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet" type="text/css">
+
+<link href="https://124.71.4.244/static/exber/assets/media/hljs/styles/default.css"
+  rel="stylesheet">
+
+<link rel="stylesheet" href="/../styles/main.css">
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<script src="https://124.71.4.244/static/exber/assets/media/js/jquery.js"></script>
+<script src="https://124.71.4.244/static/exber/assets/media/hljs/highlight.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdmirror.com/npm/katex@0.11.1/dist/katex.min.css">
+
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ["\\(", "\\)"]],
+      displayMath: [['$$', '$$'], ["\\[", "\\]"]]
+    },
+    options: {
+      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'a', 'annotation', 'annotation-xml'],
+      ignoreHtmlClass: 'tex2jax_ignore|crayon-.*', // 'crayon-' 开头的类，属于Wordpress代码高亮库，这部分不需要处理，否则会导致显示不正确,这部分是正则式，多条之间用'|'分割
+      processHtmlClass: 'tex2jax_process'
+    },
+    //禁用右键菜单	
+    renderActions: {
+      addMenu: [0, '', '']
+    }
+  };
+</script>
+<script type="text/javascript"
+  src="https://cdn.jsdmirror.com/npm/mathjax@3.2.2/es5/mml-chtml.min.js"></script>
+
+
+
+
+
+
+  <meta name="description" content="Exber&#39;s Blog">
+</head>
+
+<body>
+  <div class="head-top-line"></div>
+  <div class="header-box">
+    <style>
+.gridea-search-input{
+    height: 30px;
+    width: 200px;
+    box-sizing: border-box;
+    padding: 0 15px 0 30px;
+    border: 1px solid #e3e3e3;
+    border-radius: 15px;
+    color: #273849;
+    outline: none;
+    transition: border-color 0.2s ease;
+    background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+    background-size: 20px;
+    vertical-align: middle !important;
+}
+.gridea-search-input:focus {
+  border-color: #666666;
+  right: 0;
+}
+</style>
+<style>
+	/* 自适应轨道 */
+	.slider-track {
+		--track-height: 0.4em; /* 轨道基础高度 */
+		width: 100%;
+		height: var(--track-height);
+		background: #e0e0e0;
+		border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+		position: relative;
+		cursor: default;
+		margin: 0.5em 0; /* 垂直间距自适应 */
+	}
+	
+	/* 进度填充 */
+	.slider-fill {
+		height: 100%;
+		background: #555;
+		border-radius: inherit; /* 继承父级圆角 */
+		width: 50%; /* 初始值 */
+	}
+	
+	/* 自适应滑块 */
+	.slider-thumb {
+		--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+		position: absolute;
+		width: var(--thumb-size);
+		height: var(--thumb-size);
+		background: #555;
+		border-radius: 50%;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		cursor: grab;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+		transition: 
+			transform 0.2s ease,
+			box-shadow 0.2s ease;
+		border: 2px solid white; /* 增加辨识度 */
+	}
+	
+	/* 悬停效果 */
+	.slider-thumb:hover {
+		background: #333;
+		transform: translate(-50%, -50%) scale(1.1);
+		box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+	}
+	
+	/* 拖动效果 */
+	.slider-thumb:active {
+		cursor: grabbing;
+		transform: translate(-50%, -50%) scale(1.2);
+		box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+	}
+	
+	/* 数值显示 */
+	.value-display {
+		text-align: center;
+		font-family: Arial, sans-serif;
+		color: #555;
+		font-size: 1.2em; /* 基于容器字体大小 */
+		margin-top: 0.5em;
+	}
+</style>
+
+<div class="pisces">
+  <header class="header  ">
+    <div class="blog-header box-shadow-wrapper bg-color " id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+          
+            <a href="/" class="brand">
+              <span>Exber&#39;s Blog</span>
+            </a>  
+          
+        </div>
+        
+          <p class="subtitle">Can&#39;t go up</p>
+        
+      </div>
+      <nav class="site-nav" id="site_nav">
+        <ul id="nav_ul">
+          
+            
+            
+            <li class="nav-item ">
+              
+              
+                
+                  <a href="/../" target="_self">
+                    首页
+                  </a>
+                
+              
+            </li>
+          
+            
+            
+            <li class="nav-item ">
+              
+              
+                
+                  <a href="/../tags" target="_self">
+                    按标签筛选
+                  </a>
+                
+              
+            </li>
+          
+            
+            
+            <li class="nav-item ">
+              
+              
+                
+                  <a href="/../archives" target="_self">
+                    时间线
+                  </a>
+                
+              
+            </li>
+          
+            
+            
+            <li class="nav-item ">
+              
+              
+                
+                  <a href="https://csacademy.com/app/graph_editor/" target="_self">
+                    图论编辑器
+                  </a>
+                
+              
+            </li>
+          
+            
+            
+            <li class="nav-item ">
+              
+              
+                
+                  <a href="https://cn.overleaf.com/" target="_self">
+                    <i class="fa fa-home"></i> OverLeaf（在线编辑 LaTeX）
+                  </a>
+                
+              
+            </li>
+          
+            
+            
+            <li class="nav-item ">
+              
+              
+                
+                  <a href="http://yuantiji.ac/zh/" target="_self">
+                    原题机
+                  </a>
+                
+              
+            </li>
+          
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://Rebxe.github.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.5</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script type="text/javascript"> 
+ 
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+<script>
+	// 获取DOM元素
+	const sliderTrack = document.getElementById('sliderTrack');
+	const sliderThumb = document.getElementById('sliderThumb');
+	const sliderFill = document.getElementById('sliderFill');
+	const sliderValue = document.getElementById('sliderValue');
+	
+	// 初始化变量
+	let isDragging = false;
+	let currentValue = 0.6;
+	
+	// 更新滑块位置和数值显示
+	function updateSlider(positionX) {
+		const trackRect = sliderTrack.getBoundingClientRect();
+		let newPosition = (positionX - trackRect.left) / trackRect.width;
+		newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+		
+		// 更新UI
+		sliderThumb.style.left = `${newPosition * 100}%`;
+		sliderFill.style.width = `${newPosition * 100}%`;
+		
+		// 更新当前值
+		currentValue = newPosition;
+		document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+		
+		// 更新显示值（保留两位小数）
+		const displayValue = newPosition.toFixed(2);
+		sliderValue.textContent = displayValue;
+	}
+	
+	// 响应父容器大小变化
+	function handleResize() {
+		const trackRect = sliderTrack.getBoundingClientRect();
+		const positionX = trackRect.left + trackRect.width * currentValue;
+		updateSlider(positionX);
+	}
+	
+	// 鼠标按下事件 - 仅在圆点上触发
+	sliderThumb.addEventListener('mousedown', (e) => {
+		isDragging = true;
+		sliderThumb.style.cursor = 'grabbing';
+		e.preventDefault();
+	});
+	
+	// 鼠标移动事件
+	document.addEventListener('mousemove', (e) => {
+		if (!isDragging) return;
+		updateSlider(e.clientX);
+	});
+	
+	// 鼠标释放事件
+	document.addEventListener('mouseup', () => {
+		if (isDragging) {
+			isDragging = false;
+			sliderThumb.style.cursor = 'grab';
+		}
+	});
+	
+	// 监听父容器大小变化
+	const resizeObserver = new ResizeObserver(() => {
+		handleResize();
+	});
+	
+	// 开始观察相关元素
+	resizeObserver.observe(sliderTrack.parentElement);
+	resizeObserver.observe(sliderTrack);
+	
+	// 初始化滑块位置
+	handleResize();
+</script>
+  </div>
+  <div class="main-continer">
+    
+    <div
+      class="section-layout  pisces">
+      <div class="section-layout-wrapper">
+        <div id="sidebarMeta" class="sidebar">
+    
+<div class="sidebar-wrapper box-shadow-wrapper bg-color">
+  <div class="sidebar-item">
+    <img class="site-author-image right-motion" src="https://124.71.4.244/static/exber/images/avatar.png"/>
+    <p class="site-author-name">Exber</p>
+    
+    <div class="site-description right-motion">
+      
+      
+      
+        <p>洛谷 @Exber</p>
+      
+        <p>Codeforces @Rebex</p>
+      
+      
+    </div>
+    
+  </div>
+  <div class="sidebar-item side-item-stat right-motion">
+    <div class="sidebar-item-box">
+      <a href="/archives/">
+        
+        <span class="site-item-stat-count">302</span>
+        <span class="site-item-stat-name language" data-lan="article">文章</span>
+      </a>
+    </div>
+  </div>
+  
+    
+      <div class="sidebar-item">
+        <span class="site-item-rss">
+            <i class="fa fa-rss"></i>
+            <a href="https://Rebxe.github.io/atom.xml" target="_blank">RSS</a>
+        </span>
+      </div>
+    
+  
+  
+
+  
+
+
+
+</div>
+</div>
+<script>
+  let sidebarMeta = document.querySelector('#sidebarMeta');
+  let scheme = 'pisces';
+  let sidebarWrapper = document.querySelector('.sidebar-wrapper');
+  if (sidebarMeta && (scheme === 'pisces' || scheme === 'gemini')) {
+    document.addEventListener('scroll', function(e) {
+      if (document.scrollingElement.scrollTop > parseInt(sidebarMeta.style.marginTop) + 10) {
+        sidebarWrapper.classList.add('home-sidebar-fixed')
+      } else {
+        sidebarWrapper.classList.remove('home-sidebar-fixed')
+      }
+    });
+  }
+  </script>
+        <div class="section-box box-shadow-wrapper">
+          <section class="section archives-section bg-color posts-expand">
+            
+
+<div class="bg-color">
+  <div class="archive-timeline-box">
+    <div class="archive-timeline-title">
+      
+        <h2 class="language" data-lan="archives" data-count="302">非常好！目前共计302篇文章，继续努力！</h2>
+      
+    </div>
+    
+	  
+		  
+		  
+			<div class="node-title">
+			  <h2 class="tag-year">2025</h2>
+			</div>    
+			
+		  
+		  <a href="https://Rebxe.github.io/post/agc023f-01-on-tree-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-03
+				  <small>AGC023F 01 on Tree 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p6646-cco-2020-shopping-plans-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  06-27
+				  <small>P6646 [CCO 2020] Shopping Plans 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/zhan-mo-ni-dui-lie-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  06-20
+				  <small>栈模拟队列学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/yi-xie-zu-he-yi-yi-ji-qiao/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  06-19
+				  <small>一些组合意义技巧</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/arc130e-increasing-minimum-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  06-07
+				  <small>ARC130E Increasing Minimum 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/arc199a-flip-row-or-col-2-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  06-04
+				  <small>ARC199A Flip Row or Col 2 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/arc143f-counting-subsets-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  06-04
+				  <small>ARC143F Counting Subsets 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/di-qi-jie-tu-ling-bei-gao-ji-zu-a-qi-wu-chang-shu-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-31
+				  <small>【第七届图灵杯高级组】A. 棋无常树 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p11983-joist-2025-zhan-lan-hui-3-exhibition-3-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-27
+				  <small>P11983 [JOIST 2025] 展览会 3 / Exhibition 3 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/arc120f-wine-thief-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-27
+				  <small>ARC120F Wine Thief 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1987f2-interesting-problem-hard-version-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-26
+				  <small>CF1987F2 Interesting Problem (Hard Version) 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/ji-he-mi-ji-shu-andfmt-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-21
+				  <small>集合幂级数&amp;FMT 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p2075-qu-jian-lis-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-13
+				  <small>P2075 区间 LIS 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/yi-xie-sui-ji-hua-ji-qiao/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>一些随机化技巧</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p3546-poi2012-pre-prefixuffix-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>P3546 [POI2012] PRE-Prefixuffix 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/arc156f-make-same-set-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>ARC156F Make Same Set 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/yang-biao-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-01
+				  <small>杨表学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1442d-sum-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  02-19
+				  <small>CF1442D Sum 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/pr-15-er-cha-sou-suo-shu-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  02-17
+				  <small>【PR #15】二叉搜索树 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/qoj2211-ioi-problem-revised-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  02-07
+				  <small>QOJ2211 IOI Problem Revised 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1349f1-slime-and-sequences-easy-version/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  01-08
+				  <small>CF1349F1 Slime and Sequences (Easy Version)</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1874f-jellyfish-and-oeis-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  01-07
+				  <small>CF1874F Jellyfish and OEIS 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p5417-ctsc2016-sa-fei-ke-si-a-rui-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  01-06
+				  <small>P5417 [CTSC2016] 萨菲克斯·阿瑞 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/networkh-shi-yong-zhi-nan/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  01-03
+				  <small>network.h 使用指南</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/lgv-yin-li-and-ju-zhen-shu-ding-li-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  01-02
+				  <small>LGV 引理 &amp; 矩阵树定理 &amp; BEST 定理学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+			<div class="node-title">
+			  <h2 class="tag-year">2024</h2>
+			</div>    
+			
+		  
+		  <a href="https://Rebxe.github.io/post/slope-trick-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-22
+				  <small>slope trick 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/qoj-8527-power-divisions-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-17
+				  <small>QOJ 8527 Power Divisions 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/agc067d-unique-matching-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  11-15
+				  <small>AGC067D Unique Matching 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/du-jiao-shai-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  10-22
+				  <small>杜教筛学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1707e-replace-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  10-16
+				  <small>CF1707E Replace 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/agc058f-authentic-tree-dp-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  09-09
+				  <small>AGC058F Authentic Tree DP 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/gym102471k-all-pair-maximum-flow-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-22
+				  <small>GYM102471K All Pair Maximum Flow 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/she-you-snake-oilfang-fa-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-20
+				  <small>蛇油（Snake oil）方法学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/fen-zhi-ntt-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-08
+				  <small>分治 NTT 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/guang-yi-chuan-bing-lian-tu-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-05
+				  <small>广义串并联图学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/lgv-yin-li-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-10
+				  <small>LGV 引理学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/dan-wei-gen-fan-yan-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  02-27
+				  <small>单位根反演学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/yi-xie-jing-dian-wen-ti/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  02-25
+				  <small>一些经典问题</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/gong-ping-zu-he-you-xi-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  02-23
+				  <small>公平组合游戏学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf725f-family-photos-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  02-17
+				  <small>CF725F Family Photos 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/xie-lu-you-hua-and-wqs-er-fen-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  01-23
+				  <small>斜率优化 &amp; wqs 二分 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/agc035d-add-and-remove-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  01-16
+				  <small>AGC035D Add and Remove 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p5336-thusc2016-cheng-ji-dan-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  01-10
+				  <small>P5336 [THUSC2016] 成绩单 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+			<div class="node-title">
+			  <h2 class="tag-year">2023</h2>
+			</div>    
+			
+		  
+		  <a href="https://Rebxe.github.io/post/arc149e-sliding-window-sort-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-29
+				  <small>ARC149E Sliding Window Sort 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1718d-permutation-for-burenka-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-28
+				  <small>CF1718D Permutation for Burenka 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1253f-cheap-robot-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-28
+				  <small>CF1253F Cheap Robot 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/yi-xie-zi-fu-chuan-de-ding-li/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-28
+				  <small>一些字符串的定理</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p5287-hnoi2019-jojo-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-28
+				  <small>P5287 [HNOI2019] JOJO 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf839e-mother-of-dragons-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-27
+				  <small>CF839E Mother of Dragons 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/arc154e-reverse-and-inversion-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-27
+				  <small>ARC154E Reverse and Inversion 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/arc141c-bracket-and-permutation-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-27
+				  <small>ARC141C Bracket and Permutation 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1909d-split-plus-k-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-24
+				  <small>CF1909D Split Plus K 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/z-suan-fa-ex-kmpxue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-21
+				  <small>Z 算法（EX KMP）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/jue-ce-dan-diao-xing-you-hua-dp-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-19
+				  <small>决策单调性优化 dp 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/ke-bing-dui-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-18
+				  <small>可并堆学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc331g-collect-them-all-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-05
+				  <small>ABC331G Collect Them All 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/2023ggxs-huo-bi-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  12-04
+				  <small>【2023GGXS】货币 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc236ex-distinct-multiples-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  11-15
+				  <small>ABC236Ex Distinct Multiples 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p8215-thupc2022-chu-sai-fen-zu-zuo-ye-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  11-09
+				  <small>P8215 [THUPC2022 初赛] 分组作业 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/ge-lu-ji-shu-ru-men/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  10-18
+				  <small>格路计数入门</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1882e2-two-permutations-hard-version-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  10-14
+				  <small>CF1882E2 Two Permutations (Hard Version) 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/agc028e-high-elements-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  10-10
+				  <small>AGC028E High Elements 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/qoj5013-astral-birth-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  10-09
+				  <small>QOJ5013 Astral Birth 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/loj6094-codeforces-round-418-gui-xiang-mi-tu-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  10-06
+				  <small>LOJ6094 「Codeforces Round #418」归乡迷途 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/chang-lian-pou-fen-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  09-29
+				  <small>长链剖分学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf19e-fairy-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  09-26
+				  <small>CF19E Fairy 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/arc165d-substring-comparison-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  09-21
+				  <small>ARC165D Substring Comparison 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1863g-swaps-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  09-20
+				  <small>CF1863G Swaps 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/agc061c-first-come-first-serve-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  09-12
+				  <small>AGC061C First Come First Serve 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc240ex-sequence-of-substrings-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  09-11
+				  <small>ABC240Ex Sequence of Substrings 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/joisc2017f-tie-dao-lu-xing-railway-trip-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  09-06
+				  <small>JOISC2017F 鉄道旅行 (Railway Trip) 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1637f-towers-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  09-04
+				  <small>CF1637F Towers 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1770f-koxia-and-sequence-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-25
+				  <small>CF1770F Koxia and Sequence 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/arc162e-strange-constraints-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-23
+				  <small>ARC162E Strange Constraints 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc228g-digits-on-grid-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-23
+				  <small>ABC228G Digits on Grid 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1270h-number-of-components-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-22
+				  <small>CF1270H Number of Components 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1368e-ski-accidents-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-19
+				  <small>CF1368E Ski Accidents 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1519f-chests-and-keys-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-16
+				  <small>CF1519F Chests and Keys 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1446d1and2-frequency-problem-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-16
+				  <small>CF1446D1&amp;2 Frequency Problem 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1463f-max-correct-set-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-16
+				  <small>CF1463F Max Correct Set 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/ji-ben-zi-chuan-jie-gou-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-15
+				  <small>基本子串结构 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1784f-minimums-or-medians-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-12
+				  <small>CF1784F Minimums or Medians 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1648e-air-reform-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-12
+				  <small>CF1648E Air Reform 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/shu-xue-qi-wang-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-08
+				  <small>数学期望学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1172f-nauuo-and-bug-and-p5609-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-08
+				  <small>CF1172F Nauuo and Bug &amp; P5609 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/agc040e-prefix-suffix-addition-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  08-07
+				  <small>AGC040E Prefix Suffix Addition 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/agc024e-sequence-growing-hard-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-21
+				  <small>AGC024E Sequence Growing Hard 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1456e-xor-ranges-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-20
+				  <small>CF1456E XOR-ranges 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/qi-fa-shi-fen-lie-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-17
+				  <small>启发式分裂 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1844g-tree-weights-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-17
+				  <small>CF1844G Tree Weights 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1830e-bully-sort-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-17
+				  <small>CF1830E Bully Sort 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1523e-crypto-lights-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-16
+				  <small> CF1523E Crypto Lights 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/guan-yu-ben-bo-ke/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-14
+				  <small>关于本博客</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1658f-juju-and-binary-string-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-14
+				  <small>CF1658F Juju and Binary String 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/poj3834-graph-game-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-14
+				  <small>POJ3834 Graph Game 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/uoj134-app-guan-li-qi-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-13
+				  <small>UOJ134 App 管理器 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/agc010e-rearranging-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-12
+				  <small>AGC010E Rearranging 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/qun-lun-ru-men/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-11
+				  <small>群论入门</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/joisc2022k-yu-2-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-11
+				  <small>JOISC2022K 魚 2 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/kuai-su-wo-er-shi-bian-huan-fwtxue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-09
+				  <small>快速沃尔什变换（FWT）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1119h-triple-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-09
+				  <small>CF1119H Triple 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf573e-bear-and-bowling-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-09
+				  <small>CF573E Bear and Bowling 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/arc163d-sum-of-scc-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  07-03
+				  <small>ARC163D Sum of SCC 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1720e-misha-and-paintings-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  06-22
+				  <small>CF1720E Misha and Paintings 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf417e-square-table-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  06-16
+				  <small>CF417E Square Table 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1103c-johnny-solving-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  06-13
+				  <small>CF1103C Johnny Solving 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc304ex-constrained-topological-sort-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  06-06
+				  <small>[ABC304Ex] Constrained Topological Sort 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1526e-oolimry-and-suffix-array-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  06-01
+				  <small>CF1526E Oolimry and Suffix Array 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1427e-xum-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-28
+				  <small>CF1427E Xum 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/gym103371b-cilantro-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-20
+				  <small>GYM103371B Cilantro 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1667c-half-queen-cover/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-19
+				  <small>CF1667C Half Queen Cover 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/at_arc146_c-arc146c-even-xor-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-15
+				  <small>ARC146C Even XOR 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/boruvka-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-03
+				  <small>Boruvka 算法 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/at_arc084_b-abc077d-small-multiple-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-02
+				  <small>AT_arc084_b [ABC077D] Small Multiple 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/sheng-cheng-han-shu-bian-huan-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  05-02
+				  <small>生成函数变换学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p4451-guo-jia-ji-xun-dui-zheng-shu-de-lqp-chai-fen-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-24
+				  <small>P4451 [国家集训队]整数的lqp拆分 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/zhi-shu-xing-sheng-cheng-han-shu-ru-men/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-20
+				  <small>指数型生成函数入门</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf891e-lust-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-19
+				  <small>CF891E Lust 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1672f2-checker-for-array-shuffling-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-18
+				  <small>CF1672F2 Checker for Array Shuffling 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1685d1-permutation-weight-easy-version-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>CF1685D1 Permutation Weight (Easy Version) 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1225f-tree-factory-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>CF1225F Tree Factory 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/yi-xie-shu-ju-jie-gou-ji-qiao/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>一些数据结构技巧</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p6944-icpc2018-wfgem-island-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>P6944 [ICPC2018 WF]Gem Island 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1153f-serval-and-bonus-problem-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>CF1153F Serval and Bonus Problem 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf794g-replace-all-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>CF794G Replace All 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf618f-double-knapsack-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>CF618F Double Knapsack 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/yi-xie-tu-lun-de-ding-li/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>一些图论的定理</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf351e-jeff-and-permutation-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>CF351E Jeff and Permutation 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/at_arc148_d-arc148d-mod-m-game-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>AT_arc148_d [ARC148D] mod M Game 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/pu-tong-xing-sheng-cheng-han-shu-ru-men/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>普通型生成函数入门</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/sheng-cheng-han-shu-ru-men/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>生成函数入门</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1787e-the-harmonization-of-xor-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>CF1787E The Harmonization of XOR 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf354d-transferring-pyramid-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>CF354D Transferring Pyramid 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p9003-rc-07-game-theory-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>P9003 [RC-07] Game Theory 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/samhou-zhui-zi-dong-ji-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>SAM（后缀自动机）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/universaloj-228-ji-chu-shu-ju-jie-gou-lian-xi-ti-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>UniversalOJ 228 基础数据结构练习题 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1498f-christmas-game-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>CF1498F Christmas Game 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1572c-paint-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>CF1572C Paint 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p3188-hnoi2007meng-huan-dao-bao-zhu-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>P3188 [HNOI2007]梦幻岛宝珠 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf710f-string-set-queries-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>CF710F String Set Queries 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p1989-wu-xiang-tu-san-yuan-huan-ji-shu-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>无向图三元环 &amp; 四元环计数 小结</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p8329-zjoi2022-shu-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-15
+				  <small>P8329 [ZJOI2022] 树 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p3978-tjoi2015gai-lu-lun-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>P3978 [TJOI2015]概率论 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p7738-noi2021-liang-zi-tong-xin-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>P7738 [NOI2021] 量子通信 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p3750-liu-sheng-lian-kao-2017-fen-shou-shi-zhu-yuan-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>P3750 [六省联考 2017] 分手是祝愿 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/yi-xie-qi-guai-de-dp-zhuang-tai/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>一些 dp 状态 &amp; 技巧</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p8321-jroi-4-shen-yang-da-jie-2-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>P8321 『JROI-4』沈阳大街 2 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf584e-anton-and-ira-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>CF584E Anton and Ira 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1282d-enchanted-artifact-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>CF1282D Enchanted Artifact 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1270e-divide-points-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>CF1270E Divide Points 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf487c-prefix-product-sequence-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>CF487C Prefix Product Sequence 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1404c-fixed-point-removal-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>CF1404C Fixed Point Removal 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf888g-xor-mst-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-14
+				  <small>CF888G Xor-MST 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1503e-2-coloring-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-08
+				  <small>CF1503E 2-Coloring 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1670e-hemose-on-the-tree-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-08
+				  <small>CF1670E Hemose on the Tree 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/prufer-xu-lie-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-08
+				  <small>Prufer 序列学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/li-chao-xian-duan-shu-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-08
+				  <small>李超线段树学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/public-judge-noip-round-2-pai-xu-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-08
+				  <small>【Public Judge NOIP Round 2】排序 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1278e-tests-for-problem-d-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-08
+				  <small>CF1278E Tests for problem D 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1468h-k-and-medians-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-08
+				  <small>CF1468H K and Medians 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf804c-ice-cream-coloring-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-08
+				  <small>CF804C Ice cream coloring 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/la-ge-lang-ri-cha-zhi-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-08
+				  <small>拉格朗日插值学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1311e-construct-the-binary-tree-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF1311E Construct the Binary Tree 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/dian-fen-zhi-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>点分治学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1158b-the-minimal-unique-substring-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF1158B The minimal unique substring 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1526d-kill-anton-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF1526D Kill Anton 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf549g-happy-line-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF549G Happy Line 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/codechef-weaseltx-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>Codechef WEASELTX 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1305e-kuroni-and-the-score-distribution-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF1305E Kuroni and the Score Distribution 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf690a3-collective-mindsets-hard-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF690A3 Collective Mindsets (hard) 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1406d-three-sequences-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF1406D Three Sequences 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1110e-magic-stones-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF1110E Magic Stones 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1485d-multiples-and-power-differences-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF1485D Multiples and Power Differences 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/arc147d-sets-scores-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>ARC147D Sets Scores 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p6892-icpc2014-wfbaggage-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>P6892 [ICPC2014 WF]Baggage 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/mine-sweeper-ii-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>Mine Sweeper II 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1450c2-errich-tac-toe-hard-version-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF1450C2 Errich-Tac-Toe (Hard Version) 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1495c-garden-of-the-sun-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF1495C Garden of the Sun 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1552e-colors-and-intervals-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  04-02
+				  <small>CF1552E Colors and Intervals 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1628c-grid-xor-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1628C Grid Xor 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1695d2-tree-queries-hard-version-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1695D2 Tree Queries (Hard Version) 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1158c-permutation-recovery-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1158C Permutation recovery 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1166e-the-lcms-must-be-large-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1166E The LCMs Must be Large 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf763b-timofey-and-rectangles-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF763B Timofey and rectangles 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1332e-height-all-the-same-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1332E Height All the Same 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf675c-money-transfers-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF675C Money Transfers 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1365f-swaps-again-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1365F Swaps Again 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1370e-binary-subsequence-rotation-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1370E Binary Subsequence Rotation 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1419e-decryption-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1419E Decryption 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1479b2-painting-the-array-ii-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1479B2 Painting the Array II 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1553e-permutation-shift-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1553E Permutation Shift 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1039b-subway-pursuit-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1039B Subway Pursuit 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1363d-guess-the-maximums-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1363D Guess The Maximums 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1019b-the-hat-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1019B The hat 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1044b-intersecting-subtrees-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1044B Intersecting Subtrees 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1392e-omkar-and-duck-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1392E Omkar and Duck 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1349b-orac-and-medians-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1349B Orac and Medians 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1366d-two-divisors-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1366D Two Divisors 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1750g-doping-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-28
+				  <small>CF1750G Doping 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1804f-approximate-diameter-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>CF1804F Approximate Diameter 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1556d-take-a-guess-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>CF1556D Take a Guess 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1583d-omkar-and-the-meaning-of-life-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>CF1583D Omkar and the Meaning of Life 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf896b-ithea-plays-with-chtholly-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>CF896B Ithea Plays With Chtholly 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1713d-tournament-countdown-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>CF1713D Tournament Countdown 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1713e-cross-swapping-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>CF1713E Cross Swapping 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1103b-game-with-modulo-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>CF1103B Game with modulo 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1088d-ehab-and-another-another-xor-problem-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>CF1088D Ehab and another another xor problem 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/lou-fang-chong-jian-xian-duan-shu-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>楼房重建线段树学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1451e1and2-bitwise-queries-easyandhard-version-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>CF1451E1&amp;2 Bitwise Queries (Easy&amp;Hard Version) 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1415d-xor-gun-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>CF1415D XOR-gun 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1521c-nastia-and-a-hidden-permutation-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>CF1521C Nastia and a Hidden Permutation 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc262e-red-and-blue-graph-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>ABC262E Red and Blue Graph 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/poj21677-qoj141-ran-se-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>POJ21677 / QOJ141 染色 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/world-tour-final-2019-c1-triangular-lamps-easy-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>【World tour final 2019 C1】Triangular Lamps Easy 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/zui-jin-gong-gong-zu-xian-lcaxue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>最近公共祖先（LCA）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/kruskal-chong-gou-shu-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>Kruskal 重构树学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p6545-ceoi2014-the-wall-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>P6545 [CEOI2014] The Wall 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/xian-xing-ji-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-27
+				  <small>线性基学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc163e-active-infants-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>ABC163E Active Infants 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1558c-bottom-tier-reversals-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>CF1558C Bottom-Tier Reversals 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1672e-notepadexe-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>CF1672E notepad.exe 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1679e-typical-party-in-dorm-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>CF1679E Typical Party in Dorm 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf856c-eleventh-birthday-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>CF856C Eleventh Birthday 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc232h-kings-tour-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>ABC232H King&#39;s Tour 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1697e-coloring-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>CF1697E Coloring 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc229g-longest-y-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>ABC229G Longest Y 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1416d-graph-and-queries-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>CF1416D Graph and Queries 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1580b-mathematics-curriculum-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>CF1580B Mathematics Curriculum 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p5298-pkuwc2018minimax-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>P5298 [PKUWC2018]Minimax 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc234g-divide-a-sequence-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>ABC234G Divide a Sequence 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1682d-circular-spanning-tree-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>CF1682D Circular Spanning Tree 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc258ex-odd-steps-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>ABC258Ex Odd Steps 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc257g-prefix-concatenation-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>ABC257G Prefix Concatenation 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc235g-gardens-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>ABC235G Gardens 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc232g-modulo-shortest-path-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-26
+				  <small>ABC232G Modulo Shortest Path 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/zu-he-heng-deng-shi-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>组合恒等式学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p1758-noi2009-guan-dao-qu-zhu-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>P1758 [NOI2009] 管道取珠 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1065e-side-transmutations-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>CF1065E Side Transmutations 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf1675g-sorting-pancakes-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>CF1675G Sorting Pancakes 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/zu-he-shu-qu-mo-lucas-ding-li-and-exlucas-ding-li-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>组合数取模（Lucas 定理 &amp; exLucas 定理）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/zu-he-ji-shu-ru-fen/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>组合计数入门</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/2022-shu-jia-za-ti-xuan-jiang/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>2022 暑假杂题选讲</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/xian-duan-shu-he-bing-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>线段树合并学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/abc252g-pre-order-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>ABC252G Pre-Order 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/qi-fa-shi-he-bing-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>启发式合并学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p1600-noip2016-ti-gao-zu-tian-tian-ai-pao-bu-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>P1600 [NOIP2016 提高组] 天天爱跑步 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p3398-cang-shu-zhao-sugar-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>P3398 仓鼠找 sugar 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/yi-xie-shu-shang-wen-ti-de-xiao-ji-qiao/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>一些树上问题的小技巧</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p3802-xiao-mo-nu-pa-qi-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>P3802 小魔女帕琪 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p7690-ceoi2002-a-decorative-fence-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-25
+				  <small>P7690 [CEOI2002] A decorative fence 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p6596-how-many-of-them-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>P6596 How Many of Them 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p6694-qiang-po-zheng-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>P6694 强迫症 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p4389-fu-gong-zhu-de-bei-bao-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>P4389 付公主的背包 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/p3321-sdoi2015xu-lie-tong-ji-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>P3321 [SDOI2015]序列统计 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf923e-perpetual-subtraction-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>CF923E Perpetual Subtraction 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf773f-test-data-generation-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>CF773F Test Data Generation 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf755g-polandball-and-many-other-balls-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>CF755G PolandBall and Many Other Balls 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf623e-transforming-sequence-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>CF623E Transforming Sequence 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf553e-kyoya-and-train-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>CF553E Kyoya and Train 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf528d-fuzzy-search/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>CF528D Fuzzy Search 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/bing-cha-ji-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>并查集学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/ren-yi-mo-shu-kuai-su-fu-li-xie-bian-huan-mttxue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-24
+				  <small>任意模数快速傅里叶变换（MTT）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cf449d-jzzhu-and-numbers-zuo-ti-ji-lu/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>CF449D Jzzhu and Numbers 做题记录</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/duo-xiang-shi-quan-jia-tong-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>多项式全家桶学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/bsgs-he-exbsgs-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>BSGS 和 exBSGS 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/kuai-su-shu-lun-bian-huan-nttxue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>快速数论变换（NTT）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/kuai-su-fu-li-xie-bian-huan-fftxue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>快速傅里叶变换（FFT）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/wang-luo-liu-de-chang-jian-jian-mo/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>网络流的常见建模</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/zheng-ti-er-fen-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>整体二分学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/wang-luo-liu-qiu-zui-xiao-fei-yong-te-jie-wang-luo-liu-jie-xian-xing-gui-hua-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>网络流求最小费用特解（网络流解线性规划）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/huan-gen-shu-pou-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>换根树剖学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/min-max-rong-chi-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>Min-Max 容斥学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/er-xiang-shi-fan-yan-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>二项式反演学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/shu-shang-zui-xiao-k-fu-gai-wen-ti-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>树上最小 k 覆盖问题学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/dong-tai-dp-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>动态 DP 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/gao-si-xiao-yuan-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>高斯消元学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/chai-fen-yue-shu-xi-tong-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>差分约束系统学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/hui-gun-chi-qu-bu-shan-chu-chi-qu-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>回滚尺取（不删除尺取）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/ji-huan-shu-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-23
+				  <small>基环树学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/mo-bi-wu-si-fan-yan-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>莫比乌斯反演学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/shu-lian-pou-fen-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>树链剖分学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/zheng-chu-fen-kuai-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>整除分块学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/cdq-fen-zhi-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>CDQ 分治学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/wang-luo-liu-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>网络流学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/hou-zhui-shu-zu-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>后缀数组学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/manacher-suan-fa-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>Manacher 算法学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/kuo-zhan-zhong-guo-sheng-yu-ding-li-excrtxue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>扩展中国剩余定理(EXCRT)学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/zhong-guo-sheng-yu-ding-li-crtxue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>中国剩余定理(CRT)学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/kuo-zhan-ou-ji-li-de-suan-fa-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>扩展欧几里得算法学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/ge-chong-xiao-ji-qiao/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>各种小技巧</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/ac-zi-dong-ji-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>AC 自动机学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/sao-miao-xian-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>扫描线学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/fhq-treap-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>fhq-Treap 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/treap-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>Treap 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/di-qia-er-shu-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>笛卡尔树学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/ou-la-han-shu-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>欧拉函数学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/trie-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>Trie 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/zui-xiao-ge-shu-ghtxue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>最小割树（GHT）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/zhu-xi-shu-ke-chi-jiu-hua-xian-duan-shu-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>主席树（可持久化线段树）学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/mo-dui-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>莫队学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/shu-lie-fen-kuai-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-21
+				  <small>数列分块学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+	  
+		  
+		  
+		  <a href="https://Rebxe.github.io/post/kmp-xue-xi-bi-ji/">
+			<div class="motion-warpper tag-archive-node">
+			  <div class="tag-node">
+				<h1>
+				  03-19
+				  <small>KMP 学习笔记</small>
+				</h1>
+			  </div>  
+		  </div>
+		  </a>
+	    
+    
+  </div>
+</div>
+
+          </section>
+        </div>
+      </div>
+    </div>
+    <div class="footer-box">
+  <footer class="footer">
+    <center id="runTimeBox">
+      已运行:<span id="run_time"></span>
+    </center>
+    <span id="busuanzi_container_site_pv">浏览数:<span id="busuanzi_value_site_pv"></span> 次</span>
+    <span class="post-meta-divider">|</span>
+    <span id="busuanzi_container_site_uv">访客数:<span id="busuanzi_value_site_uv"></span> 人</span>
+
+    <script>
+      BirthDay = new Date('');
+      if (BirthDay.getTime()) {
+        function runTime() {
+          str = "";
+          today = new Date();
+          timeold = today.getTime() - BirthDay.getTime();
+          msPerDay = 24 * 60 * 60 * 1000;
+          e_daysold = timeold / msPerDay;
+          daysold = Math.floor(e_daysold);
+          str += daysold + "天";
+          return str;
+        }
+        setInterval(function () {
+          $("#run_time").html(runTime());
+        }, 1000);
+      } else {
+        document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+      }
+    </script>
+    <div class="poweredby">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+  </footer>
+  
+    
+        <div class="pisces back-to-top" id="back_to_top">
+          <i class="fa fa-arrow-up"></i>
+          
+            <span class="scrollpercent"> <span id="back_to_top_text">0</span>% </span>
+            
+        </div>
+        
+                  
+                        
+</div>
+<script>
+  let sideBarOpen = "sidebar-open";
+  let body = document.body;
+  let back2Top = document.querySelector("#back_to_top"),
+    back2TopText = document.querySelector("#back_to_top_text"),
+    drawerBox = document.querySelector("#drawer_box"),
+    rightSideBar = document.querySelector(".sidebar"),
+    viewport = document.querySelector("body");
+
+  function scrollAnimation(currentY, targetY) {
+    let needScrollTop = targetY - currentY;
+    let _currentY = currentY;
+    setTimeout(() => {
+      const dist = Math.ceil(needScrollTop / 10);
+      _currentY += dist;
+      window.scrollTo(_currentY, currentY);
+      if (needScrollTop > 10 || needScrollTop < -10) {
+        scrollAnimation(_currentY, targetY);
+      } else {
+        window.scrollTo(_currentY, targetY);
+      }
+    }, 1);
+  }
+
+  back2Top.addEventListener("click", function (e) {
+    scrollAnimation(document.scrollingElement.scrollTop, 0);
+    e.stopPropagation();
+    return false;
+  });
+
+  window.addEventListener("scroll", function (e) {
+    let percent =
+      (document.scrollingElement.scrollTop /
+        (document.scrollingElement.scrollHeight -
+          document.scrollingElement.clientHeight)) *
+      100;
+    if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+      back2Top.classList.add("back-top-active");
+    }
+    if (percent == 0) {
+      back2Top.classList.remove("back-top-active");
+    }
+    if (back2TopText) {
+      back2TopText.textContent = Math.floor(percent);
+    }
+  });
+
+  let hasCacu = false;
+  window.addEventListener("resize", function (e) {
+    calcuHeight();
+  });
+
+  function calcuHeight() {
+    // 动态调整站点概览高度
+    if (
+      (!hasCacu && back2Top.classList.contains("pisces")) ||
+      back2Top.classList.contains("gemini")
+    ) {
+      let sideBar = document.querySelector(".sidebar");
+      let navUl = document.querySelector("#site_nav");
+      sideBar.style =
+        "margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+      hasCacu = true;
+    }
+  }
+  calcuHeight();
+
+  let open = false,
+    MOTION_TIME = 300,
+    RIGHT_MOVE_DIS = "320px";
+
+  if (drawerBox) {
+    let rightMotions = document.querySelectorAll(".right-motion");
+    let right = drawerBox.classList.contains("right");
+
+    let transitionDir = right
+      ? "transition.slideRightIn"
+      : "transition.slideLeftIn";
+
+    let openProp, closeProp;
+    if (right) {
+      openProp = {
+        paddingRight: RIGHT_MOVE_DIS,
+      };
+      closeProp = {
+        paddingRight: "0px",
+      };
+    } else {
+      openProp = {
+        paddingLeft: RIGHT_MOVE_DIS,
+      };
+      closeProp = {
+        paddingLeft: "0px",
+      };
+    }
+
+    drawerBox.onclick = function () {
+      open = !open;
+      jQuery.Velocity(rightSideBar, "stop");
+      jQuery.Velocity(viewport, "stop");
+      jQuery.Velocity(rightMotions, "stop");
+      if (open) {
+        jQuery.Velocity(
+          rightSideBar,
+          {
+            width: RIGHT_MOVE_DIS,
+          },
+          {
+            duration: MOTION_TIME,
+            begin: function () {
+              jQuery.Velocity(rightMotions, transitionDir, {});
+            },
+          }
+        );
+        jQuery.Velocity(viewport, openProp, {
+          duration: MOTION_TIME,
+        });
+      } else {
+        jQuery.Velocity(
+          rightSideBar,
+          {
+            width: "0px",
+          },
+          {
+            duration: MOTION_TIME,
+            begin: function () {
+              jQuery.Velocity(rightMotions, {
+                opacity: 0,
+              });
+            },
+          }
+        );
+        jQuery.Velocity(viewport, closeProp, {
+          duration: MOTION_TIME,
+        });
+      }
+      for (let i = 0; i < drawerBox.children.length; i++) {
+        drawerBox.children[i].classList.toggle("muse-line");
+      }
+      drawerBox.classList.toggle(sideBarOpen);
+    };
+  }
+
+  // 链接跳转
+  let newWindow = "true";
+  if (newWindow === "true") {
+    let links = document.querySelectorAll(".post-body a");
+    links.forEach((item) => {
+      if (!item.classList.contains("btn")) {
+        item.setAttribute("target", "_blank");
+      }
+    });
+  }
+
+  // 代码高亮
+  hljs.initHighlightingOnLoad();
+
+  // 离开当前页title变化
+  var leaveTitle = "我太菜了嘛~";
+  var normal_title = document.title;
+  if (leaveTitle) {
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState == "hidden") {
+        normal_title = document.title;
+        document.title = leaveTitle;
+      } else {
+        document.title = normal_title;
+      }
+    });
+  }
+</script>
+
+<link rel="stylesheet" href="https://124.71.4.244/static/exber/assets/media/css/jquery.fancybox.css" />
+<script src="https://124.71.4.244/static/exber/assets/media/js/jquery.fancybox.js"></script>
+
+<script>
+  let images = document.querySelectorAll(".section img");
+  images.forEach((image) => {
+    var parent = image.parentElement;
+    var next = image.nextElementSibling;
+    parent.removeChild(image);
+    var aelem = document.createElement("a");
+    aelem.href = image.src;
+    aelem.dataset["fancybox"] = "images";
+    aelem.dataset["rel"] = "fancybox-button";
+    aelem.classList.add("fancybox");
+    aelem.appendChild(image);
+    parent.insertBefore(aelem, next);
+  });
+</script>
+  </div>
+</body>
+
+<input hidden id="copy" />
+<script>
+  !function () {
+    let times = document.querySelectorAll('.publish-time');
+    for (let i = 0; i < times.length; i++) {
+      let date = times[i].dataset.t;
+      let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+      if (time < 60) {
+        str = time + '秒之前';
+      } else if (time < 3600) {
+        str = Math.floor(time / 60) + '分钟之前';
+      } else if (time >= 3600 && time < 86400) {
+        str = Math.floor(time / 3600) + '小时之前';
+      } else if (time >= 86400 && time < 259200) {
+        str = Math.floor(time / 86400) + '天之前';
+      } else {
+        str = times[i].textContent;
+      }
+      times[i].textContent = str;
+    }
+  }();
+</script>
+
+<script>
+  let language = '';
+  if (language !== '') {
+    let map = new Map();
+    if (language === 'en') {
+      map.set('search', 'Search');
+      map.set('category', 'Categories');
+      map.set('article', 'Articles');
+      map.set('tag', 'Tags');
+      map.set('top', 'Top');
+      map.set('publish', 'published');
+      map.set('minute', ' minutes');
+      map.set('read-more', 'Read More');
+      map.set('view', 'View');
+      map.set('words', ' words');
+      map.set('category-in', 'category in');
+      map.set('preview', 'Meta');
+      map.set('index', 'Toc');
+      map.set('no-archives', "You haven't created yet");
+      map.set('archives', " articles in total");
+      map.set('cloud-tags', " tags in total");
+      map.set('copyright', "Copyright: ");
+      map.set('author', "Author: ");
+      map.set('link', "Link: ");
+      map.set('leave-message', "Leave a message");
+      map.set('format', "Links Format");
+      map.set('site-name', "Name: ");
+      map.set('site-link', "Link: ");
+      map.set('site-desc', "Desc: ");
+      map.set('stat', " related results, taking ");
+      map.set('stat-time', " ms");
+      map.set('site-img', "Image: ");
+    }
+
+    if (map.size > 0) {
+      let lanElems = document.querySelectorAll('.language');
+      lanElems.forEach(elem => {
+        let lan = elem.dataset.lan, text = map.get(lan);
+        if (elem.__proto__ === HTMLInputElement.prototype) {
+          elem.placeholder = text
+        } else {
+          if (elem.dataset.count) {
+            text = elem.dataset.count + text;
+          }
+          elem.textContent = text;
+        }
+      })
+    }
+  }
+
+  window.Clipboard = (function (window, document, navigator) {
+    var textArea,
+      copy;
+
+    // 判断是不是ios端
+    function isOS() {
+      return navigator.userAgent.match(/ipad|iphone/i);
+    }
+    //创建文本元素
+    function createTextArea(text) {
+      textArea = document.createElement('textArea');
+      textArea.value = text;
+      textArea.style.width = 0;
+      textArea.style.height = 0;
+      textArea.clientHeight = 0;
+      textArea.clientWidth = 0;
+      document.body.appendChild(textArea);
+    }
+    //选择内容
+    function selectText() {
+      var range,
+        selection;
+
+      if (isOS()) {
+        range = document.createRange();
+        range.selectNodeContents(textArea);
+        selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        textArea.setSelectionRange(0, 999999);
+      } else {
+        textArea.select();
+      }
+    }
+
+    //复制到剪贴板
+    function copyToClipboard() {
+      try {
+        document.execCommand("Copy")
+      } catch (err) {
+        alert("复制错误！请手动复制！")
+      }
+      document.body.removeChild(textArea);
+    }
+
+    copy = function (text) {
+      createTextArea(text);
+      selectText();
+      copyToClipboard();
+    };
+
+    return {
+      copy: copy
+    };
+  })(window, document, navigator);
+
+  function copyCode(e) {
+    if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+      let code = e.currentTarget.querySelector('code');
+      var text = code.innerText;
+      if (e.srcElement.textContent === '复制成功') {
+        return;
+      }
+      e.srcElement.textContent = '复制成功';
+      (function (elem) {
+        setTimeout(() => {
+          if (elem.textContent === '复制成功') {
+            elem.textContent = '复制代码'
+          }
+        }, 1000);
+      })(e.srcElement)
+      Clipboard.copy(text);
+    }
+  }
+
+  let pres = document.querySelectorAll('pre');
+  pres.forEach(pre => {
+    let code = pre.querySelector('code');
+    let copyElem = document.createElement('span');
+    copyElem.classList.add('copy-code');
+    copyElem.textContent = '复制代码';
+    pre.appendChild(copyElem);
+    pre.onclick = copyCode
+  })
+
+</script>
+<script src="https://124.71.4.244/static/exber/assets/media/js/motion.js"></script>
+
+
+  <script
+    src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+  <script>
+    var scroll = new SmoothScroll('a[href*="#"]', {
+      speed: 200
+    });
+  </script>
+
+
+
+
+
+
+
+</html>
