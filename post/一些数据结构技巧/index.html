@@ -1,0 +1,1908 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	
+
+
+
+
+
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="静态个人博客">
+<meta name="description" content="Exber's Blog">
+<meta name="theme-color" content="#000">
+
+<title>一些数据结构技巧|Exber's Blog</title>
+
+<link rel="shortcut icon" href="https://exber.qzz.io/favicon.ico?v=1769647447">
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/css/pisces.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/fonts/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/hljs/styles/default.css">
+
+<link
+  href="https://fonts.font.im/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet"
+  type="text/css"
+>
+
+<link rel="stylesheet/less" type="text/css" href="https://exber.qzz.io/styles/main.less">
+<script src="https://cdn.jsdmirror.com/npm/less@4"></script>
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/main.css">
+
+<script src="https://exber.qzz.io/media/js/jquery.js"></script>
+<script src="https://exber.qzz.io/media/hljs/highlight.js"></script>
+
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+<script src="https://cdn.jsdmirror.com/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-texmath/texmath.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-anchor/dist/markdownItAnchor.umd.js"></script>
+
+<script>
+// 处理带空格的链接
+function markdownItLinkEncodeFixed(md) {
+	// 1. 修复链接打开规则
+	const defaultLinkOpenRender = md.renderer.rules.link_open || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const hrefIndex = token.attrIndex('href');
+		
+		if (hrefIndex >= 0) {
+			const originalHref = token.attrs[hrefIndex][1];
+			// 更健壮的编码处理
+			const encodedHref = encodeURI(originalHref).replace(/%20/g, '%20');
+			token.attrs[hrefIndex][1] = encodedHref;
+		}
+		
+		return defaultLinkOpenRender(tokens, idx, options, env, self);
+	};
+
+	// 2. 修复图片规则
+	const defaultImageRender = md.renderer.rules.image || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.image = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const srcIndex = token.attrIndex('src');
+		
+		if (srcIndex >= 0) {
+			const originalSrc = token.attrs[srcIndex][1];
+			const encodedSrc = encodeURI(originalSrc).replace(/%20/g, '%20');
+			token.attrs[srcIndex][1] = encodedSrc;
+		}
+		
+		return defaultImageRender(tokens, idx, options, env, self);
+	};
+
+	// 3. 新增：处理可能被误解析为text的链接[1](@ref)
+	const defaultTextRender = md.renderer.rules.text || 
+		function(tokens, idx, options, env, self) {
+			const token = tokens[idx];
+			return token.content;
+		};
+
+	md.renderer.rules.text = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const content = token.content;
+		
+		// 检测类似链接模式的text token[1](@ref)
+		if (content.includes('[') && content.includes(']') && content.includes('(') && content.includes(')')) {
+			try {
+				// 尝试提取和编码链接
+				const linkMatch = content.match(/\[([^\]]+)\]\(([^)]+)\)/);
+				if (linkMatch) {
+					const linkText = linkMatch[1];
+					const linkUrl = encodeURI(linkMatch[2]).replace(/%20/g, '%20');
+					return `<a href="${linkUrl}">${linkText}</a>`;
+				}
+			} catch (e) {
+				console.warn('链接提取失败:', e);
+			}
+		}
+		
+		return defaultTextRender(tokens, idx, options, env, self);
+	};
+}
+function render_markdown(content)
+{
+	let markdown = window.markdownit({ html: true })
+			 .use(markdownItLinkEncodeFixed)
+			 .use(window.texmath, {
+				 engine: katex,
+				 delimiters: 'dollars'
+			 });
+	// 处理图片路径
+	let temp_container = document.createElement('div');
+	temp_container.innerHTML = markdown.render(content);
+	{
+		let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	{
+		let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	return temp_container.innerHTML;
+}
+</script>
+<script>
+	window.Clipboard = (function (window, document, navigator) {
+		var textArea,
+			copy;
+
+		// 判断是不是ios端
+		function isOS() {
+			return navigator.userAgent.match(/ipad|iphone/i);
+		}
+		//创建文本元素
+		function createTextArea(text) {
+			textArea = document.createElement('textArea');
+			textArea.value = text;
+			textArea.style.width = 0;
+			textArea.style.height = 0;
+			textArea.clientHeight = 0;
+			textArea.clientWidth = 0;
+			document.body.appendChild(textArea);
+		}
+		//选择内容
+		function selectText() {
+			var range,
+				selection;
+
+			if (isOS()) {
+				range = document.createRange();
+				range.selectNodeContents(textArea);
+				selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				textArea.setSelectionRange(0, 999999);
+			} else {
+				textArea.select();
+			}
+		}
+
+		//复制到剪贴板
+		function copyToClipboard() {
+			try {
+				document.execCommand("Copy")
+			} catch (err) {
+				alert("复制错误！请手动复制！")
+			}
+			document.body.removeChild(textArea);
+		}
+
+		copy = function (text) {
+			createTextArea(text);
+			selectText();
+			copyToClipboard();
+		};
+
+		return {
+			copy: copy
+		};
+	})(window, document, navigator);
+</script>
+	<meta name="description" content="一些数据结构技巧" />
+</head>
+
+<body>
+	<div class="head-top-line"></div>
+	<div class="header-box">
+		
+		
+	<style> /* 搜索相关 */
+		.gridea-search-input{
+			height: 30px;
+			width: 200px;
+			box-sizing: border-box;
+			padding: 0 15px 0 30px;
+			border: 1px solid #e3e3e3;
+			border-radius: 15px;
+			color: #273849;
+			outline: none;
+			transition: border-color 0.2s ease;
+			background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+			background-size: 20px;
+			vertical-align: middle !important;
+		}
+		.gridea-search-input:focus {
+		  border-color: #666666;
+		  right: 0;
+		}
+		/* 自适应轨道 */
+		.slider-track {
+			--track-height: 0.4em; /* 轨道基础高度 */
+			width: 100%;
+			height: var(--track-height);
+			background: #e0e0e0;
+			border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+			position: relative;
+			cursor: default;
+			margin: 0.5em 0; /* 垂直间距自适应 */
+		}
+		
+		/* 进度填充 */
+		.slider-fill {
+			height: 100%;
+			background: #555;
+			border-radius: inherit; /* 继承父级圆角 */
+			width: 50%; /* 初始值 */
+		}
+		
+		/* 自适应滑块 */
+		.slider-thumb {
+			--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+			position: absolute;
+			width: var(--thumb-size);
+			height: var(--thumb-size);
+			background: #555;
+			border-radius: 50%;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: 
+				transform 0.2s ease,
+				box-shadow 0.2s ease;
+			border: 2px solid white; /* 增加辨识度 */
+		}
+		
+		/* 悬停效果 */
+		.slider-thumb:hover {
+			background: #333;
+			transform: translate(-50%, -50%) scale(1.1);
+			box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+		}
+		
+		/* 拖动效果 */
+		.slider-thumb:active {
+			cursor: grabbing;
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		}
+		
+		/* 数值显示 */
+		.value-display {
+			text-align: center;
+			font-family: Arial, sans-serif;
+			color: #555;
+			font-size: 1.2em; /* 基于容器字体大小 */
+			margin-top: 0.5em;
+		}
+	</style>
+
+<div class="pisces">
+  <header class="header">
+    <div class="blog-header box-shadow-wrapper" id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+            <a href="https://exber.qzz.io" class="brand">
+              <span>Exber's Blog</span>
+            </a>  
+        </div>
+        
+			<p class="subtitle">Can't go up</p>
+        
+      </div>
+      <nav class="site-nav bg-color" id="site_nav">
+        <ul id="nav_ul">
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io" target="">
+					首页
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io/tags" target="">
+					按标签筛选
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://csacademy.com/app/graph_editor/" target="_blank">
+					图论编辑器
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="http://yuantiji.ac/zh/" target="_blank">
+					原题机
+				</a>
+            </li>
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://exber.qzz.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.6</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script>
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+
+
+	<script>
+		// 获取DOM元素
+		const sliderTrack = document.getElementById('sliderTrack');
+		const sliderThumb = document.getElementById('sliderThumb');
+		const sliderFill = document.getElementById('sliderFill');
+		const sliderValue = document.getElementById('sliderValue');
+		
+		// 初始化变量
+		let isDragging = false;
+		let currentValue = 0.6;
+		
+		// 更新滑块位置和数值显示
+		function updateSlider(positionX) {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			let newPosition;
+
+			// 检查轨道宽度是否有效
+			if (trackRect.width <= 0) {
+				// 如果轨道宽度无效，则直接使用当前的 currentValue
+				newPosition = currentValue;
+			} else {
+				// 正常计算位置
+				newPosition = (positionX - trackRect.left) / trackRect.width;
+				newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+			}
+
+			// 更新UI
+			sliderThumb.style.left = `${newPosition * 100}%`;
+			sliderFill.style.width = `${newPosition * 100}%`;
+
+			// 更新当前值和表单隐藏域的值
+			currentValue = newPosition;
+			document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+
+			// 更新显示值（保留两位小数）
+			// 使用 Number.isNaN 进行严格检查，确保显示正常
+			const displayValue = Number.isNaN(newPosition) ? '0.60' : newPosition.toFixed(2);
+			sliderValue.textContent = displayValue;
+		}
+		
+		// 响应父容器大小变化
+		function handleResize() {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			const positionX = trackRect.left + trackRect.width * currentValue;
+			updateSlider(positionX);
+		}
+		
+		// 鼠标按下事件 - 仅在圆点上触发
+		sliderThumb.addEventListener('mousedown', (e) => {
+			isDragging = true;
+			sliderThumb.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		
+		// 鼠标移动事件
+		document.addEventListener('mousemove', (e) => {
+			if (!isDragging) return;
+			updateSlider(e.clientX);
+		});
+		
+		// 鼠标释放事件
+		document.addEventListener('mouseup', () => {
+			if (isDragging) {
+				isDragging = false;
+				sliderThumb.style.cursor = 'grab';
+			}
+		});
+		
+		// 监听父容器大小变化
+		const resizeObserver = new ResizeObserver(() => {
+			handleResize();
+		});
+		
+		// 开始观察相关元素
+		resizeObserver.observe(sliderTrack.parentElement);
+		resizeObserver.observe(sliderTrack);
+		
+		// 初始化
+		handleResize();
+	</script>
+
+	</div>
+	<div class="main-continer">
+	<div class="section-layout pisces">
+		<div class="section-layout-wrapper">
+			<div class="sidebar">
+	<div class="sidebar-box box-shadow-wrapper bg-color right-motion" id="sidebar">
+		<div class="post-list-sidebar" id="sidebar-selector">
+			<div class="sidebar-title">
+				<span id="tocSideBar" class="sidebar-title-item sidebar-title-active language" data-lan="index">文章目录</span>
+				<span id="metaSideBar" class="sidebar-title-item language" data-lan="preview">站点概览</span>
+			</div>
+		</div>
+		<div class="sidebar-body pisces" id="sidebar_body">
+			<div class="post-side-meta" id="post_side_meta">
+				
+
+
+
+
+
+
+<div class="sidebar-item">
+	<img class="site-author-image right-motion" src="https://exber.qzz.io/avatar.png"/>
+	<p class="site-author-name">Exber</p>
+	
+	<div class="site-description right-motion">
+		<p>洛谷 @Exber</p>
+<p>Codeforces @Rebex</p>
+
+	</div>
+	
+</div>
+<div class="sidebar-item side-item-stat right-motion">
+	<div class="sidebar-item-box">
+		<a href="https://exber.qzz.io/tags">
+			<span class="site-item-stat-count">26</span>
+			<span class="site-item-stat-name language" data-lan="tag">标签</span>
+		</a>
+	</div>
+	<div class="sidebar-item-box">
+		<a>
+			
+			<span class="site-item-stat-count">330</span>
+			<span class="site-item-stat-name language" data-lan="article">文章</span>
+		</a>
+	</div>
+</div>
+
+			</div>
+			<div class="post-toc sidebar-body-active" id="post_toc" style="opacity: 1;">
+				<div class="toc-box right-motion">
+					<div class="toc-wrapper  no_compress" id="toc_wrapper">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+			<div class="section-box box-shadow-wrapper">
+				<div class="section bg-color post post-page">
+					
+					<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/%E4%B8%80%E4%BA%9B%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E6%8A%80%E5%B7%A7">一些数据结构技巧</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-04-15 16:52:12">2023-04-15 16:52:12</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>学习笔记</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>小技巧</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>数据结构</span>
+				</a>
+			
+		</span>
+		
+		
+		
+		<span class="meta-item pc-show">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-copy"></i>
+			<a class="language" data-lan="copy-markdown" data-src-markdown="### 值域树状数组求 $k-th$
+
+这里以第 $k$ 小为例。
+
+首先不难发现一定会有 $k-1$ 个数比第 $k$ 小的数小，那么只需要找到最大的满足 $[-\inf,pos]$ 中数的个数等于 $k-1$ 的 $pos$，答案即为 $pos+1$。
+
+考虑倍增求出 $pos$，显然由于树状数组维护的区间的长度是 $2$ 的次幂，所以可以从大往小枚举 $2$ 的次幂 $2^p$ 并尝试加上这段区间。
+
+<details><summary>具体实现</summary><p>
+
+```cpp
+inline int kth(int k) // 这里假设值域 [1,n]
+{
+	k--;
+	int pos=0,sum=0;
+	for(int j=20;j>=0;j--) // 需要保证 2^j>=n
+	{
+		if(pos+(1<<j)<=n&&sum+tr[pos+(1<<j)]<=k)
+		{
+			sum+=tr[pos+(1<<j)];
+			pos+=1<<j;
+		}
+	}
+	if(sum!=k-1)
+	{
+		return -1; // 没有
+	}
+	return pos+1>n?-1:pos+1; // pos+1>n 也是没有的情况
+}
+```
+
+</p></details>
+
+### 值域倍增分块
+
+经常用于解决把所有 $a_i> x$ 的 $a_i$ 减去 $x$ 之类的东西。
+
+例题：[P7447 [Ynoi2007] rgxsxrs](https://www.luogu.com.cn/problem/P7447)
+
+<details><summary>题解</summary><p>
+
+> 把值域分成 $[2^k,2^{k+1})$ 这样的 $\log$ 个块，那么每次修改就找到 $x$ 所在的块 $[2^y,2^{y+1})$：
+> 
+> - 对于所有满足 $z>y$ 的 $[2^z,2^{z+1})$：这些块将会集体减掉 $x$，那么维护每一块的最小值，暴力让该跌落的值跌落到更低的块；
+> - 对于所有满足 $z<y$ 的 $[2^z,2^{z+1})$：这些块没有任何改变；
+> - 对于 $[2^y,2^{y+1})$：这一块中所有满足 $a_i>x$ 的 $a_i$ 都会跌落到更低的块，那么维护块内最大值暴力让该跌落的值跌落；
+> 
+> 由于每个数最多只会跌落 $\log V$ 次，所以时间复杂度为 $O(m\log V\log n+n\log V)$。
+
+</p></details>
+
+更多例题：
+
+- [CF702F T-Shirts](https://www.luogu.com.cn/problem/CF702F)
+- [CF1515I Phoenix and Diamonds](https://www.luogu.com.cn/problem/CF1515I)
+- [P4587 [FJOI2016]神秘数](https://www.luogu.com.cn/problem/P4587)
+- [LOJ3527 地牢游戏](https://vjudge.csgrandeur.cn/problem/LibreOJ-3527)
+
+### 减半报警器
+
+用于解决类似这样的问题：
+
+> 维护一个数据结构，刚开始给了一些范围，每个范围有对应的权值。每次把包含一个点的范围的权值减去 $x$，维护每个范围的权值最早被减完的时刻。
+
+例题：[Codeforces GYM 102452I](https://codeforces.com/gym/102452/problem/I)
+
+> 有 $n$ 个国家，每个国家有权值 $w_i$ 和若干个（$\le 3$）观测点。有 $q$ 次操作，每次会将所有能观测到 $x$ 的国家的 $w_i$ 减去 $y$。你要求出每个国家的权值第一次被减完是在第几次操作。
+
+<details><summary>题解</summary><p>
+
+> 观测点个数为 $1$ 的情况是最简单的，直接把 $w_i$ 挂到观测点上即可；
+>
+> 观测点个数为 $2$ 比较复杂，设这两个观测点为 $x$ 和 $y$，把 $\lceil\frac{w_i}{2}\rceil$ 挂到 $x$ 上，$\lceil\frac{w_i}{2}\rceil$ 挂到 $y$ 上。这样两边都没减完则 $w_i$ 一定没被减完，有一边被减完则判一下 $w_i$ 是否被减完，若没减完则重新平均分配。注意到每次 $w_i$ 至少减半，所以最多重新分配 $\log V$ 次，均摊时间复杂度 $O(n\log V)$；
+>
+> 观测点个数 $3$ 的情况和观测点个数为 $2$ 的情况一样，只需要把 $w_i$ 平均分成三份，注意到每次重新分配会让 $w_i$ 变成原来的 $\frac{2}{3}$，那么均摊时间复杂度为 $O(n\log_{1.5}V)$。
+>
+> 每次操作的时间复杂度为 $O(\log n)$，那么总时间复杂度即为 $O(q\log n+n\log_{1.5}V)$。
+
+</p></details>
+
+注意挂的一定是向上取整的值，否则会出现 $(1,0,0)$ 这种尴尬情况。
+
+例题 2：[Codeforces GYM 104065B](https://codeforces.com/gym/104065/problem/B)
+
+> 你要邀请 $n$ 个人来参加会议，一个人同意参加当且仅当已经有至少 $k_i$ 个编号在 $[l_i,r_i]$ 内的人来参加，问最多能有多少个人参加。
+>
+> 也就是说你要确定一个邀请人的顺序。
+
+<details><summary>题解</summary><p>
+
+> 转换后的题意相当于给定了 $m$ 个区间，第 $i$ 个区间的权值为 $k_i$，你需要动态维护这样的过程：
+>
+> - 找到 $k_i\le 0$ 的某个区间 $i$；
+> - 把它删掉，答案加一，同时将所有包含 $i$ 的区间的 $k_i$ 都减去 $1$；
+>
+> 考虑所有区间都包含某个位置 $p$ 的特殊情况，那么每个区间都可以被分成 $[l_i,p]$ 和 $[p+1,r_i]$ 两段。可以把 $k_i$ 平均分到这两段上，每一次修改操作相当于找到左边的一个后缀或者右边的一个前缀减掉 $1$。
+>
+> 这样若一个区间的某一边被减完了则重新分配剩下的 $k_i$，每次至少减半，均摊时间复杂度为 $O(n\log V)$。
+>
+> 用线段树动态维护这个东西，每次区间减，暴力找到需要重构的区间编号即可。
+>
+> 若所有区间没有包含共同的位置，那么可以把区间分成三类：
+>
+> - 包含 $\lfloor\frac{n}{2}\rfloor$ 的；
+> - 在 $\lfloor\frac{n}{2}\rfloor$ 左边的；
+> - 在 $\lfloor\frac{n}{2}\rfloor$ 右边的；
+>
+> 这是一个类似线段树的结构，那么分治下去，每次修改都不断往 $x$ 的方向走，改一下包含当前分治中心 $mid$  的区间。
+>
+> 一次修改会分治 $O(\log n)$ 次，每次分治的时间复杂度为 $O(\log n)$，那么总的时间复杂度即为 $O(n\log^2n+n\log V)$。
+
+</p></details>
+
+更多例题：
+
+- [P7603 [THUPC2021] 鬼街](https://www.luogu.com.cn/problem/P7603)
+- [Codeforces GYM 102331F](https://codeforces.com/gym/102331/problem/F)
+- 【2025NOI模拟赛27】防御
+
+### 支配
+
+>  $x$ 满足的条件包含 $y$ 满足的条件，并且 $x$ 的值比 $y$ 的优，那么 $y$ 就没有存在的必要了。
+>
+> ——《单调队列》
+
+#### 关于距离的支配
+
+##### 序列上
+
+[CF765F Souvenirs](https://www.luogu.com.cn/problem/CF765F) / [CF1793F Rebrending](https://www.luogu.com.cn/problem/CF1793F)
+
+<details><summary>题解</summary><p>
+
+> CF 自己抄自己，两道题一模一样。
+>
+> 先假设只有 $i<j$ 且 $a_i<a_j$ 的 $(i,j)$ 有贡献，另一种取值再跑一次即可。
+>
+> 注意到若 $(i1,j1)$ 和 $(i2,j2)$（$i1<j2$，$i2<j2$）若满足 $a_{i1}-a_{j1}\le a_{i2}-a_{j2}$ 且 $i1\ge i2$，$j1\le j2$ 则$(i2,j2)$ 被 $(i1,j1)$ 完全包含了，即 $(i1,j1)$ 支配了 $(i2,j2)$，所以只用统计 $(i1,j1)$ 的贡献。
+>
+> 固定 $i$，考虑找到所有有用的 $j$。设 $S_i=\{j|(i,j)\text{ 未被支配}\}$，考虑增量求解 $S_i$，设 $p=\max\{j|j\in S_i\}$，那么 $k$（$k>p$）想要加入 $S_i$ 就必须满足：
+>
+> - $a_k-a_i<a_p-a_i\Rightarrow a_k<a_p$；
+> - $a_k-a_i<|a_p-a_k|\Rightarrow a_k-a_i<a_p-a_k\Rightarrow a_k<\frac{a_p+a_i}{2}$；
+>
+> 所以 $|S_i|$ 是 $\log V$ 级别的，那么未被支配的 $(i,j)$ 也就只有 $n\log V$ 个。
+>
+> 接下来就变成二维数点问题了，扫描线即可，时间复杂度 $O((q+n\log V)\log n)$。
+
+</p></details>
+
+##### 树上
+
+[P9058 [Ynoi2004] rpmtdq](https://www.luogu.com.cn/problem/P9058)
+
+<details><summary>题解</summary><p>
+
+> 考虑点分治，对于来自分治中心 $rt$ 不同两个子树中的两个点 $x,y$，显然有 $\operatorname{dis}(x,y)=\operatorname{dis}(x,rt)+\operatorname{dis}(y,rt)$。
+>
+> 那么不妨设 $a_u=\operatorname{dis}(u,rt)$，显然点对 $(i,j)$（$i<j$）未被支配当且仅当对于所有 $i<k<j$ 都有 $a_i+a_j<a_i+a_k$ 且 $a_i+a_j<a_k+a_j$。稍加化简可得 $a_i<a_k,a_j<a_k$，$\max(a_i,a_j)<a_k$，那么只有 $a_i$ 的前驱后继会和 $i$ 构成支配，所以每层分治每个点只会组成 $O(1)$ 个支配对，那么总支配对个数是 $O(n\log n)$ 的。
+>
+> 接下来就变成二维数点问题了，扫描线即可，时间复杂度 $O((q+n\log V)\log n)$。
+
+</p></details>
+
+#### 一些特殊的支配
+
+##### Mex 支配
+
+对于一个长度为 $n$ 的序列 $a$，设 $b_{l,r}=\text{mex}_{l\le i\le r}\{a_i\}$，有性质：
+
+1. $b_{l,r}\ge b_{l+1,r}$，证明显然；
+
+2. $b_{*,r}\to b_{*,r+1}$ 相当于把所有 $b_{i,r}=a_{r+1}$ 的 $b_{i,r}$ 都修改为大于 $a_{r+1}$ 的数，由第一个性质，需要被修改的 $i$ 一定是在一个区间内，所以根据颜色段均摊的经典结论，所有 $r$ 造成的总修改数是 $O(n)$ 级别的；
+
+3. 满足不存在 $[l',r']\subset [l,r],b_{l',r'}=b_{l,r}$ 的区间 $[l,r]$ 个数最多有 $2n$ 个。
+
+   <details><summary>证明</summary><p>
+
+   > 对于每个满足条件的 $[l,r]$，显然 $a_l\not=a_r$，不妨假定 $a_l>a_r$（另一种情况对称）。
+   >
+   > 现在来证明对于每个 $l$，都只有一个 $r$ 满足 $r>l,a_l>a_r$ 且 $[l,r]$ 满足条件。
+   >
+   > 考虑反证，设存在 $l<r1<r2$ 满足 $a_l>a_{r1},a_l>a_{r2}$ 且 $[l,r1]$ 与 $[l,r2]$ 均满足条件。显然由于 $[l,r1]$ 满足条件，一定有 $b_{l,r1}>a_l$。由于 $a_l>a_{r2}$，所以有 $b_{l,r1}>a_{r2}$，那么显然 $[l,r2-1]\sub [l,r2]$ 且 $b_{l,r2}=b_{l,r2-1}$，所以 $[l,r2]$ 不满足条件，矛盾。
+   >
+   > 那么对于每个位置 $i$，它作为 $a_{l}$ 和 $a_r$ 中最小值时最多有一个合法区间，作为最大值时也最多有一个合法区间，所以合法区间个数最多有 $2n$ 个。
+   >
+   > Q.E.D.
+   
+   </p></details>
+
+#### 更多例题
+
+- [P8528 [Ynoi2003] 铃原露露](https://www.luogu.com.cn/problem/P8528)
+- [P9060 [Ynoi2002] Goedel Machine](https://www.luogu.com.cn/problem/P9060)
+
+### 三维计数技巧
+
+> 对于满足某些条件的有序三元组 $(i,j,k)$ 且固定 $k$ 和 $j$ 后合法的 $i$ 在一段区间内时，可以考虑枚举 $k$ 同时维护每个 $j$ 对应的 $i$ 的合法区间 $[l_j,r_j]$。
+
+例题：[Nasty Donchik](https://codeforces.com/group/Uo1lq8ZyWf/contest/265564/problem/C)
+
+> 题意：给定序列 $a_1,a_2,\dots,a_n$，求有多少有序三元组 $(i,j,k)$ 满足 $i\le j<k$ 且 $a_{[i,j]}$ 中出现的数集以及 $a_{[j+1,k]}$ 中出现的数放入两个不可重集后两个集合相等。
+
+<details><summary>题解</summary><p>
+
+> 固定 $k$ 和 $j$ 后显然 $i$ 是在一个区间内的，考虑维护 $l_p$ 和 $r_p$ 表示 $j=p$ 时 $i$ 的上界和下界减一，则固定 $k$ 后的答案即为 $\sum\limits_{j=1}^{k-1}\max(r_j-l_j,0)$。那么设 $L_i=\max\{j|j<i,a_j=a_i\},R_i=\min\{j|j>i,a_j=a_i\}$，则有 $l_j=\max\{i|i\le j,R_i>k\},r_j=\min\{L_i|j<i\le k\}$。
+>
+> 考虑 $k\to k+1$ 后对 $l_j$ 和 $r_j$ 的影响，注意到 $l_j$ 单调递增且 $r_j$ 单调递增，而 $k\to k+1$ 对 $l_j$ 的影响是删去了 $R_i=k+1$ 的元素，体现为后缀取 $\min$ 即区间赋值；对 $r_j$ 的影响则是加入了 $L_{k+1}$，也体现为后缀取 $\min$ 即区间赋值。注意到由于两个东西都是单调递增的，所以可以用线段树来维护。
+>
+> 时间复杂度 $O(n\log n)$。
+
+</p></details>
+
+更多例题：
+
+- [GYM102900J Octasection](https://codeforces.com/gym/102900/problem/J)
+
+### 区间修改区间历史和线段树
+
+考虑给线段树上每个点维护一个一次函数 $f(x)=kx+b$，$f(x)$ 为 $x$ 时的历史和。
+
+单点修改区间查询是好做的，找到要修改的点，设在时刻 $y$ **结束后**要修改为 $k'$，那么把那个点的一次函数修改为 $f(x)=k'x+y(k-k')+b$ 即可。
+
+区间修改区间查询分为两种情况：
+
+- 区间加区间查询：很好做，给 $k$ 和 $b$ 打 tag 即可；
+- 区间赋值区间查询：
+  注意到此时区间内 $k$ 不同则无法一起修改，那么维护区间 $k$ 最小值 $mnk$ 和最大值 $mxk$。对于一个需要被修改的区间，若 $mnk\not=mxk$ 则递归左右儿子修改，否则直接打 tag 修改。
+  这样做时间复杂度均摊是 $O(n+q\log n)$ 的，其中 $n$ 为序列长度，$q$ 为操作数。因为刚开始最多有 $n$ 个区间需要额外往下递归，每次修改最多会让 $\log n$ 个区间在以后的修改中需要额外往下递归，所以总共需要额外往下递归的区间是 $O(n+q\log n)$ 的；
+
+例题：
+
+- [【2022NOI模拟赛01】漏网之鱼](https://www.ckjweb.tk/post/2022noi-mo-ni-sai-01-lou-wang-zhi-yu-zuo-ti-ji-lu/)
+- [CF1824D LuoTianyi and the Function](https://www.luogu.com.cn/problem/CF1824D)
+
+### set 维护连续段
+
+颜色段均摊若用线段树维护则会把一个连续段拆成 $\log$ 个，总连续段个数变为 $O(n\log n)$。
+
+而用 set 维护则总连续段个数是 $O(n)$ 的，并且很好写。
+
+代码如下：
+
+```cpp
+struct seg
+{
+	int l,r,x;
+	inline bool operator<(const seg &b)const{return l<b.l;}
+};
+
+typedef set<seg>::iterator iter;
+set<seg> st;
+
+inline iter split(int p)
+{
+	iter x=st.lower_bound((seg){p,0,0});
+	if(x!=st.end()&&x->l==p) return x;
+	x--;
+	seg vx=*x;
+	st.erase(x);
+	st.insert((seg){vx.l,p-1,vx.x});
+	return st.insert((seg){p,vx.r,vx.x}).first;
+}
+
+inline void ins(int lb,int rb,int x)
+{
+	split(lb);
+	iter l,r=prev(split(rb+1));
+	l=st.lower_bound((seg){lb,0,0});
+	iter pr=l,ed=next(r);
+	while(pr!=ed)
+	{
+		// a_{[pr->l,pr->r]} = x
+		st.erase(pr++);
+	}
+	st.insert((seg){lb,rb,p});
+}
+```
+
+### 摩尔投票
+
+可以用来求集合中出现次数**可能**严格大于 $\lfloor\frac{r-l+1}{k}\rfloor$ 的 $k-1$ 个数。
+
+为什么是可能呢，因为它的原理如下：
+
+> 每次选 $k$ 个互不相同的数，将它们从集合中删去，剩下的至多 $k-1$ 种数就是答案。
+
+这是显然的，因为答案一定不会被删去（出现次数比其它数出现次数总和的 $\frac{1}{k-1}$ 还多），而答案至多只有 $k-1$ 个。
+
+这个东西满足可加性，维护两个集合最后剩下的 $k-1$ 个数即可。
+
+那么可以做区间修改区间查询众数了。
+
+没见过想不到。
+
+例题：[P3765 总统选举](https://www.luogu.com.cn/problem/P3765)
+
+NOI 考过：[P8496 [NOI2022] 众数](https://www.luogu.com.cn/problem/P8496)
+
+模拟赛考过：【2024NOIP模拟赛73】数数
+
+### 函数复合扫描线
+
+> 给定一个函数的序列 $f_i$，每次给定一个输入 $x$ 和一个区间 $[l,r]$，查询 $f_r(f_{r-1}(f_{r-2}(\dots f_l(x)\dots)))$，即对 $x$ 依次应用区间内函数后的结果。
+
+这种题有一个套路就是离线，然后从左往右扫描函数序列，动态维护一个集合 $S$：
+
+- 遇到查询左端点的时候将 $x$ 加入 $S$，并保存好 $x$ 在 $S$ 中的指针；
+- 扫过一个 $i$ 就将 $S$ 中元素集体应用 $f_i$；
+- 遇到查询右端点就拿出指针查询 $x$ 的最终值；
+
+”保存指针“：由于 $S$ 一般要用某些数据结构维护，而 $x$ 会不断改变，所以需要维护 $x$ 在对应数据结构中的指针（例如平衡树的节点编号）。
+
+例题：
+
+- [QOJ # 8672. 排队](https://qoj.ac/problem/8672)
+- [P9999 [Ynoi2000] tmostnrq](https://www.luogu.com.cn/problem/P9999)
+- [CF1172F Nauuo and Bug](https://www.luogu.com.cn/problem/CF1172F)
+" onclick="copyMarkdown(this)">复制 Markdown</a>
+		</span>
+		
+	</div>
+</section>
+
+<script>
+	function copyMarkdown(e) {
+		let text = e.getAttribute('data-src-markdown');
+		if (e.innerHTML == '复制成功') {
+			return;
+		}
+		e.innerHTML = '复制成功';
+		(function (elem) {
+			setTimeout(() => {
+				if (elem.innerHTML == '复制成功') {
+					elem.innerHTML = '复制 Markdown'
+				}
+			}, 1000);
+		})(e)
+		Clipboard.copy(text);
+	}
+</script>
+
+					<div class="post-body next-md-body" id="post_body" data-post-markdown="### 值域树状数组求 $k-th$
+
+这里以第 $k$ 小为例。
+
+首先不难发现一定会有 $k-1$ 个数比第 $k$ 小的数小，那么只需要找到最大的满足 $[-\inf,pos]$ 中数的个数等于 $k-1$ 的 $pos$，答案即为 $pos+1$。
+
+考虑倍增求出 $pos$，显然由于树状数组维护的区间的长度是 $2$ 的次幂，所以可以从大往小枚举 $2$ 的次幂 $2^p$ 并尝试加上这段区间。
+
+<details><summary>具体实现</summary><p>
+
+```cpp
+inline int kth(int k) // 这里假设值域 [1,n]
+{
+	k--;
+	int pos=0,sum=0;
+	for(int j=20;j>=0;j--) // 需要保证 2^j>=n
+	{
+		if(pos+(1<<j)<=n&&sum+tr[pos+(1<<j)]<=k)
+		{
+			sum+=tr[pos+(1<<j)];
+			pos+=1<<j;
+		}
+	}
+	if(sum!=k-1)
+	{
+		return -1; // 没有
+	}
+	return pos+1>n?-1:pos+1; // pos+1>n 也是没有的情况
+}
+```
+
+</p></details>
+
+### 值域倍增分块
+
+经常用于解决把所有 $a_i> x$ 的 $a_i$ 减去 $x$ 之类的东西。
+
+例题：[P7447 [Ynoi2007] rgxsxrs](https://www.luogu.com.cn/problem/P7447)
+
+<details><summary>题解</summary><p>
+
+> 把值域分成 $[2^k,2^{k+1})$ 这样的 $\log$ 个块，那么每次修改就找到 $x$ 所在的块 $[2^y,2^{y+1})$：
+> 
+> - 对于所有满足 $z>y$ 的 $[2^z,2^{z+1})$：这些块将会集体减掉 $x$，那么维护每一块的最小值，暴力让该跌落的值跌落到更低的块；
+> - 对于所有满足 $z<y$ 的 $[2^z,2^{z+1})$：这些块没有任何改变；
+> - 对于 $[2^y,2^{y+1})$：这一块中所有满足 $a_i>x$ 的 $a_i$ 都会跌落到更低的块，那么维护块内最大值暴力让该跌落的值跌落；
+> 
+> 由于每个数最多只会跌落 $\log V$ 次，所以时间复杂度为 $O(m\log V\log n+n\log V)$。
+
+</p></details>
+
+更多例题：
+
+- [CF702F T-Shirts](https://www.luogu.com.cn/problem/CF702F)
+- [CF1515I Phoenix and Diamonds](https://www.luogu.com.cn/problem/CF1515I)
+- [P4587 [FJOI2016]神秘数](https://www.luogu.com.cn/problem/P4587)
+- [LOJ3527 地牢游戏](https://vjudge.csgrandeur.cn/problem/LibreOJ-3527)
+
+### 减半报警器
+
+用于解决类似这样的问题：
+
+> 维护一个数据结构，刚开始给了一些范围，每个范围有对应的权值。每次把包含一个点的范围的权值减去 $x$，维护每个范围的权值最早被减完的时刻。
+
+例题：[Codeforces GYM 102452I](https://codeforces.com/gym/102452/problem/I)
+
+> 有 $n$ 个国家，每个国家有权值 $w_i$ 和若干个（$\le 3$）观测点。有 $q$ 次操作，每次会将所有能观测到 $x$ 的国家的 $w_i$ 减去 $y$。你要求出每个国家的权值第一次被减完是在第几次操作。
+
+<details><summary>题解</summary><p>
+
+> 观测点个数为 $1$ 的情况是最简单的，直接把 $w_i$ 挂到观测点上即可；
+>
+> 观测点个数为 $2$ 比较复杂，设这两个观测点为 $x$ 和 $y$，把 $\lceil\frac{w_i}{2}\rceil$ 挂到 $x$ 上，$\lceil\frac{w_i}{2}\rceil$ 挂到 $y$ 上。这样两边都没减完则 $w_i$ 一定没被减完，有一边被减完则判一下 $w_i$ 是否被减完，若没减完则重新平均分配。注意到每次 $w_i$ 至少减半，所以最多重新分配 $\log V$ 次，均摊时间复杂度 $O(n\log V)$；
+>
+> 观测点个数 $3$ 的情况和观测点个数为 $2$ 的情况一样，只需要把 $w_i$ 平均分成三份，注意到每次重新分配会让 $w_i$ 变成原来的 $\frac{2}{3}$，那么均摊时间复杂度为 $O(n\log_{1.5}V)$。
+>
+> 每次操作的时间复杂度为 $O(\log n)$，那么总时间复杂度即为 $O(q\log n+n\log_{1.5}V)$。
+
+</p></details>
+
+注意挂的一定是向上取整的值，否则会出现 $(1,0,0)$ 这种尴尬情况。
+
+例题 2：[Codeforces GYM 104065B](https://codeforces.com/gym/104065/problem/B)
+
+> 你要邀请 $n$ 个人来参加会议，一个人同意参加当且仅当已经有至少 $k_i$ 个编号在 $[l_i,r_i]$ 内的人来参加，问最多能有多少个人参加。
+>
+> 也就是说你要确定一个邀请人的顺序。
+
+<details><summary>题解</summary><p>
+
+> 转换后的题意相当于给定了 $m$ 个区间，第 $i$ 个区间的权值为 $k_i$，你需要动态维护这样的过程：
+>
+> - 找到 $k_i\le 0$ 的某个区间 $i$；
+> - 把它删掉，答案加一，同时将所有包含 $i$ 的区间的 $k_i$ 都减去 $1$；
+>
+> 考虑所有区间都包含某个位置 $p$ 的特殊情况，那么每个区间都可以被分成 $[l_i,p]$ 和 $[p+1,r_i]$ 两段。可以把 $k_i$ 平均分到这两段上，每一次修改操作相当于找到左边的一个后缀或者右边的一个前缀减掉 $1$。
+>
+> 这样若一个区间的某一边被减完了则重新分配剩下的 $k_i$，每次至少减半，均摊时间复杂度为 $O(n\log V)$。
+>
+> 用线段树动态维护这个东西，每次区间减，暴力找到需要重构的区间编号即可。
+>
+> 若所有区间没有包含共同的位置，那么可以把区间分成三类：
+>
+> - 包含 $\lfloor\frac{n}{2}\rfloor$ 的；
+> - 在 $\lfloor\frac{n}{2}\rfloor$ 左边的；
+> - 在 $\lfloor\frac{n}{2}\rfloor$ 右边的；
+>
+> 这是一个类似线段树的结构，那么分治下去，每次修改都不断往 $x$ 的方向走，改一下包含当前分治中心 $mid$  的区间。
+>
+> 一次修改会分治 $O(\log n)$ 次，每次分治的时间复杂度为 $O(\log n)$，那么总的时间复杂度即为 $O(n\log^2n+n\log V)$。
+
+</p></details>
+
+更多例题：
+
+- [P7603 [THUPC2021] 鬼街](https://www.luogu.com.cn/problem/P7603)
+- [Codeforces GYM 102331F](https://codeforces.com/gym/102331/problem/F)
+- 【2025NOI模拟赛27】防御
+
+### 支配
+
+>  $x$ 满足的条件包含 $y$ 满足的条件，并且 $x$ 的值比 $y$ 的优，那么 $y$ 就没有存在的必要了。
+>
+> ——《单调队列》
+
+#### 关于距离的支配
+
+##### 序列上
+
+[CF765F Souvenirs](https://www.luogu.com.cn/problem/CF765F) / [CF1793F Rebrending](https://www.luogu.com.cn/problem/CF1793F)
+
+<details><summary>题解</summary><p>
+
+> CF 自己抄自己，两道题一模一样。
+>
+> 先假设只有 $i<j$ 且 $a_i<a_j$ 的 $(i,j)$ 有贡献，另一种取值再跑一次即可。
+>
+> 注意到若 $(i1,j1)$ 和 $(i2,j2)$（$i1<j2$，$i2<j2$）若满足 $a_{i1}-a_{j1}\le a_{i2}-a_{j2}$ 且 $i1\ge i2$，$j1\le j2$ 则$(i2,j2)$ 被 $(i1,j1)$ 完全包含了，即 $(i1,j1)$ 支配了 $(i2,j2)$，所以只用统计 $(i1,j1)$ 的贡献。
+>
+> 固定 $i$，考虑找到所有有用的 $j$。设 $S_i=\{j|(i,j)\text{ 未被支配}\}$，考虑增量求解 $S_i$，设 $p=\max\{j|j\in S_i\}$，那么 $k$（$k>p$）想要加入 $S_i$ 就必须满足：
+>
+> - $a_k-a_i<a_p-a_i\Rightarrow a_k<a_p$；
+> - $a_k-a_i<|a_p-a_k|\Rightarrow a_k-a_i<a_p-a_k\Rightarrow a_k<\frac{a_p+a_i}{2}$；
+>
+> 所以 $|S_i|$ 是 $\log V$ 级别的，那么未被支配的 $(i,j)$ 也就只有 $n\log V$ 个。
+>
+> 接下来就变成二维数点问题了，扫描线即可，时间复杂度 $O((q+n\log V)\log n)$。
+
+</p></details>
+
+##### 树上
+
+[P9058 [Ynoi2004] rpmtdq](https://www.luogu.com.cn/problem/P9058)
+
+<details><summary>题解</summary><p>
+
+> 考虑点分治，对于来自分治中心 $rt$ 不同两个子树中的两个点 $x,y$，显然有 $\operatorname{dis}(x,y)=\operatorname{dis}(x,rt)+\operatorname{dis}(y,rt)$。
+>
+> 那么不妨设 $a_u=\operatorname{dis}(u,rt)$，显然点对 $(i,j)$（$i<j$）未被支配当且仅当对于所有 $i<k<j$ 都有 $a_i+a_j<a_i+a_k$ 且 $a_i+a_j<a_k+a_j$。稍加化简可得 $a_i<a_k,a_j<a_k$，$\max(a_i,a_j)<a_k$，那么只有 $a_i$ 的前驱后继会和 $i$ 构成支配，所以每层分治每个点只会组成 $O(1)$ 个支配对，那么总支配对个数是 $O(n\log n)$ 的。
+>
+> 接下来就变成二维数点问题了，扫描线即可，时间复杂度 $O((q+n\log V)\log n)$。
+
+</p></details>
+
+#### 一些特殊的支配
+
+##### Mex 支配
+
+对于一个长度为 $n$ 的序列 $a$，设 $b_{l,r}=\text{mex}_{l\le i\le r}\{a_i\}$，有性质：
+
+1. $b_{l,r}\ge b_{l+1,r}$，证明显然；
+
+2. $b_{*,r}\to b_{*,r+1}$ 相当于把所有 $b_{i,r}=a_{r+1}$ 的 $b_{i,r}$ 都修改为大于 $a_{r+1}$ 的数，由第一个性质，需要被修改的 $i$ 一定是在一个区间内，所以根据颜色段均摊的经典结论，所有 $r$ 造成的总修改数是 $O(n)$ 级别的；
+
+3. 满足不存在 $[l',r']\subset [l,r],b_{l',r'}=b_{l,r}$ 的区间 $[l,r]$ 个数最多有 $2n$ 个。
+
+   <details><summary>证明</summary><p>
+
+   > 对于每个满足条件的 $[l,r]$，显然 $a_l\not=a_r$，不妨假定 $a_l>a_r$（另一种情况对称）。
+   >
+   > 现在来证明对于每个 $l$，都只有一个 $r$ 满足 $r>l,a_l>a_r$ 且 $[l,r]$ 满足条件。
+   >
+   > 考虑反证，设存在 $l<r1<r2$ 满足 $a_l>a_{r1},a_l>a_{r2}$ 且 $[l,r1]$ 与 $[l,r2]$ 均满足条件。显然由于 $[l,r1]$ 满足条件，一定有 $b_{l,r1}>a_l$。由于 $a_l>a_{r2}$，所以有 $b_{l,r1}>a_{r2}$，那么显然 $[l,r2-1]\sub [l,r2]$ 且 $b_{l,r2}=b_{l,r2-1}$，所以 $[l,r2]$ 不满足条件，矛盾。
+   >
+   > 那么对于每个位置 $i$，它作为 $a_{l}$ 和 $a_r$ 中最小值时最多有一个合法区间，作为最大值时也最多有一个合法区间，所以合法区间个数最多有 $2n$ 个。
+   >
+   > Q.E.D.
+   
+   </p></details>
+
+#### 更多例题
+
+- [P8528 [Ynoi2003] 铃原露露](https://www.luogu.com.cn/problem/P8528)
+- [P9060 [Ynoi2002] Goedel Machine](https://www.luogu.com.cn/problem/P9060)
+
+### 三维计数技巧
+
+> 对于满足某些条件的有序三元组 $(i,j,k)$ 且固定 $k$ 和 $j$ 后合法的 $i$ 在一段区间内时，可以考虑枚举 $k$ 同时维护每个 $j$ 对应的 $i$ 的合法区间 $[l_j,r_j]$。
+
+例题：[Nasty Donchik](https://codeforces.com/group/Uo1lq8ZyWf/contest/265564/problem/C)
+
+> 题意：给定序列 $a_1,a_2,\dots,a_n$，求有多少有序三元组 $(i,j,k)$ 满足 $i\le j<k$ 且 $a_{[i,j]}$ 中出现的数集以及 $a_{[j+1,k]}$ 中出现的数放入两个不可重集后两个集合相等。
+
+<details><summary>题解</summary><p>
+
+> 固定 $k$ 和 $j$ 后显然 $i$ 是在一个区间内的，考虑维护 $l_p$ 和 $r_p$ 表示 $j=p$ 时 $i$ 的上界和下界减一，则固定 $k$ 后的答案即为 $\sum\limits_{j=1}^{k-1}\max(r_j-l_j,0)$。那么设 $L_i=\max\{j|j<i,a_j=a_i\},R_i=\min\{j|j>i,a_j=a_i\}$，则有 $l_j=\max\{i|i\le j,R_i>k\},r_j=\min\{L_i|j<i\le k\}$。
+>
+> 考虑 $k\to k+1$ 后对 $l_j$ 和 $r_j$ 的影响，注意到 $l_j$ 单调递增且 $r_j$ 单调递增，而 $k\to k+1$ 对 $l_j$ 的影响是删去了 $R_i=k+1$ 的元素，体现为后缀取 $\min$ 即区间赋值；对 $r_j$ 的影响则是加入了 $L_{k+1}$，也体现为后缀取 $\min$ 即区间赋值。注意到由于两个东西都是单调递增的，所以可以用线段树来维护。
+>
+> 时间复杂度 $O(n\log n)$。
+
+</p></details>
+
+更多例题：
+
+- [GYM102900J Octasection](https://codeforces.com/gym/102900/problem/J)
+
+### 区间修改区间历史和线段树
+
+考虑给线段树上每个点维护一个一次函数 $f(x)=kx+b$，$f(x)$ 为 $x$ 时的历史和。
+
+单点修改区间查询是好做的，找到要修改的点，设在时刻 $y$ **结束后**要修改为 $k'$，那么把那个点的一次函数修改为 $f(x)=k'x+y(k-k')+b$ 即可。
+
+区间修改区间查询分为两种情况：
+
+- 区间加区间查询：很好做，给 $k$ 和 $b$ 打 tag 即可；
+- 区间赋值区间查询：
+  注意到此时区间内 $k$ 不同则无法一起修改，那么维护区间 $k$ 最小值 $mnk$ 和最大值 $mxk$。对于一个需要被修改的区间，若 $mnk\not=mxk$ 则递归左右儿子修改，否则直接打 tag 修改。
+  这样做时间复杂度均摊是 $O(n+q\log n)$ 的，其中 $n$ 为序列长度，$q$ 为操作数。因为刚开始最多有 $n$ 个区间需要额外往下递归，每次修改最多会让 $\log n$ 个区间在以后的修改中需要额外往下递归，所以总共需要额外往下递归的区间是 $O(n+q\log n)$ 的；
+
+例题：
+
+- [【2022NOI模拟赛01】漏网之鱼](https://www.ckjweb.tk/post/2022noi-mo-ni-sai-01-lou-wang-zhi-yu-zuo-ti-ji-lu/)
+- [CF1824D LuoTianyi and the Function](https://www.luogu.com.cn/problem/CF1824D)
+
+### set 维护连续段
+
+颜色段均摊若用线段树维护则会把一个连续段拆成 $\log$ 个，总连续段个数变为 $O(n\log n)$。
+
+而用 set 维护则总连续段个数是 $O(n)$ 的，并且很好写。
+
+代码如下：
+
+```cpp
+struct seg
+{
+	int l,r,x;
+	inline bool operator<(const seg &b)const{return l<b.l;}
+};
+
+typedef set<seg>::iterator iter;
+set<seg> st;
+
+inline iter split(int p)
+{
+	iter x=st.lower_bound((seg){p,0,0});
+	if(x!=st.end()&&x->l==p) return x;
+	x--;
+	seg vx=*x;
+	st.erase(x);
+	st.insert((seg){vx.l,p-1,vx.x});
+	return st.insert((seg){p,vx.r,vx.x}).first;
+}
+
+inline void ins(int lb,int rb,int x)
+{
+	split(lb);
+	iter l,r=prev(split(rb+1));
+	l=st.lower_bound((seg){lb,0,0});
+	iter pr=l,ed=next(r);
+	while(pr!=ed)
+	{
+		// a_{[pr->l,pr->r]} = x
+		st.erase(pr++);
+	}
+	st.insert((seg){lb,rb,p});
+}
+```
+
+### 摩尔投票
+
+可以用来求集合中出现次数**可能**严格大于 $\lfloor\frac{r-l+1}{k}\rfloor$ 的 $k-1$ 个数。
+
+为什么是可能呢，因为它的原理如下：
+
+> 每次选 $k$ 个互不相同的数，将它们从集合中删去，剩下的至多 $k-1$ 种数就是答案。
+
+这是显然的，因为答案一定不会被删去（出现次数比其它数出现次数总和的 $\frac{1}{k-1}$ 还多），而答案至多只有 $k-1$ 个。
+
+这个东西满足可加性，维护两个集合最后剩下的 $k-1$ 个数即可。
+
+那么可以做区间修改区间查询众数了。
+
+没见过想不到。
+
+例题：[P3765 总统选举](https://www.luogu.com.cn/problem/P3765)
+
+NOI 考过：[P8496 [NOI2022] 众数](https://www.luogu.com.cn/problem/P8496)
+
+模拟赛考过：【2024NOIP模拟赛73】数数
+
+### 函数复合扫描线
+
+> 给定一个函数的序列 $f_i$，每次给定一个输入 $x$ 和一个区间 $[l,r]$，查询 $f_r(f_{r-1}(f_{r-2}(\dots f_l(x)\dots)))$，即对 $x$ 依次应用区间内函数后的结果。
+
+这种题有一个套路就是离线，然后从左往右扫描函数序列，动态维护一个集合 $S$：
+
+- 遇到查询左端点的时候将 $x$ 加入 $S$，并保存好 $x$ 在 $S$ 中的指针；
+- 扫过一个 $i$ 就将 $S$ 中元素集体应用 $f_i$；
+- 遇到查询右端点就拿出指针查询 $x$ 的最终值；
+
+”保存指针“：由于 $S$ 一般要用某些数据结构维护，而 $x$ 会不断改变，所以需要维护 $x$ 在对应数据结构中的指针（例如平衡树的节点编号）。
+
+例题：
+
+- [QOJ # 8672. 排队](https://qoj.ac/problem/8672)
+- [P9999 [Ynoi2000] tmostnrq](https://www.luogu.com.cn/problem/P9999)
+- [CF1172F Nauuo and Bug](https://www.luogu.com.cn/problem/CF1172F)
+"></div>
+					<div class="post-footer">
+	<ul class="post-copyright">
+		<li class="post-copyright-author">
+			<strong class="language" data-lan="author">本文作者：</strong>Exber
+		</li>
+		<li class="post-copyright-link">
+			<strong class="language" data-lan="link">本文链接：</strong>
+			<a href="https://exber.qzz.io/post/%E4%B8%80%E4%BA%9B%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E6%8A%80%E5%B7%A7" title="一些数据结构技巧">https://exber.qzz.io/post/%E4%B8%80%E4%BA%9B%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E6%8A%80%E5%B7%A7</a>
+		</li>
+		<li class="post-copyright-license">
+			<strong class="language" data-lan="copyright">版权声明： </strong>
+			本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+		</li>
+	</ul>
+	<div class="tags">
+		
+			<a href="https://exber.qzz.io/tags"># 学习笔记</a>
+		
+			<a href="https://exber.qzz.io/tags"># 小技巧</a>
+		
+			<a href="https://exber.qzz.io/tags"># 数据结构</a>
+		
+	</div>
+</div>
+				</div>
+			</div>
+			<script>
+	// 处理目录
+	function work_with_toc() {
+		let lastTop = 0, lList = [], hList = [], postBody, lastIndex = -1;
+		let active = 'active-show', activeClass = 'active-current';
+		let tocWrapper = document.querySelector('#toc_wrapper');
+		let tocContent = tocWrapper.children[0];
+		let autoNumber = tocWrapper && tocWrapper.classList.contains('auto-number');
+
+		function addTocNumber(elem, deep) {
+			if (!elem) {
+				return;
+			}
+			let prop = elem.__proto__;
+
+			if (prop === HTMLUListElement.prototype) {
+				for (let i = 0; i < elem.children.length; i++) {
+					addTocNumber(elem.children[i], deep + (i + 1) + '.');
+				}
+			} else if (prop === HTMLLIElement.prototype) {
+				// 保存li元素
+				if (elem.children[0] && elem.children[0].__proto__ === HTMLAnchorElement.prototype) {
+					lList.push(elem);
+				}
+				for (let i = 0; i < elem.children.length; i++) {
+					let cur = elem.children[i];
+					if (cur.__proto__ === HTMLAnchorElement.prototype) {
+						if (autoNumber) {
+							cur.text = deep + ' ' + cur.text;
+						}
+					} else if (cur.__proto__ === HTMLUListElement.prototype) {
+						addTocNumber(cur, deep);
+					}
+				}
+			}
+		}
+
+		function removeParentActiveClass() {
+			let parents = tocContent.querySelectorAll('.' + active)
+			parents.forEach(function (elem) {
+				elem.classList.remove(active);
+			});
+		}
+
+		function addActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.add(activeClass);
+			}
+		}
+
+		function removeActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.remove(activeClass);
+			}
+		}
+
+		function addActiveLiElemment(elem, parent) {
+			if (!elem || elem === parent) {
+				return;
+			} else {
+				if (elem.__proto__ === HTMLLIElement.prototype) {
+					elem.classList.add(active);
+				}
+				addActiveLiElemment(elem.parentElement, parent);
+			}
+		}
+
+		function showToc() {
+			if (tocWrapper) {
+				postBody = document.querySelector('#post_body');
+				for (let i = 0; i < postBody.children.length; i++) {
+					if (postBody.children[i].__proto__ === HTMLHeadingElement.prototype) {
+						hList.push(postBody.children[i]);
+					}
+				}
+				if (tocWrapper.classList.contains('compress')) {
+					tocContent.classList.add('closed');
+				} else if (tocWrapper.classList.contains('no_compress')) {
+					tocContent.classList.add('expanded');
+				} else {
+					if (hList.length > 10) {
+						active = 'active-hidden'
+						tocContent.classList.add('closed');
+					} else {
+						tocContent.classList.add('expanded');
+					}
+				}
+			}
+		}
+
+		(function () {
+			// 处理不是从一级标题开始目录
+			while (tocContent.children.length === 1 && tocContent.children[0].__proto__ === HTMLUListElement.prototype) {
+				let con = tocContent.children[0];
+				tocContent.innerHTML = con.innerHTML;
+			}
+			addTocNumber(tocContent, '');
+		})();
+
+		document.addEventListener('scroll', function (e) {
+			if (lList.length <= 0) {
+				return;
+			}
+			let scrollTop = document.scrollingElement.scrollTop + 10;
+			let dir;
+
+			if (lastTop - scrollTop > 0) {
+				dir = 'up';
+			} else {
+				dir = 'down';
+			}
+
+			lastTop = scrollTop;
+			if (scrollTop <= 0) {
+				if (lastIndex >= 0 && lastIndex < hList.length) {
+					lList[lastIndex].classList.remove(activeClass);
+				}
+				return;
+			}
+
+			let current = 0, hasFind = false;
+			for (let i = 0; i < hList.length; i++) {
+				if (hList[i].offsetTop > scrollTop) {
+					current = i;
+					hasFind = true;
+					break;
+				}
+			}
+			if (!hasFind && scrollTop > lList[lList.length - 1].offsetTop) {
+				current = hList.length - 1;
+			} else {
+				current--;
+			}
+			if (dir === 'down') {
+				if (current > lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex)
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			} else {
+				if (current < lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex);
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			}
+		});
+
+
+		window.addEventListener('load', function () {
+			showToc();
+			document.querySelector('#sidebar').style = 'display: block;';
+			tocWrapper.classList.add('toc-active');
+			setTimeout(function () {
+				if ("createEvent" in document) {
+					let evt = document.createEvent("HTMLEvents");
+					evt.initEvent("scroll", false, true);
+					document.dispatchEvent(evt);
+				}
+				else {
+					document.fireEvent("scroll");
+				}
+			}, 500)
+		})
+		
+		const SIDEBAR_TITLE_ACTIVE = 'sidebar-title-active';
+		const SIDEBAR_BODY_ACTIVE = 'sidebar-body-active';
+		const SLIDE_UP_IN = 'slide-up-in';
+
+		let tocSideBar = document.querySelector('#tocSideBar'),
+		metaSideBar = document.querySelector('#metaSideBar'),
+		postToc = document.querySelector('#post_toc'),
+		postSiteMeta = document.querySelector('#post_side_meta'),
+		sidebarTitle = document.querySelector('.sidebar-title'),
+		sidebarBody = document.querySelector('#sidebar_body');
+
+		tocSideBar && tocSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		metaSideBar && metaSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		function toggleSidebar(e) {
+			let currentTitle = document.querySelector("."+SIDEBAR_TITLE_ACTIVE);
+			if (currentTitle == e.srcElement) {
+				return ;
+			}
+			let current, showElement, hideElement;
+			if (e.srcElement == metaSideBar) {
+				showElement = postSiteMeta;
+				hideElement = postToc;
+			} else if (e.srcElement == tocSideBar){
+				showElement = postToc;
+				hideElement = postSiteMeta;
+			}
+			currentTitle.classList.remove(SIDEBAR_TITLE_ACTIVE);
+			e.srcElement.classList.add(SIDEBAR_TITLE_ACTIVE);
+
+			jQuery.Velocity(hideElement, 'stop');
+			jQuery.Velocity(hideElement, 'transition.slideUpOut', {
+				display: 'none',
+				duration: 200,
+				complete: function () {
+					jQuery.Velocity(showElement, 'transition.slideDownIn', {
+						duration: 200
+					});
+				}
+			})
+			hideElement.classList.remove(SIDEBAR_BODY_ACTIVE);
+			showElement.classList.add(SIDEBAR_BODY_ACTIVE);
+		}
+
+		postToc && postToc.addEventListener('transitionend', function() {
+			this.classList.remove(SLIDE_UP_IN);
+		});
+	}
+</script>
+<script>
+	// 没有目录时删除侧边栏目录相关
+	function remove_toc(){
+		document.querySelector('#sidebar-selector').remove();
+		document.querySelector('#post_toc').remove();
+		document.querySelector('#post_side_meta').classList.remove("post-side-meta");
+	}
+</script>
+<script>
+	// 渲染文章 markdown 并生成目录
+	function render_post_markdown(content)
+	{
+		let markdown = window.markdownit({ html: true })
+				.use(markdownItLinkEncodeFixed)
+				.use(window.markdownItAnchor, {
+					permalink: false,
+					permalinkBefore: false
+				})
+				.use(window.texmath, {
+					engine: katex,
+					delimiters: 'dollars'
+				});
+		// 处理图片路径
+		let temp_container = document.createElement('div');
+		temp_container.innerHTML = markdown.render(content);
+		{
+			let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		{
+			let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		return temp_container.innerHTML;
+	}
+	function generateToc() {
+		const contentElement = document.getElementById('post_body');
+		const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+		const tocElement = document.getElementById('toc_wrapper');
+		
+		if (headings.length === 0) {
+			return false;
+		}
+		let toc_ul = "<ul style='list-style: none;'>";
+		let toc_li = "<li style='list-style: none;'>";
+		let tocHtml = toc_ul;
+		let currentLevel = 1;
+		let stack = [0];
+		
+		headings.forEach((heading, index) => {
+			const level = parseInt(heading.tagName.substring(1));
+			const id = heading.id || `heading-${index}`;
+			heading.id = id;
+			
+			// 提取包含公式的 HTML 内容
+			let headingContent = heading.innerHTML;
+			
+			// 调整层级逻辑
+			if (level > currentLevel) {
+				for (let i = currentLevel; i < level; i++) {
+					tocHtml += toc_ul;
+					stack[i] = 0;
+				}
+			} else if (level < currentLevel) {
+				for (let i = currentLevel; i > level; i--) {
+					tocHtml += '</ul></li>';
+					stack.pop();
+				}
+			} else if (index > 0) {
+				tocHtml += '</li>';
+			}
+			
+			stack[level-1] = (stack[level-1] || 0) + 1;
+			for (let i = level; i < stack.length; i++) {
+				stack[i] = 0;
+			}
+			
+			// 使用渲染后的内容（包含已处理的公式）
+			tocHtml += toc_li+`<a href="#${id}">${headingContent}</a>`;
+			currentLevel = level;
+		});
+		
+		for (let i = 1; i < currentLevel; i++) {
+			tocHtml += '</ul></li>';
+		}
+		if (headings.length > 0) {
+			tocHtml += '</li>';
+		}
+		
+		tocHtml += '</ul>';
+		tocElement.innerHTML = tocHtml;
+		
+		return true;
+	}
+</script>
+<script>
+	!function () {
+		const post_body = document.querySelector('div[data-post-markdown]');
+		
+		try {
+			const markdownContent = post_body.getAttribute('data-post-markdown');
+			
+			if (markdownContent) {
+				const renderedHTML = render_post_markdown(markdownContent);
+				post_body.innerHTML = renderedHTML;
+				post_body.removeAttribute('data-post-markdown');
+				if(generateToc()) work_with_toc();
+				else remove_toc();
+			}
+		} catch (error) {
+			post_body.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+		}
+	}();
+</script>
+		</div>
+	</div>
+	
+
+
+
+
+
+
+<div class="footer-box">
+	<footer class="footer">
+		<center id="runTimeBox">
+			已运行: <span id="run_time"></span>
+		</center>
+		<script>
+			BirthDay = new Date('2023-03-01');
+			if (BirthDay.getTime()) {
+				function runTime() {
+					str = "";
+					today = new Date();
+					timeold = today.getTime() - BirthDay.getTime();
+					msPerDay = 24 * 60 * 60 * 1000;
+					e_daysold = timeold / msPerDay;
+					daysold = Math.floor(e_daysold);
+					str += daysold + " 天";
+					return str;
+				}
+				setInterval(function () {
+					$("#run_time").html(runTime());
+				}, 1000);
+			} else {
+				document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+			}
+		</script>
+		<div class="poweredby">
+			Powered by Exber
+		</div>
+	</footer>
+	<div class="pisces back-to-top" id="back_to_top">
+		<i class="fa fa-arrow-up"></i>
+		<span class="scrollpercent">
+			<span id="back_to_top_text">0</span>%
+		</span>
+	</div>
+</div>
+<script>
+	// back2top
+	let back2Top = document.querySelector("#back_to_top"),
+		back2TopText = document.querySelector("#back_to_top_text");
+
+	function scrollAnimation(currentY, targetY) {
+		let needScrollTop = targetY - currentY;
+		let _currentY = currentY;
+		setTimeout(() => {
+			const dist = Math.ceil(needScrollTop / 10);
+			_currentY += dist;
+			window.scrollTo(_currentY, currentY);
+			if (needScrollTop > 10 || needScrollTop < -10) {
+				scrollAnimation(_currentY, targetY);
+			} else {
+				window.scrollTo(_currentY, targetY);
+			}
+		}, 1);
+	}
+
+	back2Top.addEventListener("click", function(e) {
+		scrollAnimation(document.scrollingElement.scrollTop, 0);
+		e.stopPropagation();
+		return false;
+	});
+
+	window.addEventListener("scroll", function(e) {
+		let percent =
+			(document.scrollingElement.scrollTop /
+				(document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight)) *
+			100;
+		if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+			back2Top.classList.add("back-top-active");
+		}
+		if (percent == 0) {
+			back2Top.classList.remove("back-top-active");
+		}
+		if (back2TopText) {
+			back2TopText.textContent = Math.floor(percent);
+		}
+	});
+</script>
+	</div>
+</body>
+
+
+
+
+
+
+
+<input hidden id="copy" />
+<link rel="stylesheet" href="https://exber.qzz.io/media/css/jquery.fancybox.css" />
+<script src="https://exber.qzz.io/media/js/jquery.fancybox.js"></script>
+<script>
+	// 渲染所有带有 data-markdown 属性的 div 元素
+	!function () {
+		const markdownElements = document.querySelectorAll('div[data-markdown]');
+		
+		markdownElements.forEach((element, index) => {
+			try {
+				const markdownContent = element.getAttribute('data-markdown');
+				
+				if (markdownContent) {
+					const renderedHTML = render_markdown(markdownContent);
+					element.innerHTML = renderedHTML;
+					element.removeAttribute('data-markdown');
+				}
+			} catch (error) {
+				element.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+			}
+		});
+	}();
+</script>
+<script>
+	document.querySelectorAll(".section img").forEach((image) => {
+		var parent = image.parentElement;
+		var next = image.nextElementSibling;
+		parent.removeChild(image);
+		var aelem = document.createElement("a");
+		aelem.href = image.src;
+		aelem.dataset["fancybox"] = "images";
+		aelem.dataset["rel"] = "fancybox-button";
+		aelem.classList.add("fancybox");
+		aelem.appendChild(image);
+		parent.insertBefore(aelem, next);
+	});
+	
+	!function () {
+		let times = document.querySelectorAll('.publish-time');
+		for (let i = 0; i < times.length; i++) {
+			let date = times[i].dataset.t;
+			let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+			if (time < 60) {
+				str = time + '秒之前';
+			} else if (time < 3600) {
+				str = Math.floor(time / 60) + '分钟之前';
+			} else if (time >= 3600 && time < 86400) {
+				str = Math.floor(time / 3600) + '小时之前';
+			} else if (time >= 86400 && time < 259200) {
+				str = Math.floor(time / 86400) + '天之前';
+			} else {
+				str = times[i].textContent;
+			}
+			times[i].textContent = str;
+		}
+	}();
+	
+	let language = '';
+	if (language !== '') {
+		let map = new Map();
+		if (language === 'en') {
+			map.set('search', 'Search');
+			map.set('category', 'Categories');
+			map.set('article', 'Articles');
+			map.set('tag', 'Tags');
+			map.set('top', 'Top');
+			map.set('publish', 'published');
+			map.set('minute', ' minutes');
+			map.set('read-more', 'Read More');
+			map.set('view', 'View');
+			map.set('words', ' words');
+			map.set('category-in', 'category in');
+			map.set('preview', 'Meta');
+			map.set('index', 'Toc');
+			map.set('no-archives', "You haven't created yet");
+			map.set('archives', " articles in total");
+			map.set('cloud-tags', " tags in total");
+			map.set('copyright', "Copyright: ");
+			map.set('author', "Author: ");
+			map.set('link', "Link: ");
+			map.set('leave-message', "Leave a message");
+			map.set('format', "Links Format");
+			map.set('site-name', "Name: ");
+			map.set('site-link', "Link: ");
+			map.set('site-desc', "Desc: ");
+			map.set('stat', " related results, taking ");
+			map.set('stat-time', " ms");
+			map.set('site-img', "Image: ");
+			map.set('copy-markdown', "Copy Markdown");
+		}
+
+		if (map.size > 0) {
+			let lanElems = document.querySelectorAll('.language');
+			lanElems.forEach(elem => {
+				let lan = elem.dataset.lan, text = map.get(lan);
+				if (elem.__proto__ === HTMLInputElement.prototype) {
+					elem.placeholder = text
+				} else {
+					if (elem.dataset.count) {
+						text = elem.dataset.count + text;
+					}
+					elem.textContent = text;
+				}
+			})
+		}
+	}
+
+	function copyCode(e) {
+		if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+			let code = e.currentTarget.querySelector('code');
+			var text = code.innerText;
+			if (e.srcElement.textContent === '复制成功') {
+				return;
+			}
+			e.srcElement.textContent = '复制成功';
+			(function (elem) {
+				setTimeout(() => {
+					if (elem.textContent === '复制成功') {
+						elem.textContent = '复制代码'
+					}
+				}, 1000);
+			})(e.srcElement)
+			Clipboard.copy(text);
+		}
+	}
+
+	let pres = document.querySelectorAll('pre');
+	pres.forEach(pre => {
+		let code = pre.querySelector('code');
+		let copyElem = document.createElement('span');
+		copyElem.classList.add('copy-code');
+		copyElem.textContent = '复制代码';
+		pre.appendChild(copyElem);
+		pre.onclick = copyCode
+	})
+</script>
+<script src="https://exber.qzz.io/media/js/motion.js"></script>
+<script src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+<script>
+	var scroll = new SmoothScroll('a[href*="#"]', {
+		speed: 200
+	});
+</script>
+<script>
+	// 动态调整站点概览位置
+	let hasCacu = false;
+	window.addEventListener("resize", function(e) {
+		calcuHeight();
+	});
+
+	function calcuHeight() {
+		if (!hasCacu) {
+			let sideBar = document.querySelector(".sidebar");
+			let navUl = document.querySelector("#site_nav");
+			sideBar.style =
+				"margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+			hasCacu = true;
+		}
+	}
+	calcuHeight();
+	
+	// 侧边栏固定逻辑
+	let sidebar = document.querySelector('.sidebar');
+	let sidebarWrapper = document.querySelector('#sidebar');
+	if (sidebar) {
+		let hasFix = false;
+		document.addEventListener('scroll', function(e) {
+		  if (document.scrollingElement.scrollTop > parseInt(sidebar.style.marginTop) + 15) {
+			if (!hasFix) {
+				sidebarWrapper.classList.add('sidebar-fixed')
+				hasFix = true;
+			}
+		  } else {
+			if (hasFix) {
+				sidebarWrapper.classList.remove('sidebar-fixed')
+				hasFix = false;
+			}
+		  }
+		});
+	}
+</script>
+<script>
+	// 链接跳转
+	let newWindow = "true";
+	if (newWindow === "true") {
+		let links = document.querySelectorAll(".post-body a");
+		links.forEach((item) => {
+			if (!item.classList.contains("btn")) {
+				item.setAttribute("target", "_blank");
+			}
+		});
+	}
+
+	// 代码高亮
+	hljs.initHighlightingOnLoad();
+
+	// 离开当前页title变化
+	var leaveTitle = "";
+	var normal_title = document.title;
+	if (leaveTitle) {
+		document.addEventListener("visibilitychange", function() {
+			if (document.visibilityState == "hidden") {
+				normal_title = document.title;
+				document.title = leaveTitle;
+			} else {
+				document.title = normal_title;
+			}
+		});
+	}
+</script>
+</html>

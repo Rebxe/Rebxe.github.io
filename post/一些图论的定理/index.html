@@ -1,0 +1,1888 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	
+
+
+
+
+
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="静态个人博客">
+<meta name="description" content="Exber's Blog">
+<meta name="theme-color" content="#000">
+
+<title>一些图论的定理|Exber's Blog</title>
+
+<link rel="shortcut icon" href="https://exber.qzz.io/favicon.ico?v=1769647447">
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/css/pisces.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/fonts/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/hljs/styles/default.css">
+
+<link
+  href="https://fonts.font.im/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet"
+  type="text/css"
+>
+
+<link rel="stylesheet/less" type="text/css" href="https://exber.qzz.io/styles/main.less">
+<script src="https://cdn.jsdmirror.com/npm/less@4"></script>
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/main.css">
+
+<script src="https://exber.qzz.io/media/js/jquery.js"></script>
+<script src="https://exber.qzz.io/media/hljs/highlight.js"></script>
+
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+<script src="https://cdn.jsdmirror.com/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-texmath/texmath.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-anchor/dist/markdownItAnchor.umd.js"></script>
+
+<script>
+// 处理带空格的链接
+function markdownItLinkEncodeFixed(md) {
+	// 1. 修复链接打开规则
+	const defaultLinkOpenRender = md.renderer.rules.link_open || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const hrefIndex = token.attrIndex('href');
+		
+		if (hrefIndex >= 0) {
+			const originalHref = token.attrs[hrefIndex][1];
+			// 更健壮的编码处理
+			const encodedHref = encodeURI(originalHref).replace(/%20/g, '%20');
+			token.attrs[hrefIndex][1] = encodedHref;
+		}
+		
+		return defaultLinkOpenRender(tokens, idx, options, env, self);
+	};
+
+	// 2. 修复图片规则
+	const defaultImageRender = md.renderer.rules.image || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.image = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const srcIndex = token.attrIndex('src');
+		
+		if (srcIndex >= 0) {
+			const originalSrc = token.attrs[srcIndex][1];
+			const encodedSrc = encodeURI(originalSrc).replace(/%20/g, '%20');
+			token.attrs[srcIndex][1] = encodedSrc;
+		}
+		
+		return defaultImageRender(tokens, idx, options, env, self);
+	};
+
+	// 3. 新增：处理可能被误解析为text的链接[1](@ref)
+	const defaultTextRender = md.renderer.rules.text || 
+		function(tokens, idx, options, env, self) {
+			const token = tokens[idx];
+			return token.content;
+		};
+
+	md.renderer.rules.text = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const content = token.content;
+		
+		// 检测类似链接模式的text token[1](@ref)
+		if (content.includes('[') && content.includes(']') && content.includes('(') && content.includes(')')) {
+			try {
+				// 尝试提取和编码链接
+				const linkMatch = content.match(/\[([^\]]+)\]\(([^)]+)\)/);
+				if (linkMatch) {
+					const linkText = linkMatch[1];
+					const linkUrl = encodeURI(linkMatch[2]).replace(/%20/g, '%20');
+					return `<a href="${linkUrl}">${linkText}</a>`;
+				}
+			} catch (e) {
+				console.warn('链接提取失败:', e);
+			}
+		}
+		
+		return defaultTextRender(tokens, idx, options, env, self);
+	};
+}
+function render_markdown(content)
+{
+	let markdown = window.markdownit({ html: true })
+			 .use(markdownItLinkEncodeFixed)
+			 .use(window.texmath, {
+				 engine: katex,
+				 delimiters: 'dollars'
+			 });
+	// 处理图片路径
+	let temp_container = document.createElement('div');
+	temp_container.innerHTML = markdown.render(content);
+	{
+		let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	{
+		let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	return temp_container.innerHTML;
+}
+</script>
+<script>
+	window.Clipboard = (function (window, document, navigator) {
+		var textArea,
+			copy;
+
+		// 判断是不是ios端
+		function isOS() {
+			return navigator.userAgent.match(/ipad|iphone/i);
+		}
+		//创建文本元素
+		function createTextArea(text) {
+			textArea = document.createElement('textArea');
+			textArea.value = text;
+			textArea.style.width = 0;
+			textArea.style.height = 0;
+			textArea.clientHeight = 0;
+			textArea.clientWidth = 0;
+			document.body.appendChild(textArea);
+		}
+		//选择内容
+		function selectText() {
+			var range,
+				selection;
+
+			if (isOS()) {
+				range = document.createRange();
+				range.selectNodeContents(textArea);
+				selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				textArea.setSelectionRange(0, 999999);
+			} else {
+				textArea.select();
+			}
+		}
+
+		//复制到剪贴板
+		function copyToClipboard() {
+			try {
+				document.execCommand("Copy")
+			} catch (err) {
+				alert("复制错误！请手动复制！")
+			}
+			document.body.removeChild(textArea);
+		}
+
+		copy = function (text) {
+			createTextArea(text);
+			selectText();
+			copyToClipboard();
+		};
+
+		return {
+			copy: copy
+		};
+	})(window, document, navigator);
+</script>
+	<meta name="description" content="一些图论的定理" />
+</head>
+
+<body>
+	<div class="head-top-line"></div>
+	<div class="header-box">
+		
+		
+	<style> /* 搜索相关 */
+		.gridea-search-input{
+			height: 30px;
+			width: 200px;
+			box-sizing: border-box;
+			padding: 0 15px 0 30px;
+			border: 1px solid #e3e3e3;
+			border-radius: 15px;
+			color: #273849;
+			outline: none;
+			transition: border-color 0.2s ease;
+			background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+			background-size: 20px;
+			vertical-align: middle !important;
+		}
+		.gridea-search-input:focus {
+		  border-color: #666666;
+		  right: 0;
+		}
+		/* 自适应轨道 */
+		.slider-track {
+			--track-height: 0.4em; /* 轨道基础高度 */
+			width: 100%;
+			height: var(--track-height);
+			background: #e0e0e0;
+			border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+			position: relative;
+			cursor: default;
+			margin: 0.5em 0; /* 垂直间距自适应 */
+		}
+		
+		/* 进度填充 */
+		.slider-fill {
+			height: 100%;
+			background: #555;
+			border-radius: inherit; /* 继承父级圆角 */
+			width: 50%; /* 初始值 */
+		}
+		
+		/* 自适应滑块 */
+		.slider-thumb {
+			--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+			position: absolute;
+			width: var(--thumb-size);
+			height: var(--thumb-size);
+			background: #555;
+			border-radius: 50%;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: 
+				transform 0.2s ease,
+				box-shadow 0.2s ease;
+			border: 2px solid white; /* 增加辨识度 */
+		}
+		
+		/* 悬停效果 */
+		.slider-thumb:hover {
+			background: #333;
+			transform: translate(-50%, -50%) scale(1.1);
+			box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+		}
+		
+		/* 拖动效果 */
+		.slider-thumb:active {
+			cursor: grabbing;
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		}
+		
+		/* 数值显示 */
+		.value-display {
+			text-align: center;
+			font-family: Arial, sans-serif;
+			color: #555;
+			font-size: 1.2em; /* 基于容器字体大小 */
+			margin-top: 0.5em;
+		}
+	</style>
+
+<div class="pisces">
+  <header class="header">
+    <div class="blog-header box-shadow-wrapper" id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+            <a href="https://exber.qzz.io" class="brand">
+              <span>Exber's Blog</span>
+            </a>  
+        </div>
+        
+			<p class="subtitle">Can't go up</p>
+        
+      </div>
+      <nav class="site-nav bg-color" id="site_nav">
+        <ul id="nav_ul">
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io" target="">
+					首页
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io/tags" target="">
+					按标签筛选
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://csacademy.com/app/graph_editor/" target="_blank">
+					图论编辑器
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="http://yuantiji.ac/zh/" target="_blank">
+					原题机
+				</a>
+            </li>
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://exber.qzz.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.6</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script>
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+
+
+	<script>
+		// 获取DOM元素
+		const sliderTrack = document.getElementById('sliderTrack');
+		const sliderThumb = document.getElementById('sliderThumb');
+		const sliderFill = document.getElementById('sliderFill');
+		const sliderValue = document.getElementById('sliderValue');
+		
+		// 初始化变量
+		let isDragging = false;
+		let currentValue = 0.6;
+		
+		// 更新滑块位置和数值显示
+		function updateSlider(positionX) {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			let newPosition;
+
+			// 检查轨道宽度是否有效
+			if (trackRect.width <= 0) {
+				// 如果轨道宽度无效，则直接使用当前的 currentValue
+				newPosition = currentValue;
+			} else {
+				// 正常计算位置
+				newPosition = (positionX - trackRect.left) / trackRect.width;
+				newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+			}
+
+			// 更新UI
+			sliderThumb.style.left = `${newPosition * 100}%`;
+			sliderFill.style.width = `${newPosition * 100}%`;
+
+			// 更新当前值和表单隐藏域的值
+			currentValue = newPosition;
+			document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+
+			// 更新显示值（保留两位小数）
+			// 使用 Number.isNaN 进行严格检查，确保显示正常
+			const displayValue = Number.isNaN(newPosition) ? '0.60' : newPosition.toFixed(2);
+			sliderValue.textContent = displayValue;
+		}
+		
+		// 响应父容器大小变化
+		function handleResize() {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			const positionX = trackRect.left + trackRect.width * currentValue;
+			updateSlider(positionX);
+		}
+		
+		// 鼠标按下事件 - 仅在圆点上触发
+		sliderThumb.addEventListener('mousedown', (e) => {
+			isDragging = true;
+			sliderThumb.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		
+		// 鼠标移动事件
+		document.addEventListener('mousemove', (e) => {
+			if (!isDragging) return;
+			updateSlider(e.clientX);
+		});
+		
+		// 鼠标释放事件
+		document.addEventListener('mouseup', () => {
+			if (isDragging) {
+				isDragging = false;
+				sliderThumb.style.cursor = 'grab';
+			}
+		});
+		
+		// 监听父容器大小变化
+		const resizeObserver = new ResizeObserver(() => {
+			handleResize();
+		});
+		
+		// 开始观察相关元素
+		resizeObserver.observe(sliderTrack.parentElement);
+		resizeObserver.observe(sliderTrack);
+		
+		// 初始化
+		handleResize();
+	</script>
+
+	</div>
+	<div class="main-continer">
+	<div class="section-layout pisces">
+		<div class="section-layout-wrapper">
+			<div class="sidebar">
+	<div class="sidebar-box box-shadow-wrapper bg-color right-motion" id="sidebar">
+		<div class="post-list-sidebar" id="sidebar-selector">
+			<div class="sidebar-title">
+				<span id="tocSideBar" class="sidebar-title-item sidebar-title-active language" data-lan="index">文章目录</span>
+				<span id="metaSideBar" class="sidebar-title-item language" data-lan="preview">站点概览</span>
+			</div>
+		</div>
+		<div class="sidebar-body pisces" id="sidebar_body">
+			<div class="post-side-meta" id="post_side_meta">
+				
+
+
+
+
+
+
+<div class="sidebar-item">
+	<img class="site-author-image right-motion" src="https://exber.qzz.io/avatar.png"/>
+	<p class="site-author-name">Exber</p>
+	
+	<div class="site-description right-motion">
+		<p>洛谷 @Exber</p>
+<p>Codeforces @Rebex</p>
+
+	</div>
+	
+</div>
+<div class="sidebar-item side-item-stat right-motion">
+	<div class="sidebar-item-box">
+		<a href="https://exber.qzz.io/tags">
+			<span class="site-item-stat-count">26</span>
+			<span class="site-item-stat-name language" data-lan="tag">标签</span>
+		</a>
+	</div>
+	<div class="sidebar-item-box">
+		<a>
+			
+			<span class="site-item-stat-count">330</span>
+			<span class="site-item-stat-name language" data-lan="article">文章</span>
+		</a>
+	</div>
+</div>
+
+			</div>
+			<div class="post-toc sidebar-body-active" id="post_toc" style="opacity: 1;">
+				<div class="toc-box right-motion">
+					<div class="toc-wrapper  no_compress" id="toc_wrapper">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+			<div class="section-box box-shadow-wrapper">
+				<div class="section bg-color post post-page">
+					
+					<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/%E4%B8%80%E4%BA%9B%E5%9B%BE%E8%AE%BA%E7%9A%84%E5%AE%9A%E7%90%86">一些图论的定理</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-04-15 16:35:15">2023-04-15 16:35:15</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>学习笔记</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>图论</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>小技巧</span>
+				</a>
+			
+		</span>
+		
+		
+		
+		<span class="meta-item pc-show">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-copy"></i>
+			<a class="language" data-lan="copy-markdown" data-src-markdown="## Part 1 公共部分
+
+### 1.1 定义
+
+- 补图：
+  - **无向图** $G$ 的补图中存在一条边 $(x,y)$ 当且仅当 $G$ 中不存在边 $(x,y)$
+  - **有向图** $G$ 的补图中存在一条边 $x\to y$ 当且仅当 $G$ 中不存在边 $x\to y$；
+- 子图：图中**某些点和它们之间的边**构成的新图；
+- 链覆盖：把图划分为若干条链的方案；
+- 反链：满足 $\forall x,y\in S$，$x$ 不能到达 $y$ 且 $y$ 不能到达 $x$ 的点集 $S$。
+
+### 1.2 定理
+
+- 最小链覆盖等于最长反链
+
+  <details><summary>证明</summary><p>
+
+  > 考虑不得不用两条链覆盖的结构，即一个分叉，显然不同分支上的点不能相互到达，那么最长反链中的每个点都可以代表一条链。
+  >
+  > Q.E.D.
+
+  </p></details>
+
+- 最长链等于最小反链覆盖
+
+  <details><summary>证明</summary><p>
+
+  > 对于一条链，链上的任意两点都不能被放到同一个反链中，所以最小反链覆盖不大于最长链。
+  >
+  > 而对于两条链同一个位置的点，显然要么是同一个点，要么可以放到同一个反链中，所以最小反链覆盖等于最长链。
+  >
+  > Q.E.D.
+
+  </p></details>
+
+- 最小链覆盖等于点数减去拆点二分图的最大匹配
+
+  <details><summary>证明</summary><p>
+
+  > 二分图每匹配一对点，就相当于合并了两条链。
+  >
+  > Q.E.D.
+  
+  </p></details>
+
+## Part 2 无向图
+
+### 2.1 定义
+
+- 点的邻点：**无向图**中，$v$ 为点 $u$ 的邻点当且仅当它们有边直接相连，$N(u)$ 为 $u$ 的邻点集；
+- 团：**无向图**中满足点两两之间都有连边的点集；
+- 独立集：**无向图**中满足点两两之间没有连边的点集；
+- 直径：**无向图**中所有点对的最短路的最大值；
+- 点覆盖：**无向图**中所有边两端的点都至少有一个在其中的点集；
+
+### 2.2 定理
+
+- 最大团等于补图的最大独立集
+
+  <details><summary>证明</summary><p>
+
+  > 原图的一个团内的点显然在补图上两两没有连边，所以原图的最大团在补图上一定是独立集。
+  >
+  > 反过来即可证明补图的最大独立集在原图上一定是团。
+  >
+  > Q.E.D.
+
+  </p></details>
+
+- 无向图中 $1$ 到其它点最短路的最大值 $dis$ 和图的直径 $d$ 满足 $\lceil\frac{d}{2}\rceil\le dis \le d$
+
+  <details><summary>证明</summary><p>
+
+  > $dis\le d$ 显然，$\lceil\frac{d}{2}\rceil\le dis$​ 则是因为要先走到直径上，再走到直径的两个端点。
+  >
+  > Q.E.D.
+  
+  </p></details>
+### 2.3 二分图
+
+#### 2.3.1 定义
+
+- 二分图：**无向图**，满足可以分成左部点集 $S$ 和右部点集 $T$ 使得对于所有边 $(u,v)$ 都有 $u\in S,v\in T$ 或 $u\in T,v\in S$；
+- 拆点二分图：把每个点拆成入点和出点，对于一条边 $x\to y$，在二分图中连一条从 $x$ 的出点到 $y$ 的入点的边；
+- $k-$正则二分图：所有点的度数都为 $k$ 的**二分图**，易知 $k-$正则二分图中 $|S|=|T|$；
+- 匹配：**二分图**中满足每个点度数都是 $1$ 的子图；
+- 完美匹配：某一部中的点都在其中的匹配；
+
+#### 2.3.2 定理
+
+- 二分图最小点覆盖等于最大匹配：
+
+  <details><summary>证明</summary><p>
+
+  > 网络流，源点向每个左部点连流量为 $1$ 的边，左部点向原图中有连边的右部点连流量为 $\infin$ 的边，右部点向汇点连流量为 $1$​ 的边，最小割等于最大流。
+  >
+  > Q.E.D.
+
+  </p></details>
+
+- 二分图最大独立集等于**点数**减去**最小点覆盖**：
+
+  <details><summary>证明</summary><p>
+
+  > 每条边都至少有一个端点在最小点覆盖中，那么把最小点覆盖中的点删掉后就是最大独立集了。
+  >
+  > Q.E.D.
+
+  </p></details>
+  
+- $k-$正则二分图可以被拆解为 $k$ 组完美匹配
+
+  <details><summary>证明</summary><p>
+  
+  > 归纳：
+  >
+  > - $1-$正则二分图显然满足；
+  > - $k-$正则二分图满足 Hall 定理：$\forall A\subseteq S$，$A$ 连出去的边集 $EA$ 是 $N(A)$ 连出去的边集 $EB$ 的子集，所以 $|EA|\le |EB|$，那么显然 $k|A|\le k|N(A)|$，$|A|\le |N(A)|$；
+  > - 由于 $k-$二分图满足 $|S|=|T|$，所以找到 $k-$二分图的一组完美后去掉它可以转化为 $(k-1)-$正则二分图；
+  >
+  > Q.E.D.
+  
+  </p></details>
+#### 2.3.3 Hall 定理
+
+##### 2.3.3.1 基本形式
+
+> 对于左部点集为 $S$，右部点集为 $T$ 的二分图 $G$，其存在大小为 $|S|$ 的匹配的充要条件为：
+>
+> - $\forall A\subseteq S,|\cup_{u\in A}N(u)|\ge|A|$
+
+<details><summary>证明</summary><p>
+
+> 必要性显然，充分性考虑反证。
+>
+> 若满足了基本 Hall 定理但是不存在大小为 $|S|$ 的匹配，则一定存在一个 $u\in S$ 满足 $u$ 不在最大匹配中，那么 $\forall v\in N(u)$，$v$ 一定在最大匹配中。
+>
+> 考虑匈牙利算法，对于每一个 $v$，都不断找到它匹配的点 $b_v$，把 $b_v$ 当作 $u$ 继续进行这个过程。设遍历过的 $u$ 的集合为 $B$（包含刚开始的那个 $u$），则若 $\forall u\in B$，$N(u)$ 中都不存在未被匹配的点，那么一定有 $|N(B)|=|B|-1$，即只有刚开始的那个 $u$ 找不到和它匹配的点。与定理相悖。
+>
+> Q.E.D.
+
+</p></details>
+
+##### 2.3.3.2 拓展形式
+
+> 对于左部点集为 $S$，右部点集为 $T$ 的二分图 $G$，其最大匹配为：
+>
+> - $|S|-\max\left(\max\limits_{A\subseteq S}\{|A|-|\cup_{u\in A}N(u)|\},0\right)$
+
+证明是简单的。
+
+> 对于类似这样的二分网络流图，即源点向左边第 $i$ 个点连一条流量 $a_i$ 的边，左边第 $i$ 个点向右边第 $j$ 个点连一条流量 $c_{i,j}$ 的边，右边第 $i$ 个点向汇点连一条流量 $b_{i}$ 的边：
+>
+> ![](../post-images/1694762754666.png)
+>
+> 它左边的所有点能满流（经过左边第 $i$ 个点的流量为 $a_i$）当且仅当以下条件成立：
+>
+> - 设左边点集合为 $S$，则 $\forall T\subseteq S,\sum\limits_{u\in T}a_u\le\sum\limits_{u\in N(T)}\min\left(b_u,\sum\limits_{v\in T} c_{v,u}\right)$；
+>
+> 即与 $T$ 相连的右边点集能承受的总流量要至少为 $T$ 中点输出的总流量。
+
+<details><summary>证明</summary><p>
+
+> 把基本形式证明中的匈牙利换成 EK（每次暴力找一条增广路）即可。
+
+</p></details>
+
+##### 2.3.3.3 点和区间匹配形
+
+> 数轴上有 $n$ 个点和 $n$ 个区间，一个点能匹配一个区间当且仅当这个点被这个区间包含。
+>
+> 存在大小为 $n$ 的匹配当且仅当：
+>
+> - 把值域离散化到 $[1,n]$ 后，对于所有区间 $[l,r]$，被 $[l,r]$ 完全包含的区间个数 $\le r-l+1$；
+
+<details><summary>证明</summary><p>
+
+> 考虑反证。
+>
+> 对于区间集合 $S$，若 $|S|>|\cup_{u\in S} [l_u,r_u]|$ 且 $\cup_{u\in S} [l_u,r_u]$ 可以分成若干个极长的不交且不相邻区间 $[lb_1,rb_1],[lb_2,rb_2],\dots,[lb_k,rb_k]$，则设 $A_i=\{x|x\in S,[l_x,r_x]\subseteq [lb_i,rb_i]\}$。
+>
+> 注意到对于任意不同的 $i,j$，必然有 $A_i\cap A_j=\emptyset$，也就是说，对于任意不同的 $i,j$，$A_i\cap A_j=\emptyset$ 且 $(\cup_{u\in A_i} [l_u,r_u])\cap(\cup_{u\in A_j} [l_u,r_u])=\emptyset$。
+>
+> 所以对于任意不同的 $i,j$，$A_i$ 和 $A_j$ 独立。
+>
+> 那么必然存在某个 $i$ 满足 $|A_i|>|\cup_{u\in A_i} [l_u,r_u]|$，此时区间 $\cup_{u\in A_i} [l_u,r_u]$ 不合法。
+>
+> Q.E.D.
+
+</p></details>
+
+##### 2.3.3.4 例题
+
+- [CF1519F Chests and Keys](https://www.luogu.com.cn/problem/CF1519F) | [题解](../CF1519F Chests and Keys 做题记录)
+- [P6519 [CEOI2010 day1] bodyguards](https://www.luogu.com.cn/problem/P6519)
+- [CF1718D Permutation for Burenka](https://www.luogu.com.cn/problem/CF1718D) | [题解](../CF1718D Permutation for Burenka 做题记录)
+
+### 2.4 生成树
+
+#### 2.4.1 定义
+
+- 生成树：**无向图** $G$ 的一个边集，满足所有点都可以通过该边集联通且该边集的边数最小；
+- 最小生成树：边权和最小的生成树；
+- dfs 树：所有非树边两端的节点都互为祖孙关系的生成树；
+- 本源环：**dfs 树**中只有一条非树边的环；
+
+#### 2.4.2 定理
+
+- 所有最小生成树中每种边权的边的条数对应相等：
+
+  <details><summary>证明</summary><p>
+  
+  > 考虑 Kruskal 算法的过程，显然边权小的边会选尽量多条。
+  >
+  > Q.E.D.
+  
+  </p></details>
+  
+  例题：
+  
+  - [P4208 [JSOI2008] 最小生成树计数](https://www.luogu.com.cn/problem/P4208)
+  
+- 所有简单环都可以由任意生成树中的若干本源环异或得出：
+
+  <details><summary>证明</summary><p>
+
+  > 每个简单环都等价于环中非树边对应的本源环异或起来。
+  >
+  > Q.E.D.
+
+  </p></details>
+
+  例题：
+
+  - [P4151 [WC2011] 最大XOR和路径](https://www.luogu.com.cn/problem/P4151)
+  - [CF19E Fairy](https://www.luogu.com.cn/problem/CF19E) | [题解](../CF19E Fairy 做题记录)
+
+## Part3 有向图
+
+### 3.1 定义
+
+- 强连通子图：**有向图**的满足所有点对都能互相到达的子图；
+- SCC：**有向图**的极大强连通子图（即加入任意节点都不强连通的强连通子图）；
+
+### 3.2 偏序图
+
+#### 3.2.1 定义
+
+- 偏序图：**有向图**，满足若存在边 $x\to y$ 和边 $y\to z$ 则存在边 $x\to z$；
+
+#### 3.2.2 定理
+
+- 偏序图上的独立集和反链等价
+
+  <details><summary>证明</summary><p>
+
+  > 考虑反证，设独立集中有两个点 $x,y$ 满足 $x$ 能到达 $y$，由于偏序图满足 $x$ 能到达 $y$ 则存在边 $x\to y$，所以 $x,y$​ 不能同时存在于独立集中。
+  >
+  > Q.E.D.
+  
+  </p></details>
+
+### 3.3 竞赛图
+
+#### 3.3.1 定义
+
+- 竞赛图：**有向图**，满足可以由点数相同的完全图定向得到；
+
+#### 3.3.2 定理
+
+- 竞赛图缩点（把每个 SCC 都缩成一个大点）后，满足拓扑序唯一且每个大点向它拓扑序中后面的所有大点都有连边
+
+- 把竞赛图中的点按出度从小到大排序后，每个 SCC 对应一个区间
+
+  <details><summary>证明</summary><p>
+  
+  > 竞赛图缩点后，满足拓扑序唯一且每个大点向它拓扑序中后面的所有大点都有连边。
+  >
+  > 也就是说对于每个 SCC，设拓扑序在它后面的 SCC 共有 $m$ 个点，则这个 SCC 中的每个点都会向这 $m$ 个点连一条边。
+  >
+  > 而一个大小为 $k$ 的 SCC 中的点向这个 SCC 内部的其它点最多连 $k-1$ 条边。
+  >
+  > 所以把所有点按出度从小到大排序相当于把 SCC 按照拓扑序从后往前排序，每个 SCC 对应一个区间。
+  >
+  > Q.E.D.
+  
+  </p></details>
+  
+- 竞赛图中的 SCC 个数即为其中的点按出度 $d_u$ 从小到大排序后满足 $\sum\limits_{j=1}^id_j=\binom{i}{2}$ 的 $i$ 的个数
+  
+  <details><summary>证明</summary><p>
+  
+  > 根据上一条定理的证明，把所有点按出度从小到大排序后相当于把 SCC 按照拓扑序从后往前排序，每个 SCC 对应一个区间。
+  >
+  > 那么 $\sum\limits_{j=1}^id_j=\binom{i}{2}$ 的区间 $[1,i]$ 与拓扑序的后缀构成双射。
+  >
+  > Q.E.D.
+  
+  题外话：不难发现 Sum of SCC 那题的结论和这个本质相同。
+  
+  </p></details>
+
+  例题：
+  
+  - [[ARC163D] Sum of SCC](https://www.luogu.com.cn/problem/AT_arc163_d) | [题解](../ARC163D Sum of SCC 做题记录/)
+  
+  - [CF1779E Anya's Simultaneous Exhibition](https://www.luogu.com.cn/problem/CF1779E)
+  - [QOJ5407 基础图论练习题](https://qoj.ac/problem/5407)
+" onclick="copyMarkdown(this)">复制 Markdown</a>
+		</span>
+		
+	</div>
+</section>
+
+<script>
+	function copyMarkdown(e) {
+		let text = e.getAttribute('data-src-markdown');
+		if (e.innerHTML == '复制成功') {
+			return;
+		}
+		e.innerHTML = '复制成功';
+		(function (elem) {
+			setTimeout(() => {
+				if (elem.innerHTML == '复制成功') {
+					elem.innerHTML = '复制 Markdown'
+				}
+			}, 1000);
+		})(e)
+		Clipboard.copy(text);
+	}
+</script>
+
+					<div class="post-body next-md-body" id="post_body" data-post-markdown="## Part 1 公共部分
+
+### 1.1 定义
+
+- 补图：
+  - **无向图** $G$ 的补图中存在一条边 $(x,y)$ 当且仅当 $G$ 中不存在边 $(x,y)$
+  - **有向图** $G$ 的补图中存在一条边 $x\to y$ 当且仅当 $G$ 中不存在边 $x\to y$；
+- 子图：图中**某些点和它们之间的边**构成的新图；
+- 链覆盖：把图划分为若干条链的方案；
+- 反链：满足 $\forall x,y\in S$，$x$ 不能到达 $y$ 且 $y$ 不能到达 $x$ 的点集 $S$。
+
+### 1.2 定理
+
+- 最小链覆盖等于最长反链
+
+  <details><summary>证明</summary><p>
+
+  > 考虑不得不用两条链覆盖的结构，即一个分叉，显然不同分支上的点不能相互到达，那么最长反链中的每个点都可以代表一条链。
+  >
+  > Q.E.D.
+
+  </p></details>
+
+- 最长链等于最小反链覆盖
+
+  <details><summary>证明</summary><p>
+
+  > 对于一条链，链上的任意两点都不能被放到同一个反链中，所以最小反链覆盖不大于最长链。
+  >
+  > 而对于两条链同一个位置的点，显然要么是同一个点，要么可以放到同一个反链中，所以最小反链覆盖等于最长链。
+  >
+  > Q.E.D.
+
+  </p></details>
+
+- 最小链覆盖等于点数减去拆点二分图的最大匹配
+
+  <details><summary>证明</summary><p>
+
+  > 二分图每匹配一对点，就相当于合并了两条链。
+  >
+  > Q.E.D.
+  
+  </p></details>
+
+## Part 2 无向图
+
+### 2.1 定义
+
+- 点的邻点：**无向图**中，$v$ 为点 $u$ 的邻点当且仅当它们有边直接相连，$N(u)$ 为 $u$ 的邻点集；
+- 团：**无向图**中满足点两两之间都有连边的点集；
+- 独立集：**无向图**中满足点两两之间没有连边的点集；
+- 直径：**无向图**中所有点对的最短路的最大值；
+- 点覆盖：**无向图**中所有边两端的点都至少有一个在其中的点集；
+
+### 2.2 定理
+
+- 最大团等于补图的最大独立集
+
+  <details><summary>证明</summary><p>
+
+  > 原图的一个团内的点显然在补图上两两没有连边，所以原图的最大团在补图上一定是独立集。
+  >
+  > 反过来即可证明补图的最大独立集在原图上一定是团。
+  >
+  > Q.E.D.
+
+  </p></details>
+
+- 无向图中 $1$ 到其它点最短路的最大值 $dis$ 和图的直径 $d$ 满足 $\lceil\frac{d}{2}\rceil\le dis \le d$
+
+  <details><summary>证明</summary><p>
+
+  > $dis\le d$ 显然，$\lceil\frac{d}{2}\rceil\le dis$​ 则是因为要先走到直径上，再走到直径的两个端点。
+  >
+  > Q.E.D.
+  
+  </p></details>
+### 2.3 二分图
+
+#### 2.3.1 定义
+
+- 二分图：**无向图**，满足可以分成左部点集 $S$ 和右部点集 $T$ 使得对于所有边 $(u,v)$ 都有 $u\in S,v\in T$ 或 $u\in T,v\in S$；
+- 拆点二分图：把每个点拆成入点和出点，对于一条边 $x\to y$，在二分图中连一条从 $x$ 的出点到 $y$ 的入点的边；
+- $k-$正则二分图：所有点的度数都为 $k$ 的**二分图**，易知 $k-$正则二分图中 $|S|=|T|$；
+- 匹配：**二分图**中满足每个点度数都是 $1$ 的子图；
+- 完美匹配：某一部中的点都在其中的匹配；
+
+#### 2.3.2 定理
+
+- 二分图最小点覆盖等于最大匹配：
+
+  <details><summary>证明</summary><p>
+
+  > 网络流，源点向每个左部点连流量为 $1$ 的边，左部点向原图中有连边的右部点连流量为 $\infin$ 的边，右部点向汇点连流量为 $1$​ 的边，最小割等于最大流。
+  >
+  > Q.E.D.
+
+  </p></details>
+
+- 二分图最大独立集等于**点数**减去**最小点覆盖**：
+
+  <details><summary>证明</summary><p>
+
+  > 每条边都至少有一个端点在最小点覆盖中，那么把最小点覆盖中的点删掉后就是最大独立集了。
+  >
+  > Q.E.D.
+
+  </p></details>
+  
+- $k-$正则二分图可以被拆解为 $k$ 组完美匹配
+
+  <details><summary>证明</summary><p>
+  
+  > 归纳：
+  >
+  > - $1-$正则二分图显然满足；
+  > - $k-$正则二分图满足 Hall 定理：$\forall A\subseteq S$，$A$ 连出去的边集 $EA$ 是 $N(A)$ 连出去的边集 $EB$ 的子集，所以 $|EA|\le |EB|$，那么显然 $k|A|\le k|N(A)|$，$|A|\le |N(A)|$；
+  > - 由于 $k-$二分图满足 $|S|=|T|$，所以找到 $k-$二分图的一组完美后去掉它可以转化为 $(k-1)-$正则二分图；
+  >
+  > Q.E.D.
+  
+  </p></details>
+#### 2.3.3 Hall 定理
+
+##### 2.3.3.1 基本形式
+
+> 对于左部点集为 $S$，右部点集为 $T$ 的二分图 $G$，其存在大小为 $|S|$ 的匹配的充要条件为：
+>
+> - $\forall A\subseteq S,|\cup_{u\in A}N(u)|\ge|A|$
+
+<details><summary>证明</summary><p>
+
+> 必要性显然，充分性考虑反证。
+>
+> 若满足了基本 Hall 定理但是不存在大小为 $|S|$ 的匹配，则一定存在一个 $u\in S$ 满足 $u$ 不在最大匹配中，那么 $\forall v\in N(u)$，$v$ 一定在最大匹配中。
+>
+> 考虑匈牙利算法，对于每一个 $v$，都不断找到它匹配的点 $b_v$，把 $b_v$ 当作 $u$ 继续进行这个过程。设遍历过的 $u$ 的集合为 $B$（包含刚开始的那个 $u$），则若 $\forall u\in B$，$N(u)$ 中都不存在未被匹配的点，那么一定有 $|N(B)|=|B|-1$，即只有刚开始的那个 $u$ 找不到和它匹配的点。与定理相悖。
+>
+> Q.E.D.
+
+</p></details>
+
+##### 2.3.3.2 拓展形式
+
+> 对于左部点集为 $S$，右部点集为 $T$ 的二分图 $G$，其最大匹配为：
+>
+> - $|S|-\max\left(\max\limits_{A\subseteq S}\{|A|-|\cup_{u\in A}N(u)|\},0\right)$
+
+证明是简单的。
+
+> 对于类似这样的二分网络流图，即源点向左边第 $i$ 个点连一条流量 $a_i$ 的边，左边第 $i$ 个点向右边第 $j$ 个点连一条流量 $c_{i,j}$ 的边，右边第 $i$ 个点向汇点连一条流量 $b_{i}$ 的边：
+>
+> ![](../post-images/1694762754666.png)
+>
+> 它左边的所有点能满流（经过左边第 $i$ 个点的流量为 $a_i$）当且仅当以下条件成立：
+>
+> - 设左边点集合为 $S$，则 $\forall T\subseteq S,\sum\limits_{u\in T}a_u\le\sum\limits_{u\in N(T)}\min\left(b_u,\sum\limits_{v\in T} c_{v,u}\right)$；
+>
+> 即与 $T$ 相连的右边点集能承受的总流量要至少为 $T$ 中点输出的总流量。
+
+<details><summary>证明</summary><p>
+
+> 把基本形式证明中的匈牙利换成 EK（每次暴力找一条增广路）即可。
+
+</p></details>
+
+##### 2.3.3.3 点和区间匹配形
+
+> 数轴上有 $n$ 个点和 $n$ 个区间，一个点能匹配一个区间当且仅当这个点被这个区间包含。
+>
+> 存在大小为 $n$ 的匹配当且仅当：
+>
+> - 把值域离散化到 $[1,n]$ 后，对于所有区间 $[l,r]$，被 $[l,r]$ 完全包含的区间个数 $\le r-l+1$；
+
+<details><summary>证明</summary><p>
+
+> 考虑反证。
+>
+> 对于区间集合 $S$，若 $|S|>|\cup_{u\in S} [l_u,r_u]|$ 且 $\cup_{u\in S} [l_u,r_u]$ 可以分成若干个极长的不交且不相邻区间 $[lb_1,rb_1],[lb_2,rb_2],\dots,[lb_k,rb_k]$，则设 $A_i=\{x|x\in S,[l_x,r_x]\subseteq [lb_i,rb_i]\}$。
+>
+> 注意到对于任意不同的 $i,j$，必然有 $A_i\cap A_j=\emptyset$，也就是说，对于任意不同的 $i,j$，$A_i\cap A_j=\emptyset$ 且 $(\cup_{u\in A_i} [l_u,r_u])\cap(\cup_{u\in A_j} [l_u,r_u])=\emptyset$。
+>
+> 所以对于任意不同的 $i,j$，$A_i$ 和 $A_j$ 独立。
+>
+> 那么必然存在某个 $i$ 满足 $|A_i|>|\cup_{u\in A_i} [l_u,r_u]|$，此时区间 $\cup_{u\in A_i} [l_u,r_u]$ 不合法。
+>
+> Q.E.D.
+
+</p></details>
+
+##### 2.3.3.4 例题
+
+- [CF1519F Chests and Keys](https://www.luogu.com.cn/problem/CF1519F) | [题解](../CF1519F Chests and Keys 做题记录)
+- [P6519 [CEOI2010 day1] bodyguards](https://www.luogu.com.cn/problem/P6519)
+- [CF1718D Permutation for Burenka](https://www.luogu.com.cn/problem/CF1718D) | [题解](../CF1718D Permutation for Burenka 做题记录)
+
+### 2.4 生成树
+
+#### 2.4.1 定义
+
+- 生成树：**无向图** $G$ 的一个边集，满足所有点都可以通过该边集联通且该边集的边数最小；
+- 最小生成树：边权和最小的生成树；
+- dfs 树：所有非树边两端的节点都互为祖孙关系的生成树；
+- 本源环：**dfs 树**中只有一条非树边的环；
+
+#### 2.4.2 定理
+
+- 所有最小生成树中每种边权的边的条数对应相等：
+
+  <details><summary>证明</summary><p>
+  
+  > 考虑 Kruskal 算法的过程，显然边权小的边会选尽量多条。
+  >
+  > Q.E.D.
+  
+  </p></details>
+  
+  例题：
+  
+  - [P4208 [JSOI2008] 最小生成树计数](https://www.luogu.com.cn/problem/P4208)
+  
+- 所有简单环都可以由任意生成树中的若干本源环异或得出：
+
+  <details><summary>证明</summary><p>
+
+  > 每个简单环都等价于环中非树边对应的本源环异或起来。
+  >
+  > Q.E.D.
+
+  </p></details>
+
+  例题：
+
+  - [P4151 [WC2011] 最大XOR和路径](https://www.luogu.com.cn/problem/P4151)
+  - [CF19E Fairy](https://www.luogu.com.cn/problem/CF19E) | [题解](../CF19E Fairy 做题记录)
+
+## Part3 有向图
+
+### 3.1 定义
+
+- 强连通子图：**有向图**的满足所有点对都能互相到达的子图；
+- SCC：**有向图**的极大强连通子图（即加入任意节点都不强连通的强连通子图）；
+
+### 3.2 偏序图
+
+#### 3.2.1 定义
+
+- 偏序图：**有向图**，满足若存在边 $x\to y$ 和边 $y\to z$ 则存在边 $x\to z$；
+
+#### 3.2.2 定理
+
+- 偏序图上的独立集和反链等价
+
+  <details><summary>证明</summary><p>
+
+  > 考虑反证，设独立集中有两个点 $x,y$ 满足 $x$ 能到达 $y$，由于偏序图满足 $x$ 能到达 $y$ 则存在边 $x\to y$，所以 $x,y$​ 不能同时存在于独立集中。
+  >
+  > Q.E.D.
+  
+  </p></details>
+
+### 3.3 竞赛图
+
+#### 3.3.1 定义
+
+- 竞赛图：**有向图**，满足可以由点数相同的完全图定向得到；
+
+#### 3.3.2 定理
+
+- 竞赛图缩点（把每个 SCC 都缩成一个大点）后，满足拓扑序唯一且每个大点向它拓扑序中后面的所有大点都有连边
+
+- 把竞赛图中的点按出度从小到大排序后，每个 SCC 对应一个区间
+
+  <details><summary>证明</summary><p>
+  
+  > 竞赛图缩点后，满足拓扑序唯一且每个大点向它拓扑序中后面的所有大点都有连边。
+  >
+  > 也就是说对于每个 SCC，设拓扑序在它后面的 SCC 共有 $m$ 个点，则这个 SCC 中的每个点都会向这 $m$ 个点连一条边。
+  >
+  > 而一个大小为 $k$ 的 SCC 中的点向这个 SCC 内部的其它点最多连 $k-1$ 条边。
+  >
+  > 所以把所有点按出度从小到大排序相当于把 SCC 按照拓扑序从后往前排序，每个 SCC 对应一个区间。
+  >
+  > Q.E.D.
+  
+  </p></details>
+  
+- 竞赛图中的 SCC 个数即为其中的点按出度 $d_u$ 从小到大排序后满足 $\sum\limits_{j=1}^id_j=\binom{i}{2}$ 的 $i$ 的个数
+  
+  <details><summary>证明</summary><p>
+  
+  > 根据上一条定理的证明，把所有点按出度从小到大排序后相当于把 SCC 按照拓扑序从后往前排序，每个 SCC 对应一个区间。
+  >
+  > 那么 $\sum\limits_{j=1}^id_j=\binom{i}{2}$ 的区间 $[1,i]$ 与拓扑序的后缀构成双射。
+  >
+  > Q.E.D.
+  
+  题外话：不难发现 Sum of SCC 那题的结论和这个本质相同。
+  
+  </p></details>
+
+  例题：
+  
+  - [[ARC163D] Sum of SCC](https://www.luogu.com.cn/problem/AT_arc163_d) | [题解](../ARC163D Sum of SCC 做题记录/)
+  
+  - [CF1779E Anya's Simultaneous Exhibition](https://www.luogu.com.cn/problem/CF1779E)
+  - [QOJ5407 基础图论练习题](https://qoj.ac/problem/5407)
+"></div>
+					<div class="post-footer">
+	<ul class="post-copyright">
+		<li class="post-copyright-author">
+			<strong class="language" data-lan="author">本文作者：</strong>Exber
+		</li>
+		<li class="post-copyright-link">
+			<strong class="language" data-lan="link">本文链接：</strong>
+			<a href="https://exber.qzz.io/post/%E4%B8%80%E4%BA%9B%E5%9B%BE%E8%AE%BA%E7%9A%84%E5%AE%9A%E7%90%86" title="一些图论的定理">https://exber.qzz.io/post/%E4%B8%80%E4%BA%9B%E5%9B%BE%E8%AE%BA%E7%9A%84%E5%AE%9A%E7%90%86</a>
+		</li>
+		<li class="post-copyright-license">
+			<strong class="language" data-lan="copyright">版权声明： </strong>
+			本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+		</li>
+	</ul>
+	<div class="tags">
+		
+			<a href="https://exber.qzz.io/tags"># 学习笔记</a>
+		
+			<a href="https://exber.qzz.io/tags"># 图论</a>
+		
+			<a href="https://exber.qzz.io/tags"># 小技巧</a>
+		
+	</div>
+</div>
+				</div>
+			</div>
+			<script>
+	// 处理目录
+	function work_with_toc() {
+		let lastTop = 0, lList = [], hList = [], postBody, lastIndex = -1;
+		let active = 'active-show', activeClass = 'active-current';
+		let tocWrapper = document.querySelector('#toc_wrapper');
+		let tocContent = tocWrapper.children[0];
+		let autoNumber = tocWrapper && tocWrapper.classList.contains('auto-number');
+
+		function addTocNumber(elem, deep) {
+			if (!elem) {
+				return;
+			}
+			let prop = elem.__proto__;
+
+			if (prop === HTMLUListElement.prototype) {
+				for (let i = 0; i < elem.children.length; i++) {
+					addTocNumber(elem.children[i], deep + (i + 1) + '.');
+				}
+			} else if (prop === HTMLLIElement.prototype) {
+				// 保存li元素
+				if (elem.children[0] && elem.children[0].__proto__ === HTMLAnchorElement.prototype) {
+					lList.push(elem);
+				}
+				for (let i = 0; i < elem.children.length; i++) {
+					let cur = elem.children[i];
+					if (cur.__proto__ === HTMLAnchorElement.prototype) {
+						if (autoNumber) {
+							cur.text = deep + ' ' + cur.text;
+						}
+					} else if (cur.__proto__ === HTMLUListElement.prototype) {
+						addTocNumber(cur, deep);
+					}
+				}
+			}
+		}
+
+		function removeParentActiveClass() {
+			let parents = tocContent.querySelectorAll('.' + active)
+			parents.forEach(function (elem) {
+				elem.classList.remove(active);
+			});
+		}
+
+		function addActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.add(activeClass);
+			}
+		}
+
+		function removeActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.remove(activeClass);
+			}
+		}
+
+		function addActiveLiElemment(elem, parent) {
+			if (!elem || elem === parent) {
+				return;
+			} else {
+				if (elem.__proto__ === HTMLLIElement.prototype) {
+					elem.classList.add(active);
+				}
+				addActiveLiElemment(elem.parentElement, parent);
+			}
+		}
+
+		function showToc() {
+			if (tocWrapper) {
+				postBody = document.querySelector('#post_body');
+				for (let i = 0; i < postBody.children.length; i++) {
+					if (postBody.children[i].__proto__ === HTMLHeadingElement.prototype) {
+						hList.push(postBody.children[i]);
+					}
+				}
+				if (tocWrapper.classList.contains('compress')) {
+					tocContent.classList.add('closed');
+				} else if (tocWrapper.classList.contains('no_compress')) {
+					tocContent.classList.add('expanded');
+				} else {
+					if (hList.length > 10) {
+						active = 'active-hidden'
+						tocContent.classList.add('closed');
+					} else {
+						tocContent.classList.add('expanded');
+					}
+				}
+			}
+		}
+
+		(function () {
+			// 处理不是从一级标题开始目录
+			while (tocContent.children.length === 1 && tocContent.children[0].__proto__ === HTMLUListElement.prototype) {
+				let con = tocContent.children[0];
+				tocContent.innerHTML = con.innerHTML;
+			}
+			addTocNumber(tocContent, '');
+		})();
+
+		document.addEventListener('scroll', function (e) {
+			if (lList.length <= 0) {
+				return;
+			}
+			let scrollTop = document.scrollingElement.scrollTop + 10;
+			let dir;
+
+			if (lastTop - scrollTop > 0) {
+				dir = 'up';
+			} else {
+				dir = 'down';
+			}
+
+			lastTop = scrollTop;
+			if (scrollTop <= 0) {
+				if (lastIndex >= 0 && lastIndex < hList.length) {
+					lList[lastIndex].classList.remove(activeClass);
+				}
+				return;
+			}
+
+			let current = 0, hasFind = false;
+			for (let i = 0; i < hList.length; i++) {
+				if (hList[i].offsetTop > scrollTop) {
+					current = i;
+					hasFind = true;
+					break;
+				}
+			}
+			if (!hasFind && scrollTop > lList[lList.length - 1].offsetTop) {
+				current = hList.length - 1;
+			} else {
+				current--;
+			}
+			if (dir === 'down') {
+				if (current > lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex)
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			} else {
+				if (current < lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex);
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			}
+		});
+
+
+		window.addEventListener('load', function () {
+			showToc();
+			document.querySelector('#sidebar').style = 'display: block;';
+			tocWrapper.classList.add('toc-active');
+			setTimeout(function () {
+				if ("createEvent" in document) {
+					let evt = document.createEvent("HTMLEvents");
+					evt.initEvent("scroll", false, true);
+					document.dispatchEvent(evt);
+				}
+				else {
+					document.fireEvent("scroll");
+				}
+			}, 500)
+		})
+		
+		const SIDEBAR_TITLE_ACTIVE = 'sidebar-title-active';
+		const SIDEBAR_BODY_ACTIVE = 'sidebar-body-active';
+		const SLIDE_UP_IN = 'slide-up-in';
+
+		let tocSideBar = document.querySelector('#tocSideBar'),
+		metaSideBar = document.querySelector('#metaSideBar'),
+		postToc = document.querySelector('#post_toc'),
+		postSiteMeta = document.querySelector('#post_side_meta'),
+		sidebarTitle = document.querySelector('.sidebar-title'),
+		sidebarBody = document.querySelector('#sidebar_body');
+
+		tocSideBar && tocSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		metaSideBar && metaSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		function toggleSidebar(e) {
+			let currentTitle = document.querySelector("."+SIDEBAR_TITLE_ACTIVE);
+			if (currentTitle == e.srcElement) {
+				return ;
+			}
+			let current, showElement, hideElement;
+			if (e.srcElement == metaSideBar) {
+				showElement = postSiteMeta;
+				hideElement = postToc;
+			} else if (e.srcElement == tocSideBar){
+				showElement = postToc;
+				hideElement = postSiteMeta;
+			}
+			currentTitle.classList.remove(SIDEBAR_TITLE_ACTIVE);
+			e.srcElement.classList.add(SIDEBAR_TITLE_ACTIVE);
+
+			jQuery.Velocity(hideElement, 'stop');
+			jQuery.Velocity(hideElement, 'transition.slideUpOut', {
+				display: 'none',
+				duration: 200,
+				complete: function () {
+					jQuery.Velocity(showElement, 'transition.slideDownIn', {
+						duration: 200
+					});
+				}
+			})
+			hideElement.classList.remove(SIDEBAR_BODY_ACTIVE);
+			showElement.classList.add(SIDEBAR_BODY_ACTIVE);
+		}
+
+		postToc && postToc.addEventListener('transitionend', function() {
+			this.classList.remove(SLIDE_UP_IN);
+		});
+	}
+</script>
+<script>
+	// 没有目录时删除侧边栏目录相关
+	function remove_toc(){
+		document.querySelector('#sidebar-selector').remove();
+		document.querySelector('#post_toc').remove();
+		document.querySelector('#post_side_meta').classList.remove("post-side-meta");
+	}
+</script>
+<script>
+	// 渲染文章 markdown 并生成目录
+	function render_post_markdown(content)
+	{
+		let markdown = window.markdownit({ html: true })
+				.use(markdownItLinkEncodeFixed)
+				.use(window.markdownItAnchor, {
+					permalink: false,
+					permalinkBefore: false
+				})
+				.use(window.texmath, {
+					engine: katex,
+					delimiters: 'dollars'
+				});
+		// 处理图片路径
+		let temp_container = document.createElement('div');
+		temp_container.innerHTML = markdown.render(content);
+		{
+			let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		{
+			let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		return temp_container.innerHTML;
+	}
+	function generateToc() {
+		const contentElement = document.getElementById('post_body');
+		const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+		const tocElement = document.getElementById('toc_wrapper');
+		
+		if (headings.length === 0) {
+			return false;
+		}
+		let toc_ul = "<ul style='list-style: none;'>";
+		let toc_li = "<li style='list-style: none;'>";
+		let tocHtml = toc_ul;
+		let currentLevel = 1;
+		let stack = [0];
+		
+		headings.forEach((heading, index) => {
+			const level = parseInt(heading.tagName.substring(1));
+			const id = heading.id || `heading-${index}`;
+			heading.id = id;
+			
+			// 提取包含公式的 HTML 内容
+			let headingContent = heading.innerHTML;
+			
+			// 调整层级逻辑
+			if (level > currentLevel) {
+				for (let i = currentLevel; i < level; i++) {
+					tocHtml += toc_ul;
+					stack[i] = 0;
+				}
+			} else if (level < currentLevel) {
+				for (let i = currentLevel; i > level; i--) {
+					tocHtml += '</ul></li>';
+					stack.pop();
+				}
+			} else if (index > 0) {
+				tocHtml += '</li>';
+			}
+			
+			stack[level-1] = (stack[level-1] || 0) + 1;
+			for (let i = level; i < stack.length; i++) {
+				stack[i] = 0;
+			}
+			
+			// 使用渲染后的内容（包含已处理的公式）
+			tocHtml += toc_li+`<a href="#${id}">${headingContent}</a>`;
+			currentLevel = level;
+		});
+		
+		for (let i = 1; i < currentLevel; i++) {
+			tocHtml += '</ul></li>';
+		}
+		if (headings.length > 0) {
+			tocHtml += '</li>';
+		}
+		
+		tocHtml += '</ul>';
+		tocElement.innerHTML = tocHtml;
+		
+		return true;
+	}
+</script>
+<script>
+	!function () {
+		const post_body = document.querySelector('div[data-post-markdown]');
+		
+		try {
+			const markdownContent = post_body.getAttribute('data-post-markdown');
+			
+			if (markdownContent) {
+				const renderedHTML = render_post_markdown(markdownContent);
+				post_body.innerHTML = renderedHTML;
+				post_body.removeAttribute('data-post-markdown');
+				if(generateToc()) work_with_toc();
+				else remove_toc();
+			}
+		} catch (error) {
+			post_body.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+		}
+	}();
+</script>
+		</div>
+	</div>
+	
+
+
+
+
+
+
+<div class="footer-box">
+	<footer class="footer">
+		<center id="runTimeBox">
+			已运行: <span id="run_time"></span>
+		</center>
+		<script>
+			BirthDay = new Date('2023-03-01');
+			if (BirthDay.getTime()) {
+				function runTime() {
+					str = "";
+					today = new Date();
+					timeold = today.getTime() - BirthDay.getTime();
+					msPerDay = 24 * 60 * 60 * 1000;
+					e_daysold = timeold / msPerDay;
+					daysold = Math.floor(e_daysold);
+					str += daysold + " 天";
+					return str;
+				}
+				setInterval(function () {
+					$("#run_time").html(runTime());
+				}, 1000);
+			} else {
+				document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+			}
+		</script>
+		<div class="poweredby">
+			Powered by Exber
+		</div>
+	</footer>
+	<div class="pisces back-to-top" id="back_to_top">
+		<i class="fa fa-arrow-up"></i>
+		<span class="scrollpercent">
+			<span id="back_to_top_text">0</span>%
+		</span>
+	</div>
+</div>
+<script>
+	// back2top
+	let back2Top = document.querySelector("#back_to_top"),
+		back2TopText = document.querySelector("#back_to_top_text");
+
+	function scrollAnimation(currentY, targetY) {
+		let needScrollTop = targetY - currentY;
+		let _currentY = currentY;
+		setTimeout(() => {
+			const dist = Math.ceil(needScrollTop / 10);
+			_currentY += dist;
+			window.scrollTo(_currentY, currentY);
+			if (needScrollTop > 10 || needScrollTop < -10) {
+				scrollAnimation(_currentY, targetY);
+			} else {
+				window.scrollTo(_currentY, targetY);
+			}
+		}, 1);
+	}
+
+	back2Top.addEventListener("click", function(e) {
+		scrollAnimation(document.scrollingElement.scrollTop, 0);
+		e.stopPropagation();
+		return false;
+	});
+
+	window.addEventListener("scroll", function(e) {
+		let percent =
+			(document.scrollingElement.scrollTop /
+				(document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight)) *
+			100;
+		if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+			back2Top.classList.add("back-top-active");
+		}
+		if (percent == 0) {
+			back2Top.classList.remove("back-top-active");
+		}
+		if (back2TopText) {
+			back2TopText.textContent = Math.floor(percent);
+		}
+	});
+</script>
+	</div>
+</body>
+
+
+
+
+
+
+
+<input hidden id="copy" />
+<link rel="stylesheet" href="https://exber.qzz.io/media/css/jquery.fancybox.css" />
+<script src="https://exber.qzz.io/media/js/jquery.fancybox.js"></script>
+<script>
+	// 渲染所有带有 data-markdown 属性的 div 元素
+	!function () {
+		const markdownElements = document.querySelectorAll('div[data-markdown]');
+		
+		markdownElements.forEach((element, index) => {
+			try {
+				const markdownContent = element.getAttribute('data-markdown');
+				
+				if (markdownContent) {
+					const renderedHTML = render_markdown(markdownContent);
+					element.innerHTML = renderedHTML;
+					element.removeAttribute('data-markdown');
+				}
+			} catch (error) {
+				element.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+			}
+		});
+	}();
+</script>
+<script>
+	document.querySelectorAll(".section img").forEach((image) => {
+		var parent = image.parentElement;
+		var next = image.nextElementSibling;
+		parent.removeChild(image);
+		var aelem = document.createElement("a");
+		aelem.href = image.src;
+		aelem.dataset["fancybox"] = "images";
+		aelem.dataset["rel"] = "fancybox-button";
+		aelem.classList.add("fancybox");
+		aelem.appendChild(image);
+		parent.insertBefore(aelem, next);
+	});
+	
+	!function () {
+		let times = document.querySelectorAll('.publish-time');
+		for (let i = 0; i < times.length; i++) {
+			let date = times[i].dataset.t;
+			let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+			if (time < 60) {
+				str = time + '秒之前';
+			} else if (time < 3600) {
+				str = Math.floor(time / 60) + '分钟之前';
+			} else if (time >= 3600 && time < 86400) {
+				str = Math.floor(time / 3600) + '小时之前';
+			} else if (time >= 86400 && time < 259200) {
+				str = Math.floor(time / 86400) + '天之前';
+			} else {
+				str = times[i].textContent;
+			}
+			times[i].textContent = str;
+		}
+	}();
+	
+	let language = '';
+	if (language !== '') {
+		let map = new Map();
+		if (language === 'en') {
+			map.set('search', 'Search');
+			map.set('category', 'Categories');
+			map.set('article', 'Articles');
+			map.set('tag', 'Tags');
+			map.set('top', 'Top');
+			map.set('publish', 'published');
+			map.set('minute', ' minutes');
+			map.set('read-more', 'Read More');
+			map.set('view', 'View');
+			map.set('words', ' words');
+			map.set('category-in', 'category in');
+			map.set('preview', 'Meta');
+			map.set('index', 'Toc');
+			map.set('no-archives', "You haven't created yet");
+			map.set('archives', " articles in total");
+			map.set('cloud-tags', " tags in total");
+			map.set('copyright', "Copyright: ");
+			map.set('author', "Author: ");
+			map.set('link', "Link: ");
+			map.set('leave-message', "Leave a message");
+			map.set('format', "Links Format");
+			map.set('site-name', "Name: ");
+			map.set('site-link', "Link: ");
+			map.set('site-desc', "Desc: ");
+			map.set('stat', " related results, taking ");
+			map.set('stat-time', " ms");
+			map.set('site-img', "Image: ");
+			map.set('copy-markdown', "Copy Markdown");
+		}
+
+		if (map.size > 0) {
+			let lanElems = document.querySelectorAll('.language');
+			lanElems.forEach(elem => {
+				let lan = elem.dataset.lan, text = map.get(lan);
+				if (elem.__proto__ === HTMLInputElement.prototype) {
+					elem.placeholder = text
+				} else {
+					if (elem.dataset.count) {
+						text = elem.dataset.count + text;
+					}
+					elem.textContent = text;
+				}
+			})
+		}
+	}
+
+	function copyCode(e) {
+		if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+			let code = e.currentTarget.querySelector('code');
+			var text = code.innerText;
+			if (e.srcElement.textContent === '复制成功') {
+				return;
+			}
+			e.srcElement.textContent = '复制成功';
+			(function (elem) {
+				setTimeout(() => {
+					if (elem.textContent === '复制成功') {
+						elem.textContent = '复制代码'
+					}
+				}, 1000);
+			})(e.srcElement)
+			Clipboard.copy(text);
+		}
+	}
+
+	let pres = document.querySelectorAll('pre');
+	pres.forEach(pre => {
+		let code = pre.querySelector('code');
+		let copyElem = document.createElement('span');
+		copyElem.classList.add('copy-code');
+		copyElem.textContent = '复制代码';
+		pre.appendChild(copyElem);
+		pre.onclick = copyCode
+	})
+</script>
+<script src="https://exber.qzz.io/media/js/motion.js"></script>
+<script src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+<script>
+	var scroll = new SmoothScroll('a[href*="#"]', {
+		speed: 200
+	});
+</script>
+<script>
+	// 动态调整站点概览位置
+	let hasCacu = false;
+	window.addEventListener("resize", function(e) {
+		calcuHeight();
+	});
+
+	function calcuHeight() {
+		if (!hasCacu) {
+			let sideBar = document.querySelector(".sidebar");
+			let navUl = document.querySelector("#site_nav");
+			sideBar.style =
+				"margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+			hasCacu = true;
+		}
+	}
+	calcuHeight();
+	
+	// 侧边栏固定逻辑
+	let sidebar = document.querySelector('.sidebar');
+	let sidebarWrapper = document.querySelector('#sidebar');
+	if (sidebar) {
+		let hasFix = false;
+		document.addEventListener('scroll', function(e) {
+		  if (document.scrollingElement.scrollTop > parseInt(sidebar.style.marginTop) + 15) {
+			if (!hasFix) {
+				sidebarWrapper.classList.add('sidebar-fixed')
+				hasFix = true;
+			}
+		  } else {
+			if (hasFix) {
+				sidebarWrapper.classList.remove('sidebar-fixed')
+				hasFix = false;
+			}
+		  }
+		});
+	}
+</script>
+<script>
+	// 链接跳转
+	let newWindow = "true";
+	if (newWindow === "true") {
+		let links = document.querySelectorAll(".post-body a");
+		links.forEach((item) => {
+			if (!item.classList.contains("btn")) {
+				item.setAttribute("target", "_blank");
+			}
+		});
+	}
+
+	// 代码高亮
+	hljs.initHighlightingOnLoad();
+
+	// 离开当前页title变化
+	var leaveTitle = "";
+	var normal_title = document.title;
+	if (leaveTitle) {
+		document.addEventListener("visibilitychange", function() {
+			if (document.visibilityState == "hidden") {
+				normal_title = document.title;
+				document.title = leaveTitle;
+			} else {
+				document.title = normal_title;
+			}
+		});
+	}
+</script>
+</html>

@@ -1,0 +1,2792 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	
+
+
+
+
+
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="静态个人博客">
+<meta name="description" content="Exber's Blog">
+<meta name="theme-color" content="#000">
+
+<title>生成式扩散模型初探 —— DDPM 学习笔记|Exber's Blog</title>
+
+<link rel="shortcut icon" href="https://exber.qzz.io/favicon.ico?v=1769647447">
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/css/pisces.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/fonts/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/hljs/styles/default.css">
+
+<link
+  href="https://fonts.font.im/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet"
+  type="text/css"
+>
+
+<link rel="stylesheet/less" type="text/css" href="https://exber.qzz.io/styles/main.less">
+<script src="https://cdn.jsdmirror.com/npm/less@4"></script>
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/main.css">
+
+<script src="https://exber.qzz.io/media/js/jquery.js"></script>
+<script src="https://exber.qzz.io/media/hljs/highlight.js"></script>
+
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+<script src="https://cdn.jsdmirror.com/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-texmath/texmath.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-anchor/dist/markdownItAnchor.umd.js"></script>
+
+<script>
+// 处理带空格的链接
+function markdownItLinkEncodeFixed(md) {
+	// 1. 修复链接打开规则
+	const defaultLinkOpenRender = md.renderer.rules.link_open || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const hrefIndex = token.attrIndex('href');
+		
+		if (hrefIndex >= 0) {
+			const originalHref = token.attrs[hrefIndex][1];
+			// 更健壮的编码处理
+			const encodedHref = encodeURI(originalHref).replace(/%20/g, '%20');
+			token.attrs[hrefIndex][1] = encodedHref;
+		}
+		
+		return defaultLinkOpenRender(tokens, idx, options, env, self);
+	};
+
+	// 2. 修复图片规则
+	const defaultImageRender = md.renderer.rules.image || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.image = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const srcIndex = token.attrIndex('src');
+		
+		if (srcIndex >= 0) {
+			const originalSrc = token.attrs[srcIndex][1];
+			const encodedSrc = encodeURI(originalSrc).replace(/%20/g, '%20');
+			token.attrs[srcIndex][1] = encodedSrc;
+		}
+		
+		return defaultImageRender(tokens, idx, options, env, self);
+	};
+
+	// 3. 新增：处理可能被误解析为text的链接[1](@ref)
+	const defaultTextRender = md.renderer.rules.text || 
+		function(tokens, idx, options, env, self) {
+			const token = tokens[idx];
+			return token.content;
+		};
+
+	md.renderer.rules.text = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const content = token.content;
+		
+		// 检测类似链接模式的text token[1](@ref)
+		if (content.includes('[') && content.includes(']') && content.includes('(') && content.includes(')')) {
+			try {
+				// 尝试提取和编码链接
+				const linkMatch = content.match(/\[([^\]]+)\]\(([^)]+)\)/);
+				if (linkMatch) {
+					const linkText = linkMatch[1];
+					const linkUrl = encodeURI(linkMatch[2]).replace(/%20/g, '%20');
+					return `<a href="${linkUrl}">${linkText}</a>`;
+				}
+			} catch (e) {
+				console.warn('链接提取失败:', e);
+			}
+		}
+		
+		return defaultTextRender(tokens, idx, options, env, self);
+	};
+}
+function render_markdown(content)
+{
+	let markdown = window.markdownit({ html: true })
+			 .use(markdownItLinkEncodeFixed)
+			 .use(window.texmath, {
+				 engine: katex,
+				 delimiters: 'dollars'
+			 });
+	// 处理图片路径
+	let temp_container = document.createElement('div');
+	temp_container.innerHTML = markdown.render(content);
+	{
+		let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	{
+		let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	return temp_container.innerHTML;
+}
+</script>
+<script>
+	window.Clipboard = (function (window, document, navigator) {
+		var textArea,
+			copy;
+
+		// 判断是不是ios端
+		function isOS() {
+			return navigator.userAgent.match(/ipad|iphone/i);
+		}
+		//创建文本元素
+		function createTextArea(text) {
+			textArea = document.createElement('textArea');
+			textArea.value = text;
+			textArea.style.width = 0;
+			textArea.style.height = 0;
+			textArea.clientHeight = 0;
+			textArea.clientWidth = 0;
+			document.body.appendChild(textArea);
+		}
+		//选择内容
+		function selectText() {
+			var range,
+				selection;
+
+			if (isOS()) {
+				range = document.createRange();
+				range.selectNodeContents(textArea);
+				selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				textArea.setSelectionRange(0, 999999);
+			} else {
+				textArea.select();
+			}
+		}
+
+		//复制到剪贴板
+		function copyToClipboard() {
+			try {
+				document.execCommand("Copy")
+			} catch (err) {
+				alert("复制错误！请手动复制！")
+			}
+			document.body.removeChild(textArea);
+		}
+
+		copy = function (text) {
+			createTextArea(text);
+			selectText();
+			copyToClipboard();
+		};
+
+		return {
+			copy: copy
+		};
+	})(window, document, navigator);
+</script>
+	<meta name="description" content="生成式扩散模型初探 —— DDPM 学习笔记" />
+</head>
+
+<body>
+	<div class="head-top-line"></div>
+	<div class="header-box">
+		
+		
+	<style> /* 搜索相关 */
+		.gridea-search-input{
+			height: 30px;
+			width: 200px;
+			box-sizing: border-box;
+			padding: 0 15px 0 30px;
+			border: 1px solid #e3e3e3;
+			border-radius: 15px;
+			color: #273849;
+			outline: none;
+			transition: border-color 0.2s ease;
+			background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+			background-size: 20px;
+			vertical-align: middle !important;
+		}
+		.gridea-search-input:focus {
+		  border-color: #666666;
+		  right: 0;
+		}
+		/* 自适应轨道 */
+		.slider-track {
+			--track-height: 0.4em; /* 轨道基础高度 */
+			width: 100%;
+			height: var(--track-height);
+			background: #e0e0e0;
+			border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+			position: relative;
+			cursor: default;
+			margin: 0.5em 0; /* 垂直间距自适应 */
+		}
+		
+		/* 进度填充 */
+		.slider-fill {
+			height: 100%;
+			background: #555;
+			border-radius: inherit; /* 继承父级圆角 */
+			width: 50%; /* 初始值 */
+		}
+		
+		/* 自适应滑块 */
+		.slider-thumb {
+			--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+			position: absolute;
+			width: var(--thumb-size);
+			height: var(--thumb-size);
+			background: #555;
+			border-radius: 50%;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: 
+				transform 0.2s ease,
+				box-shadow 0.2s ease;
+			border: 2px solid white; /* 增加辨识度 */
+		}
+		
+		/* 悬停效果 */
+		.slider-thumb:hover {
+			background: #333;
+			transform: translate(-50%, -50%) scale(1.1);
+			box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+		}
+		
+		/* 拖动效果 */
+		.slider-thumb:active {
+			cursor: grabbing;
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		}
+		
+		/* 数值显示 */
+		.value-display {
+			text-align: center;
+			font-family: Arial, sans-serif;
+			color: #555;
+			font-size: 1.2em; /* 基于容器字体大小 */
+			margin-top: 0.5em;
+		}
+	</style>
+
+<div class="pisces">
+  <header class="header">
+    <div class="blog-header box-shadow-wrapper" id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+            <a href="https://exber.qzz.io" class="brand">
+              <span>Exber's Blog</span>
+            </a>  
+        </div>
+        
+			<p class="subtitle">Can't go up</p>
+        
+      </div>
+      <nav class="site-nav bg-color" id="site_nav">
+        <ul id="nav_ul">
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io" target="">
+					首页
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io/tags" target="">
+					按标签筛选
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://csacademy.com/app/graph_editor/" target="_blank">
+					图论编辑器
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="http://yuantiji.ac/zh/" target="_blank">
+					原题机
+				</a>
+            </li>
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://exber.qzz.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.6</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script>
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+
+
+	<script>
+		// 获取DOM元素
+		const sliderTrack = document.getElementById('sliderTrack');
+		const sliderThumb = document.getElementById('sliderThumb');
+		const sliderFill = document.getElementById('sliderFill');
+		const sliderValue = document.getElementById('sliderValue');
+		
+		// 初始化变量
+		let isDragging = false;
+		let currentValue = 0.6;
+		
+		// 更新滑块位置和数值显示
+		function updateSlider(positionX) {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			let newPosition;
+
+			// 检查轨道宽度是否有效
+			if (trackRect.width <= 0) {
+				// 如果轨道宽度无效，则直接使用当前的 currentValue
+				newPosition = currentValue;
+			} else {
+				// 正常计算位置
+				newPosition = (positionX - trackRect.left) / trackRect.width;
+				newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+			}
+
+			// 更新UI
+			sliderThumb.style.left = `${newPosition * 100}%`;
+			sliderFill.style.width = `${newPosition * 100}%`;
+
+			// 更新当前值和表单隐藏域的值
+			currentValue = newPosition;
+			document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+
+			// 更新显示值（保留两位小数）
+			// 使用 Number.isNaN 进行严格检查，确保显示正常
+			const displayValue = Number.isNaN(newPosition) ? '0.60' : newPosition.toFixed(2);
+			sliderValue.textContent = displayValue;
+		}
+		
+		// 响应父容器大小变化
+		function handleResize() {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			const positionX = trackRect.left + trackRect.width * currentValue;
+			updateSlider(positionX);
+		}
+		
+		// 鼠标按下事件 - 仅在圆点上触发
+		sliderThumb.addEventListener('mousedown', (e) => {
+			isDragging = true;
+			sliderThumb.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		
+		// 鼠标移动事件
+		document.addEventListener('mousemove', (e) => {
+			if (!isDragging) return;
+			updateSlider(e.clientX);
+		});
+		
+		// 鼠标释放事件
+		document.addEventListener('mouseup', () => {
+			if (isDragging) {
+				isDragging = false;
+				sliderThumb.style.cursor = 'grab';
+			}
+		});
+		
+		// 监听父容器大小变化
+		const resizeObserver = new ResizeObserver(() => {
+			handleResize();
+		});
+		
+		// 开始观察相关元素
+		resizeObserver.observe(sliderTrack.parentElement);
+		resizeObserver.observe(sliderTrack);
+		
+		// 初始化
+		handleResize();
+	</script>
+
+	</div>
+	<div class="main-continer">
+	<div class="section-layout pisces">
+		<div class="section-layout-wrapper">
+			<div class="sidebar">
+	<div class="sidebar-box box-shadow-wrapper bg-color right-motion" id="sidebar">
+		<div class="post-list-sidebar" id="sidebar-selector">
+			<div class="sidebar-title">
+				<span id="tocSideBar" class="sidebar-title-item sidebar-title-active language" data-lan="index">文章目录</span>
+				<span id="metaSideBar" class="sidebar-title-item language" data-lan="preview">站点概览</span>
+			</div>
+		</div>
+		<div class="sidebar-body pisces" id="sidebar_body">
+			<div class="post-side-meta" id="post_side_meta">
+				
+
+
+
+
+
+
+<div class="sidebar-item">
+	<img class="site-author-image right-motion" src="https://exber.qzz.io/avatar.png"/>
+	<p class="site-author-name">Exber</p>
+	
+	<div class="site-description right-motion">
+		<p>洛谷 @Exber</p>
+<p>Codeforces @Rebex</p>
+
+	</div>
+	
+</div>
+<div class="sidebar-item side-item-stat right-motion">
+	<div class="sidebar-item-box">
+		<a href="https://exber.qzz.io/tags">
+			<span class="site-item-stat-count">26</span>
+			<span class="site-item-stat-name language" data-lan="tag">标签</span>
+		</a>
+	</div>
+	<div class="sidebar-item-box">
+		<a>
+			
+			<span class="site-item-stat-count">330</span>
+			<span class="site-item-stat-name language" data-lan="article">文章</span>
+		</a>
+	</div>
+</div>
+
+			</div>
+			<div class="post-toc sidebar-body-active" id="post_toc" style="opacity: 1;">
+				<div class="toc-box right-motion">
+					<div class="toc-wrapper  no_compress" id="toc_wrapper">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+			<div class="section-box box-shadow-wrapper">
+				<div class="section bg-color post post-page">
+					
+					<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/%E7%94%9F%E6%88%90%E5%BC%8F%E6%89%A9%E6%95%A3%E6%A8%A1%E5%9E%8B%E5%88%9D%E6%8E%A2%20%E2%80%94%E2%80%94%20DDPM%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0">生成式扩散模型初探 —— DDPM 学习笔记</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2025-08-30 11:21:16">2025-08-30 11:21:16</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>机器学习</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>数学</span>
+				</a>
+			
+		</span>
+		
+		
+		
+		<span class="meta-item pc-show">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-copy"></i>
+			<a class="language" data-lan="copy-markdown" data-src-markdown="### 前向扩散
+
+#### 定义
+
+考虑这样一个过程，对于一张图片 $x_0$，我们不断为其增加噪声：（注意这表示对图片中每个像素点的每个颜色通道归一化到 $[-1,1]$ 后的值同时进行操作）
+$$
+x_t\sim\sqrt{\alpha_t}\times x_{t-1}+\sqrt{\beta_t}\times \mathcal{N}(0,1)
+$$
+其中 $\mathcal{N}(0,1)$ 表示均值为 $0$，方差为 $1$ 的正态分布（标准正态分布），则相当于 $x_t$ 从均值为 $\sqrt\alpha_t\times x_{t-1}$，方差为 $\beta_t$ 的正态分布中抽样。
+
+其中 $\alpha_t$ 和 $\beta_t$ 是人为设置的超参数，应有 $\beta_t\approx0$，保证每一步加入的噪声比较少。
+
+我们的目标是，在足够多轮后（例如 $T=1000$），使得可以近似 $x_T\sim \mathcal{N}(0,1)$。这样就可以从标准正态分布随机采样一个 $x_T$，再一步一步倒回来得到 $x_0$。
+
+注意前向扩散过程中方差 $\sigma^2_t$ 的变化：
+$$
+\sigma^2_{t}=\alpha_t\times\sigma^2_{t-1}+\beta_t
+$$
+我们希望 $\sigma^2_T\approx 1$。不妨假定 $\sigma^2_0=1$（这可以通过对数据集进行标准化保证），也就是说我们希望扩散完成后方差依然为 $1$，则为了保证扩散过程中的稳定性，不妨对于所有 $t$，都保证 $\sigma_t^2=1$。
+
+那么代入：
+$$
+1=\alpha_t+\beta_t
+$$
+故一般保证 $\alpha_t+\beta_t=1$。
+
+#### 一步到位
+
+考虑 $x_{t}$ 和 $x_{t-2}$ 的关系：
+$$
+\begin{aligned}
+x_t&\sim\sqrt{\alpha_t}\times x_{t-1}+\sqrt{\beta_t}\times \mathcal{N}(0,1)\\
+&\sim\sqrt{\alpha_t}\times\left(\sqrt{\alpha_{t-1}}\times x_{t-2}+\sqrt{\beta_{t-1}}\times \mathcal{N}(0,1)\right)+\sqrt{\beta_t}\times \mathcal{N}(0,1)\\
+&\sim\sqrt{\alpha_t\alpha_{t-1}}\times x_{t-2}+\underbrace{\sqrt{\alpha_t\beta_{t-1}}\times \mathcal{N}(0,1)}_{\text{方差为 }\alpha_t\beta_{t-1}\text{ }的正态分布}+\underbrace{\sqrt{\beta_t}\times \mathcal{N}(0,1)}_{\text{方差为 }\beta_{t}\text{ }的正态分布}\\
+\end{aligned}
+$$
+由正态分布的叠加性，对于两个相互独立的正态分布，有 $\mathcal{N}(\mu_1,\sigma^2_1)+\mathcal{N}(\mu_2,\sigma^2_2)=\mathcal{N}(\mu_1+\mu_2,\sigma^2_1+\sigma^2_2)$，所以有：
+$$
+\underbrace{\sqrt{\alpha_t\beta_{t-1}}\times \mathcal{N}(0,1)}_{\text{方差为 }\alpha_t\beta_{t-1}\text{ }的正态分布}+\underbrace{\sqrt{\beta_t}\times \mathcal{N}(0,1)}_{\text{方差为 }\beta_{t}\text{ }的正态分布}=\underbrace{\sqrt{\alpha_t\beta_{t-1}+\beta_t}\times \mathcal{N}(0,1)}_{\text{方差为 }\alpha_t\beta_{t-1}+\beta_{t}\text{ }的正态分布}
+$$
+而由于 $\alpha_t+\beta_t=1$，故：
+$$
+\begin{aligned}
+\alpha_t\beta_{t-1}+\beta_t&=\alpha_t(1-\alpha_{t-1})+1-\alpha_t\\
+&=\alpha_t-\alpha_t\alpha_{t-1}+1-\alpha_t\\
+&=1-\alpha_t\alpha_{t-1}
+\end{aligned}
+$$
+所以：
+$$
+x_t\sim\sqrt{\alpha_t\alpha_{t-1}}\times x_{t-2}+\sqrt{1-\alpha_t\alpha_{t-1}}\times \mathcal{N}(0,1)
+$$
+以此类推，有：
+$$
+x_t\sim \sqrt{\underbrace{\alpha_t\alpha_{t-1}\dots\alpha_1}_{\text{记为 }\bar\alpha_t}}\times x_0+ \sqrt{\underbrace{1-\alpha_t\alpha_{t-1}\dots\alpha_1}_{\text{记为 }\bar\beta_t}}\times\mathcal{N}(0,1)
+$$
+
+### 反向生成
+
+#### 预测什么
+
+为了实现反向生成，我们需要预测每一步加入的噪声 $\epsilon_t\sim \mathcal{N}(0,1)$，从而根据 $x_t$ 推出 $x_{t-1}$：
+$$
+x_{t}=\sqrt{\alpha_t}\times x_{t-1}+\sqrt{\beta_t}\times \epsilon\\
+x_{t-1}=\frac{1}{\sqrt{\alpha_t}}\times \left(x_{t}-\sqrt{\beta_t}\times\epsilon\right)
+$$
+对比下面两条式子：
+$$
+x_t\sim \sqrt{\alpha_t}\times \left(\sqrt{\bar\alpha_{t-1}}\times x_0+\sqrt{\bar\beta_{t-1}}\times \mathcal{N}(0,1)\right) + \sqrt{\beta_t}\times \epsilon_1\\
+x_t\sim \sqrt{\bar\alpha_t}\times x_0+\sqrt{\bar\beta_t}\times \epsilon_2
+$$
+第一条是直接训练模型去拟合每一步加入的噪声，第二条是训练模型去拟合一步到位的噪声。
+
+不难发现，根据第一条去训练就需要每次采样 $x_0,t$ 和两个服从 $\mathcal{N}(0,1)$ 的随机变量，比下面那一条多一个需要采样的变量，故较难收敛，训练起来更加费时费力。
+
+所以不妨直接训练模型去拟合一步到位的噪声 $\epsilon_2$，即每次训练：
+
+- 采样 $x_0,t$，再从 $\mathcal{N}(0,1)$ 采样一个 $\epsilon$；
+- 计算 $x_t=\sqrt{\bar\alpha_t}\times x_0+\sqrt{\bar\beta_t}\times \epsilon$；
+- 根据模型的输出 $M(x_t,t)$ 和 $\epsilon$ 的差异，进行反向传播，更新参数；
+
+那么根据 $x_t\sim \sqrt{\bar\alpha_t}\times x_0+\sqrt{\bar\beta_t}\times \epsilon$，我们可以得知：
+$$
+x_0=\frac{1}{\sqrt{\bar\alpha_t}}\times\left(x_t-\sqrt{\bar\beta_t}\times M(x_t,t)\right)
+$$
+但是直接一步到位去预测 $x_0$ 是不现实的，下面来推导一下怎么根据 $M(x_t,t)$ 的输出得到每一步加入的噪声 $\epsilon_t$。
+
+#### 逐步逆向
+
+令：
+
+- $P(x_t|x_0)$ 为已知原图为 $x_0$，第 $t$ 步扩散结果等于 $x_t$ 的概率；
+- $P(x_{t-1},x_t|x_0)$ 为已知原图为 $x_0$，第 $t-1$ 步扩散结果等于 $x_{t-1}$ 且第 $t$ 步扩散结果等于 $x_t$ 的概率；
+- $P(x_t|x_{t-1},x_0)$ 为已知第 $t-1$ 步扩散结果等于 $x_{t-1}$ 且原图等于 $x_0$ 的前提下，第 $t$ 步扩散结果等于 $x_{t}$ 的概率，$P(x_{t-1}|x_{t},x_0)$ 同理。
+
+那么只要求出 $P(x_{t-1}|x_{t},x_0)$，我们就能代入 $x_t$ 和模型预测的 $x_0$，依据这个关于 $x_{t-1}$ 的概率密度函数直接采样得到 $x_{t-1}$。
+
+根据贝叶斯公式，有：
+$$
+P(x_{t-1}|x_{t},x_0)=\frac{P(x_{t-1},x_t|x_0)}{P(x_{t}|x_0)}=\frac{P(x_t|x_{t-1},x_0)\times P(x_{t-1}|x_0)}{P(x_{t}|x_0)}
+$$
+根据之前的定义，有：
+
+- $P(x_t|x_{t-1},x_0)$：$x_t\sim \mathcal{N}(\sqrt{\alpha_t}x_{t-1},\beta_t)$；
+- $P(x_{t-1}|x_0)$：$x_{t-1}\sim\mathcal{N}(\sqrt{\bar\alpha_{t-1}}x_{0},\bar\beta_{t-1})$；
+- $P(x_{t}|x_0)$：$x_{t}\sim\mathcal{N}(\sqrt{\bar\alpha_t}x_{0},\bar\beta_t)$；
+
+由于正态分布 $\mathcal{N}(\mu,\sigma^2)$ 的概率密度函数（抽样得到 $x$ 的概率）为 $\exp\left(-\frac{1}{2}\times \frac{(x-\mu)^2}{\sigma^2}\right)$，故 $P(x_{t-1}|x_{t},x_0)$ 等于：
+$$
+\exp\left(-\frac{1}{2}\times \left(\frac{\left(x_t-\sqrt{\alpha_t}x_{t-1}\right)^2}{\beta_t}+\frac{\left(x_{t-1}-\sqrt{\bar\alpha_{t-1}}x_0\right)^2}{\bar\beta_{t-1}}-\frac{\left(x_{t}-\sqrt{\bar\alpha_{t}}x_0\right)^2}{\bar\beta_t}\right)\right)
+$$
+对 $-\frac{1}{2}\times(\dots)$ 里的东西变形，注意到我们只关心和 $x_{t-1}$ 有关的项（常数不影响后续的配方）：
+$$
+\frac{\left(x_t-\sqrt{\alpha_t}x_{t-1}\right)^2}{\beta_t}+\frac{\left(x_{t-1}-\sqrt{\bar\alpha_{t-1}}x_0\right)^2}{\bar\beta_{t-1}}-\frac{\left(x_{t}-\sqrt{\bar\alpha_{t}}x_0\right)^2}{\bar\beta_t}\\
+\frac{x_t^2-2\sqrt{\alpha_t}x_tx_{t-1}+\alpha_tx_{t-1}^2}{\beta_t}+\frac{x_{t-1}^2-2\sqrt{\bar\alpha_{t-1}}x_{t-1}x_0+\bar\alpha_{t-1}x_0^2}{\bar\beta_{t-1}}\\
+\frac{-2\sqrt{\alpha_t}x_t}{\beta_t}\times x_{t-1}+\frac{\alpha_t}{\beta_t}\times x_{t-1}^2+\frac{1}{\bar\beta_{t-1}}\times x_{t-1}^2+\frac{-2\sqrt{\bar\alpha_{t-1}}x_0}{\bar\beta_{t-1}}\times x_{t-1}\\
+\left(\frac{\alpha_t}{\beta_t}+\frac{1}{\bar\beta_{t-1}}\right)\times x_{t-1}^2-2\left(\frac{\sqrt{\alpha_t}x_t}{\beta_t}+\frac{\sqrt{\bar\alpha_{t-1}}x_0}{\bar\beta_{t-1}}\right)\times x_{t-1}\\
+$$
+接下来对其进行配方，使其变为 $\frac{(x_{t-1}-\mu)^2}{\sigma^2}$ 的形式，则：
+$$
+\frac{(x_{t-1}-\mu)^2}{\sigma^2}=\frac{x_{t-1}^2-2\mu x_{t-1}+\mu^2}{\sigma^2}\\
+\frac{1}{\sigma^2}\times x_{t-1}^2-2\frac{\mu}{\sigma^2}\times x_{t-1}
+$$
+所以：
+$$
+\sigma^2=\frac{1}{\frac{\alpha_t}{\beta_t}+\frac{1}{\bar\beta_{t-1}}}\\
+=\frac{\beta_t\bar\beta_{t-1}}{\alpha_t\bar\beta_{t-1}+\beta_t}\\
+=\frac{\beta_t\bar\beta_{t-1}}{\alpha_t-\bar\alpha_{t}+1-\alpha_t}\\
+=\frac{\beta_t\bar\beta_{t-1}}{\bar\beta_t}\\
+\mu=\left(\frac{\sqrt{\alpha_t}x_t}{\beta_t}+\frac{\sqrt{\bar\alpha_{t-1}}x_0}{\bar\beta_{t-1}}\right)\times \sigma^2\\
+=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}x_t+\beta_t\sqrt{\bar\alpha_{t-1}}x_0}{\beta_t\bar\beta_{t-1}}\times \frac{\beta_t\bar\beta_{t-1}}{\bar\beta_t}\\
+=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}x_t+\beta_t\sqrt{\bar\alpha_{t-1}}x_0}{\bar\beta_t}
+$$
+注意到方差与模型的预测无关，所以也有人说 DDPM 就是在预测每一步的均值。
+
+根据模型的预测，将 $x_0$ 代入：
+$$
+\begin{aligned}
+\mu&=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}x_t+\beta_t\sqrt{\bar\alpha_{t-1}}x_0}{\bar\beta_t}\\
+&=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}x_t+\beta_t\sqrt{\bar\alpha_{t-1}}\frac{1}{\sqrt{\bar\alpha_t}}\left(x_t-\sqrt{\bar\beta_t}M(x_t,t)\right)}{\bar\beta_t}\\
+&=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}x_t+\frac{\beta_t\sqrt{\bar\alpha_{t-1}}}{\sqrt{\bar\alpha_t}}x_t-\frac{\beta_t\sqrt{\bar\alpha_{t-1}}\sqrt{\bar\beta_t}}{\sqrt{\bar\alpha_t}}M(x_t,t)}{\bar\beta_t}\\
+&=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}\sqrt{\bar\alpha_t}+\beta_t\sqrt{\bar\alpha_{t-1}}}{\sqrt{\bar\alpha_t}\bar\beta_t}x_t-\frac{\beta_t\sqrt{\bar\alpha_{t-1}}\sqrt{\bar\beta_t}}{\sqrt{\bar\alpha_t}\bar\beta_t}M(x_t,t)\\
+&=\frac{\left(\bar\beta_{t-1}\alpha_t+\beta_t\right)\sqrt{\bar\alpha_{t-1}}}{\sqrt{\bar\alpha_t}\bar\beta_t}x_t-\frac{\beta_t}{\sqrt{\alpha_t}\sqrt{\bar\beta_t}}M(x_t,t)\\
+&=\frac{\left(\alpha_t-\bar\alpha_t+1-\alpha_t\right)\sqrt{\bar\alpha_{t-1}}}{\sqrt{\bar\alpha_t}\bar\beta_t}x_t-\frac{\beta_t}{\sqrt{\alpha_t}\sqrt{\bar\beta_t}}M(x_t,t)\\
+&=\frac{1}{\sqrt{\alpha_t}}x_t-\frac{\beta_t}{\sqrt{\alpha_t}\sqrt{\bar\beta_t}}M(x_t,t)\\
+&=\frac{1}{\sqrt{\alpha_t}}\left(x_t-\frac{\beta_t}{\sqrt{\bar\beta_t}}M(x_t,t)\right)\\
+\end{aligned}
+$$
+那么我们就得到了反向过程中每一步的采样公式：
+$$
+x_{t-1}\sim \frac{1}{\sqrt{\alpha_t}}\left(x_t-\frac{\beta_t}{\sqrt{\bar\beta_t}}M(x_t,t)\right)+\sqrt{\frac{\beta_t\bar\beta_{t-1}}{\bar\beta_t}}\times\mathcal{N}(0,1)
+$$
+将 $\beta$ 和 $\bar\beta$ 展开就得到了原论文中的形式：
+$$
+x_{t-1}\sim \frac{1}{\sqrt{\alpha_t}}\left(x_t-\frac{1-\alpha_t}{\sqrt{1-\bar\alpha_t}}M(x_t,t)\right)+\sqrt{\beta_t\times \frac{1-\bar\alpha_{t-1}}{1-\bar\alpha_{t}}}\times\mathcal{N}(0,1)
+$$
+
+### 实现细节
+
+#### 超参设置
+
+##### Liner Schedule
+
+原论文中 $T=1000$，$\beta_t=10^{-4}+\frac{t}{T}\times (0.02-10^{-4})$，即 $\beta_t$ 从 $10^{-4}$ 线性递增到 $0.02$。
+
+这样设置符合直觉，毕竟 $t$ 越大 $x_t$ 就越接近随机噪声，对 $x_t$ 的破坏量 $\beta_t$ 就可以相应地增大。而经计算可得 $\bar\alpha_{T}\approx 4\times 10^{-5}$，符合 $x_T$ 的分布接近 $\mathcal{N}(0,1)$ 的需求。
+
+##### Cosine Schedule
+
+观察 Liner Schedule 的 $\bar\alpha_t$ 的曲线就会发现，似乎后面有很多步都是没用的，前一半扩散得太快：
+
+![](../post-images/1756524136510.png)
+
+所以后来提出了一种改进方法，设置 $\bar a_t=\cos\left(\frac{\frac{t}{T}+\epsilon}{1+\epsilon}\times \frac{\pi}{2}\right)^2$，其中 $\epsilon$ 是为了稳定数值引入的极小量，一般设置为 $10^{-3}$：（图中蓝色曲线）
+![](../post-images/1756525465639.png)
+
+实验表明，这样设置超参数可以利用好后面的扩散进程，效果更好。
+
+实际应用中，一般令 $f(t)=\cos\left(\frac{\frac{t}{T}+\epsilon}{1+\epsilon}\times \frac{\pi}{2}\right)^2$，$\bar\alpha_t=\frac{f(t)}{f(0)}$，并将 $\alpha_t$ 裁剪到 $[\epsilon,1-\epsilon]$，其中 $\epsilon$ 一般设置为 $10^{-3}$。
+
+#### 模型及损失函数选取
+
+对于这种输入和输出张量形状相同的任务，一般选用 U-Net 模型。而由于模型是在预测一个服从正态分布的变量，故输出应较为接近 $0$，故可用 $\text{MSE}$（均方误差）损失函数。
+
+需要注意的是，时间步 $t$ 也要输入模型中，一般是以 Transformer 中三角函数位置编码的形式嵌入进 U-Net 中的。
+
+这里给出对于 $32\times 32$ 的三通道图片的 U-Net 结构：
+
+![](../post-images/1756527052285.png)
+
+其中 DownBlock 和 UpBlock 结构一样：（TimeEmbedding 即为和 Transformer 中位置编码一样的三角函数编码，经过一个简单的多层感知机（MLP）变换后的结果）
+
+![](../post-images/1756527212193.jpg)
+
+MiddleBlock 则是一个对称的结构，不过其实也可以贪方便直接使用 DownBlock 替代掉：
+
+![](../post-images/1756527299162.jpg)
+
+激活函数则一般使用 SiLU 这种一阶导平滑连续的函数，增强其在 $0$ 附近的表达能力（实测 ReLU 和 Leaky_ReLU 效果都不太好）。
+
+这是一个小小的 Demo，使用了[自己的 C++ 机器学习库](https://github.com/Rebxe/network.h)、[开源库 stb](https://github.com/nothings/stb) 和 [C++ 图形库 EasyX](easyx.cn)，实现了生成指定类型的手写数字：
+
+<details><summary><code>U_NET.h</code></summary><p>
+
+```cpp
+#pragma once
+
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <fstream>
+#include <random>
+#include <ctime>
+#include <vector>
+
+#include &quot;./network_h/network.h&quot;
+
+using namespace std;
+
+using namespace network;
+
+const dim_t Batch_Size = 32;
+const dim_t time_dim = 256, emb_dim = 32, model_dim = 64;
+
+inline void time_embedding(dim_t t, dim_t dim, float* out)
+{
+	for (dim_t i = 0; i < dim; i++)
+	{
+		float wk = pow(10000, -(i / 2 * 2) / (float)dim);
+		if (i & 1 ^ 1) out[i] = sin(wk * t);
+		else out[i] = cos(wk * t);
+	}
+}
+
+class BLOCK : public OP_Base
+{
+public:
+	FC* fc1, * fc2; // time_liner & type_liner
+	CONV* c0, * c1, * c2, * c3;
+	GN* gn1, * gn2, * gn3;
+	BLOCK(OP_Base* fap, dim_t d, dim_t d2, dim_t h, dim_t w) :OP_Base(fap)
+	{
+		if (d != d2) c0 = get<CONV>(af::dim4{ h,w,d,0 }, make_pair(3, 3), d2, make_pair(1, 1), make_pair(1, 1));
+		else c0 = NULL;
+		fc1 = get<FC>(time_dim, d2), fc2 = get<FC>(emb_dim, d2);
+		c1 = get<CONV>(af::dim4{ h,w,d,0 }, make_pair(3, 3), d2, make_pair(1, 1), make_pair(1, 1));
+		gn1 = get<GN>(2, d2, 32, true);
+		c2 = get<CONV>(af::dim4{ h,w,d2,0 }, make_pair(3, 3), d2, make_pair(1, 1), make_pair(1, 1));
+		gn2 = get<GN>(2, d2, 32, true);
+		c3 = get<CONV>(af::dim4{ h,w,d2,0 }, make_pair(3, 3), d2, make_pair(1, 1), make_pair(1, 1));
+		gn3 = get<GN>(2, d2, 32, true);
+	}
+	val4d* operator()(val4d* x, val4d* time_emb, val4d* type_emb)
+	{
+		val4d* y;
+		if (c0 != NULL) y = (*c0)(x), y = silu(y, true);
+		else y = x;
+		// add time_emb
+		x = (*c1)(x), x = silu(x, true);
+		time_emb = (*fc1)(time_emb), time_emb = silu(time_emb, true);
+		x = add(x, tile(time_emb, af::dim4{ x->dims(0),x->dims(1),1,1 }));
+		x = (*gn1)(x);
+		// add type_emb
+		x = (*c2)(x), x = silu(x, true);
+		type_emb = (*fc2)(type_emb), type_emb = silu(type_emb, true);
+		x = add(x, tile(type_emb, af::dim4{ x->dims(0),x->dims(1),1,1 }));
+		x = (*gn2)(x);
+		// add short cut
+		x = (*c3)(x), x = silu(x, true);
+		x = add(x, y);
+		x = (*gn3)(x);
+		return x;
+	}
+};
+
+class DOWN :public OP_Base
+{
+public:
+	CONV* c;
+	GN* gn;
+	DOWN(OP_Base* fap, dim_t d, dim_t h, dim_t w) :OP_Base(fap)
+	{
+		c = get<CONV>(af::dim4{ h,w,d,0 }, make_pair(4, 4), d * 2, make_pair(2, 2), make_pair(1, 1));
+		gn = get<GN>(2, d * 2, 32, true);
+	}
+	val4d* operator()(val4d* x)
+	{
+		x = (*c)(x), x = silu(x, true), x = (*gn)(x);
+		return x;
+	}
+};
+
+class UP :public OP_Base
+{
+public:
+	CONV* c1, *c2;
+	GN* gn1, * gn2;
+	UP(OP_Base* fap, dim_t d, dim_t h, dim_t w) :OP_Base(fap)
+	{
+		c1 = get<CONV>(af::dim4{ h * 2,w * 2,d,0 }, make_pair(3, 3), d, make_pair(1, 1), make_pair(1, 1));
+		gn1 = get<GN>(2, d, 32, true);
+		c2 = get<CONV>(af::dim4{ h * 2,w * 2,d,0 }, make_pair(3, 3), d / 2, make_pair(1, 1), make_pair(1, 1));
+		gn2 = get<GN>(2, d / 2, 32, true);
+	}
+	val4d* operator()(val4d* x)
+	{
+		x = upsample(x, { 2,2 });
+		x = (*c1)(x), x = silu(x, true), x = (*gn1)(x);
+		x = (*c2)(x), x = silu(x, true), x = (*gn2)(x);
+		return x;
+	}
+};
+
+class U_NET : public OP_Base
+{
+public:
+	/****Time Embedding****/
+	FC* fc0, * fc1;
+
+	/****Type Embedding****/
+	EMBEDDING* emb;
+
+
+	/****In****/
+	CONV* c0;
+
+	/****Encoder****/
+	BLOCK* down_b[3][2];
+	DOWN* down[3];
+
+	/****Middle*****/
+	BLOCK* mid[3];
+
+	/****Decoder****/
+	UP* up[3];
+	BLOCK* up_b[3][2];
+
+	/****Out*****/
+	CONV* c1;
+
+	float in[Batch_Size * 1 * 32 * 32];
+	float ftime_emb[Batch_Size * time_dim];
+	dim_t in_t[Batch_Size], in_type[Batch_Size];
+	val4d* out;
+
+	U_NET() :OP_Base(NULL)
+	{
+		// Time Embedding
+		fc0 = get<FC>(time_dim, time_dim * 4), fc1 = get<FC>(time_dim * 4, time_dim);
+		// Type Embedding
+		emb = get<EMBEDDING>(10, 1, emb_dim);
+		// U-Net
+		c0 = get<CONV>(af::dim4{ 32,32,1,0 }, make_pair(3, 3), model_dim, make_pair(1, 1), make_pair(1, 1));
+		dim_t d = model_dim, h = 32, w = 32;
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 2; j++) down_b[i][j] = get<BLOCK>(d, d, h, w);
+			down[i] = get<DOWN>(d, h, w);
+			d *= 2, h /= 2, w /= 2;
+		}
+		for (int i = 0; i < 3; i++) mid[i] = get<BLOCK>(d, d, h, w);
+		for (int i = 0; i < 3; i++)
+		{
+			up[i] = get<UP>(d, h, w);
+			h *= 2, w *= 2, d /= 2;
+			for (int j = 0; j < 2; j++) up_b[i][j] = get<BLOCK>(d * 2, d, h, w);
+		}
+		c1 = get<CONV>(af::dim4{ h,w,d,0 }, make_pair(1, 1), 1, make_pair(1, 1), make_pair(0, 0), make_pair(1, 1), Init_Xavier);
+	}
+	inline void forward()
+	{
+		init_forward();
+		dim_t n = eval ? 1 : Batch_Size;
+		val4d* time_emb, * type_emb;
+		{
+			for (int i = 0; i < n; i++) time_embedding(in_t[i], time_dim, ftime_emb + i * time_dim);
+			af::dim4 emb_s = af::dim4{ 1,1,time_dim,n };
+			time_emb = tmp<val4d>(emb_s);
+			time_emb->data() = af::array(emb_s, ftime_emb);
+			time_emb = (*fc0)(time_emb), time_emb = silu(time_emb, true);
+			time_emb = (*fc1)(time_emb), time_emb = silu(time_emb, true);
+		}
+		{
+			type_emb = (*emb)(n, in_type);
+		}
+		af::dim4 ins = { 32,32,1,eval ? 1 : Batch_Size };
+		val4d* x = tmp<val4d>(ins);
+		x->data() = af::array(ins, in);
+		x = (*c0)(x);
+		vector<val4d*> que;
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 2; j++)
+			{
+				x = (*down_b[i][j])(x, time_emb, type_emb);
+				que.push_back(x);
+			}
+			x = (*down[i])(x);
+		}
+		for (int i = 0; i < 3; i++) x = (*mid[i])(x, time_emb, type_emb);
+		for (int i = 0; i < 3; i++)
+		{
+			x = (*up[i])(x);
+			for (int j = 0; j < 2; j++)
+			{
+				x = (*up_b[i][j])(concat({ x,que.back() }, 2), time_emb, type_emb);
+				que.pop_back();
+			}
+		}
+		x = (*c1)(x), x = tanh(x, true);
+		out = x;
+	}
+};
+
+class WARMUP_COSINE
+{
+private:
+	int t, tot_t;
+	double preres;
+public:
+	double mnl, mxl;
+	int WarmUp;
+	double T_MAX, T_MLT;
+	bool REPET;
+
+public:
+	void save(ofstream& ouf)
+	{
+		writf(ouf, mnl), writf(ouf, mxl);
+		writf(ouf, WarmUp);
+		writf(ouf, T_MAX), writf(ouf, T_MLT);
+		writf(ouf, REPET);
+		writf(ouf, t), writf(ouf, tot_t);
+		writf(ouf, preres);
+	}
+	void load(ifstream& inf)
+	{
+		readf(inf, mnl), readf(inf, mxl);
+		readf(inf, WarmUp);
+		readf(inf, T_MAX), readf(inf, T_MLT);
+		readf(inf, REPET);
+		readf(inf, t), readf(inf, tot_t);
+		readf(inf, preres);
+	}
+
+public:
+	WARMUP_COSINE(double LLRT, double RLRT, int MAX_T, bool REP = true, int WUP = 0, double MLT_T = 1)
+	{
+		mnl = LLRT, mxl = RLRT, T_MAX = MAX_T, T_MLT = MLT_T, WarmUp = WUP;
+		REPET = REP;
+		t = tot_t = 0;
+		preres = WUP == 0 ? mxl : mnl;
+	}
+	double get() { return preres; }
+	void step()
+	{
+		tot_t++;
+		if (tot_t <= WarmUp)
+		{
+			preres += (mxl - mnl) / (double)WarmUp;
+			return;
+		}
+		if (t > T_MAX) return;
+		preres = mnl + (1 / (double)2) * (mxl - mnl) * (1 + cos(t / (double)T_MAX * acos(-1)));
+		t++;
+		if (REPET && t == T_MAX + 1) t = 0, T_MAX *= T_MLT;
+	}
+};
+```
+
+</p></details>
+
+<details><summary><code>main.cpp</code></summary><p>
+
+```cpp
+#define NDEBUG
+
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <fstream>
+#include <random>
+#include <ctime>
+#include <cmath>
+#include <sstream>
+#include <chrono>
+#include <io.h>
+#include <conio.h>
+
+using namespace std;
+
+#include &quot;./U_NET.h&quot;
+
+#include &quot;stb_image.h&quot;
+#include &quot;stb_image_write.h&quot;
+
+#include <easyx.h>
+
+const int tot_dat = 60000;
+const int T = 1000;
+const int save_t = 500;
+const float grad_l = -1, grad_r = 1;
+const float lrt_l = 0.00001, lrt_r = 0.0005;
+const int total_batch = 10000, warm_up = 100;
+
+mt19937 rndgen(time(NULL));
+float a[T + 5], b[T + 5], a_[T + 5];
+float dat[tot_dat][1 * 32 * 32];
+int type[tot_dat];
+U_NET brn;
+ADAM opt(brn.parameter(), lrt_l, 0.9, 0.999, 0.01);
+WARMUP_COSINE lrt_gen(lrt_l, lrt_r, total_batch, false, warm_up);
+
+void loaddata(string imgpath, string anspath)
+{
+	FILE* fimg = fopen(imgpath.c_str(), &quot;rb&quot;);
+	FILE* fans = fopen(anspath.c_str(), &quot;rb&quot;);
+	if (fimg == NULL)
+	{
+		puts(&quot;加载图片数据失败\n&quot;);
+		system(&quot;pause&quot;);
+		exit(1);
+	}
+	if (fans == NULL)
+	{
+		puts(&quot;加载答案数据失败\n&quot;);
+		system(&quot;pause&quot;);
+		exit(1);
+	}
+	fseek(fimg, 16, SEEK_SET);
+	fseek(fans, 8, SEEK_SET);
+	unsigned char* img = new unsigned char[28 * 28];
+	for (int cas = 0; cas < tot_dat; cas++)
+	{
+		fread(img, 1, 28 * 28, fimg);
+		for (int i = 0; i < 32 * 32; i++) dat[cas][i] = -1;
+		for (int i = 0; i < 28 * 28; i++)
+		{
+			int x = i / 28, y = i % 28;
+			dat[cas][(x + 2) * 32 + (y + 2)] = img[i] / (float)255 * 2 - 1;
+		}
+		unsigned char num;
+		fread(&num, 1, 1, fans);
+		type[cas] = num;
+	}
+	delete[] img;
+	fclose(fimg), fclose(fans);
+}
+inline void putimg(int sx, int sy, float* a) // put a 64*64 img
+{
+	for (int i = 0; i < 32; i++)
+	{
+		for (int j = 0; j < 32; j++)
+		{
+			for (int k = 0; k < 2; k++)
+			{
+				for (int l = 0; l < 2; l++)
+				{
+					putpixel(sx + j * 2 + k, sy + i * 2 + l, RGB(
+						(a[i * 32 + j] + 1) / 2 * 255,
+						(a[i * 32 + j] + 1) / 2 * 255,
+						(a[i * 32 + j] + 1) / 2 * 255));
+				}
+			}
+		}
+	}
+}
+
+inline void init()
+{
+	// Liner schedule
+	/*
+	float bl = 1e-4, br = 0.02;
+	for (int i = 1; i <= T; i++)
+	{
+		b[i] = bl + (float)(i - 1) / (T - 1) * (br - bl);
+		a[i] = 1 - b[i];
+	}
+	a_[1] = a[1];
+	for (int i = 2; i <= T; i++) a_[i] = a_[i - 1] * a[i];
+	*/
+	
+	// Cosine schedule
+	float pi = acos(-1), eps = 1e-3;
+	auto f = [&](int t) {return (float)pow(cos(((float)t / T + eps) / (1 + eps) * pi / 2), 2); };
+	a[1] = (std::min)((std::max)(f(1) / f(0), eps), 1 - eps);
+	for (int i = 2; i <= T; i++) a[i] = (std::min)((std::max)(f(i) / f(i - 1), eps), 1 - eps);
+	for (int i = 1; i <= T; i++) b[i] = 1 - a[i];
+	a_[1] = a[1];
+	for (int i = 2; i <= T; i++) a_[i] = a_[i - 1] * a[i];
+}
+
+float x0[1 * 32 * 32], noise[Batch_Size * 1 * 32 * 32];
+
+float train()
+{
+	uniform_int_distribution<int> rndid(0, tot_dat - 1);
+	uniform_int_distribution<int> rndt(1, T);
+	normal_distribution<float> n(0, 1);
+	for (int bs = 0; bs < Batch_Size; bs++)
+	{
+		int id = rndid(rndgen);
+		int ad = bs * 1 * 32 * 32;
+		for (int i = 0; i < 1 * 32 * 32; i++) x0[i] = dat[id][i];
+		for (int i = 0; i < 1 * 32 * 32; i++) noise[ad + i] = n(rndgen);
+		int t = rndt(rndgen);
+		brn.in_t[bs] = t;
+		brn.in_type[bs] = type[id];
+		for (int i = 0; i < 1 * 32 * 32; i++) brn.in[ad + i] = sqrt(a_[t]) * x0[i] + sqrt(1 - a_[t]) * noise[ad + i];
+	}
+	brn.forward();
+	opt.clear_grad();
+	float loss = MSEloss(brn.out, af::array({ 32,32,1,Batch_Size }, noise));
+	brn.out->backward();
+	for (auto t : brn.parameter()) *t.second = (af::max)((af::min)(*t.second, grad_r), grad_l); // grad_clip
+	opt.lrt = lrt_gen.get();
+	opt.step(), lrt_gen.step();
+	return loss;
+}
+
+unsigned char tmp[32][32], res[1 * 32 * 32];
+
+inline void work(int type, int sx, int sy)
+{
+	normal_distribution<float> n(0, 1);
+	for (int i = 0; i < 1 * 32 * 32; i++) brn.in[i] = n(rndgen);
+	for (int i = T; i >= 1; i--)
+	{
+		brn.in_t[0] = i;
+		brn.in_type[0] = type;
+		brn.forward();
+		float* out = brn.out->data().host<float>();
+		for (int j = 0; j < 1 * 32 * 32; j++)
+		{
+			brn.in[j] = 1 / sqrt(a[i]) * (brn.in[j] - b[i] / sqrt(1 - a_[i]) * out[j])
+				+ (i > 1 ? sqrt((1 - a_[i - 1]) / (1 - a_[i]) * b[i]) * n(rndgen) : 0);
+			brn.in[j] = max((float)-1, min((float)1, brn.in[j]));
+		}
+		af::freeHost(out);
+		if (i % 1 == 0)
+		{
+			putimg(sx, sy, brn.in);
+			wstringstream ssm;
+			ssm << &quot;T = &quot; << i - 1 << &quot;   &quot;;
+			outtextxy(80, 180, ssm.str().c_str());
+		}
+	}
+}
+
+void load(int idx)
+{
+	stringstream ssm;
+	ssm << idx << &quot;.ai&quot;;
+	ifstream inf(ssm.str(), ios::in | ios::binary);
+	brn.load(inf);
+	opt.load(inf);
+	lrt_gen.load(inf);
+	inf.close();
+}
+
+void save(int idx)
+{
+	stringstream ssm;
+	ssm << idx << &quot;.ai&quot;;
+	ofstream ouf(ssm.str(), ios::out | ios::binary);
+	brn.save(ouf);
+	opt.save(ouf);
+	lrt_gen.save(ouf);
+	ouf.close();
+}
+
+int main()
+{
+	init();
+	printf(&quot;模式选择：\n&quot;);
+	printf(&quot;[1] 训练\n&quot;);
+	printf(&quot;[2] 运行\n&quot;);
+	int op;
+	scanf(&quot;%d&quot;, &op);
+	if (op == 1)
+	{
+		system(&quot;cls&quot;);
+		string imgpath = &quot;../../../../data/MNIST/&quot;;
+		//string imgpath = &quot;./data/&quot;;
+		printf(&quot;图片文件夹：%s\n\n&quot;, imgpath.c_str());
+		loaddata(imgpath + &quot;img&quot;, imgpath + &quot;ans&quot;);
+		printf(&quot;模式选择：\n&quot;);
+		printf(&quot;[1] 重新训练\n&quot;);
+		printf(&quot;[2] 读取并继续训练（自动填充 ai 路径）\n&quot;);
+		int op;
+		scanf(&quot;%d&quot;, &op);
+		system(&quot;cls&quot;);
+		int idx;
+		if (op == 1) idx = 0;
+		else
+		{
+			printf(&quot;断点 id：\n&quot;);
+			scanf(&quot;%d&quot;, &idx);
+			load(idx);
+			system(&quot;cls&quot;);
+		}
+		initgraph(256, 256, EX_SHOWCONSOLE);
+		putimg(48, 48, dat[0]);
+		brn.set_eval(false);
+		for (int tme = idx + 1;; tme++)
+		{
+			auto start = std::chrono::high_resolution_clock::now();
+			printf(&quot;%d th loss: %f\tlearning rate: %f\n&quot;, tme, train(), opt.lrt);
+			auto stop = std::chrono::high_resolution_clock::now();
+			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+			printf(&quot;Time use: %d ms\n\n&quot;, (int)duration);
+			if (_kbhit())
+			{
+				char ch;
+				while (_kbhit()) ch = _getch();
+				if (ch == 27)
+				{
+					save(tme);
+					break;
+				}
+				if (ch == 't')
+				{
+					printf(&quot;输入一个 [0,9] 中的整数：&quot;);
+					int x;
+					cin >> x;
+					brn.set_eval(true);
+					work(x, 48, 48);
+					outtextxy(80, 180, L&quot;Finished&quot;);
+					brn.set_eval(false);
+				}
+			}
+			if (tme % save_t == 0) save(tme);
+		}
+	}
+	else
+	{
+		system(&quot;cls&quot;);
+		printf(&quot;ai 文件路径：\n&quot;);
+		string path;
+		cin >> path;
+		ifstream inf(path, ios::in | ios::binary);
+		brn.load(inf);
+		inf.close();
+		initgraph(640, 256, EX_SHOWCONSOLE);
+		brn.set_eval(true);
+		for (int i = 0; i < 10; i++)
+		{
+			wstringstream ssm;
+			ssm << i;
+			outtextxy(30 + i * 64, 80, ssm.str().c_str());
+			work(i, i * 64, 0);
+		}
+		system(&quot;pause&quot;);
+	}
+	return 0;
+}
+```
+
+</p></details>
+
+这是训练了 14876 个 Batch 后的生成效果：
+
+![](../post-images/1756566255301.jpg)
+" onclick="copyMarkdown(this)">复制 Markdown</a>
+		</span>
+		
+	</div>
+</section>
+
+<script>
+	function copyMarkdown(e) {
+		let text = e.getAttribute('data-src-markdown');
+		if (e.innerHTML == '复制成功') {
+			return;
+		}
+		e.innerHTML = '复制成功';
+		(function (elem) {
+			setTimeout(() => {
+				if (elem.innerHTML == '复制成功') {
+					elem.innerHTML = '复制 Markdown'
+				}
+			}, 1000);
+		})(e)
+		Clipboard.copy(text);
+	}
+</script>
+
+					<div class="post-body next-md-body" id="post_body" data-post-markdown="### 前向扩散
+
+#### 定义
+
+考虑这样一个过程，对于一张图片 $x_0$，我们不断为其增加噪声：（注意这表示对图片中每个像素点的每个颜色通道归一化到 $[-1,1]$ 后的值同时进行操作）
+$$
+x_t\sim\sqrt{\alpha_t}\times x_{t-1}+\sqrt{\beta_t}\times \mathcal{N}(0,1)
+$$
+其中 $\mathcal{N}(0,1)$ 表示均值为 $0$，方差为 $1$ 的正态分布（标准正态分布），则相当于 $x_t$ 从均值为 $\sqrt\alpha_t\times x_{t-1}$，方差为 $\beta_t$ 的正态分布中抽样。
+
+其中 $\alpha_t$ 和 $\beta_t$ 是人为设置的超参数，应有 $\beta_t\approx0$，保证每一步加入的噪声比较少。
+
+我们的目标是，在足够多轮后（例如 $T=1000$），使得可以近似 $x_T\sim \mathcal{N}(0,1)$。这样就可以从标准正态分布随机采样一个 $x_T$，再一步一步倒回来得到 $x_0$。
+
+注意前向扩散过程中方差 $\sigma^2_t$ 的变化：
+$$
+\sigma^2_{t}=\alpha_t\times\sigma^2_{t-1}+\beta_t
+$$
+我们希望 $\sigma^2_T\approx 1$。不妨假定 $\sigma^2_0=1$（这可以通过对数据集进行标准化保证），也就是说我们希望扩散完成后方差依然为 $1$，则为了保证扩散过程中的稳定性，不妨对于所有 $t$，都保证 $\sigma_t^2=1$。
+
+那么代入：
+$$
+1=\alpha_t+\beta_t
+$$
+故一般保证 $\alpha_t+\beta_t=1$。
+
+#### 一步到位
+
+考虑 $x_{t}$ 和 $x_{t-2}$ 的关系：
+$$
+\begin{aligned}
+x_t&\sim\sqrt{\alpha_t}\times x_{t-1}+\sqrt{\beta_t}\times \mathcal{N}(0,1)\\
+&\sim\sqrt{\alpha_t}\times\left(\sqrt{\alpha_{t-1}}\times x_{t-2}+\sqrt{\beta_{t-1}}\times \mathcal{N}(0,1)\right)+\sqrt{\beta_t}\times \mathcal{N}(0,1)\\
+&\sim\sqrt{\alpha_t\alpha_{t-1}}\times x_{t-2}+\underbrace{\sqrt{\alpha_t\beta_{t-1}}\times \mathcal{N}(0,1)}_{\text{方差为 }\alpha_t\beta_{t-1}\text{ }的正态分布}+\underbrace{\sqrt{\beta_t}\times \mathcal{N}(0,1)}_{\text{方差为 }\beta_{t}\text{ }的正态分布}\\
+\end{aligned}
+$$
+由正态分布的叠加性，对于两个相互独立的正态分布，有 $\mathcal{N}(\mu_1,\sigma^2_1)+\mathcal{N}(\mu_2,\sigma^2_2)=\mathcal{N}(\mu_1+\mu_2,\sigma^2_1+\sigma^2_2)$，所以有：
+$$
+\underbrace{\sqrt{\alpha_t\beta_{t-1}}\times \mathcal{N}(0,1)}_{\text{方差为 }\alpha_t\beta_{t-1}\text{ }的正态分布}+\underbrace{\sqrt{\beta_t}\times \mathcal{N}(0,1)}_{\text{方差为 }\beta_{t}\text{ }的正态分布}=\underbrace{\sqrt{\alpha_t\beta_{t-1}+\beta_t}\times \mathcal{N}(0,1)}_{\text{方差为 }\alpha_t\beta_{t-1}+\beta_{t}\text{ }的正态分布}
+$$
+而由于 $\alpha_t+\beta_t=1$，故：
+$$
+\begin{aligned}
+\alpha_t\beta_{t-1}+\beta_t&=\alpha_t(1-\alpha_{t-1})+1-\alpha_t\\
+&=\alpha_t-\alpha_t\alpha_{t-1}+1-\alpha_t\\
+&=1-\alpha_t\alpha_{t-1}
+\end{aligned}
+$$
+所以：
+$$
+x_t\sim\sqrt{\alpha_t\alpha_{t-1}}\times x_{t-2}+\sqrt{1-\alpha_t\alpha_{t-1}}\times \mathcal{N}(0,1)
+$$
+以此类推，有：
+$$
+x_t\sim \sqrt{\underbrace{\alpha_t\alpha_{t-1}\dots\alpha_1}_{\text{记为 }\bar\alpha_t}}\times x_0+ \sqrt{\underbrace{1-\alpha_t\alpha_{t-1}\dots\alpha_1}_{\text{记为 }\bar\beta_t}}\times\mathcal{N}(0,1)
+$$
+
+### 反向生成
+
+#### 预测什么
+
+为了实现反向生成，我们需要预测每一步加入的噪声 $\epsilon_t\sim \mathcal{N}(0,1)$，从而根据 $x_t$ 推出 $x_{t-1}$：
+$$
+x_{t}=\sqrt{\alpha_t}\times x_{t-1}+\sqrt{\beta_t}\times \epsilon\\
+x_{t-1}=\frac{1}{\sqrt{\alpha_t}}\times \left(x_{t}-\sqrt{\beta_t}\times\epsilon\right)
+$$
+对比下面两条式子：
+$$
+x_t\sim \sqrt{\alpha_t}\times \left(\sqrt{\bar\alpha_{t-1}}\times x_0+\sqrt{\bar\beta_{t-1}}\times \mathcal{N}(0,1)\right) + \sqrt{\beta_t}\times \epsilon_1\\
+x_t\sim \sqrt{\bar\alpha_t}\times x_0+\sqrt{\bar\beta_t}\times \epsilon_2
+$$
+第一条是直接训练模型去拟合每一步加入的噪声，第二条是训练模型去拟合一步到位的噪声。
+
+不难发现，根据第一条去训练就需要每次采样 $x_0,t$ 和两个服从 $\mathcal{N}(0,1)$ 的随机变量，比下面那一条多一个需要采样的变量，故较难收敛，训练起来更加费时费力。
+
+所以不妨直接训练模型去拟合一步到位的噪声 $\epsilon_2$，即每次训练：
+
+- 采样 $x_0,t$，再从 $\mathcal{N}(0,1)$ 采样一个 $\epsilon$；
+- 计算 $x_t=\sqrt{\bar\alpha_t}\times x_0+\sqrt{\bar\beta_t}\times \epsilon$；
+- 根据模型的输出 $M(x_t,t)$ 和 $\epsilon$ 的差异，进行反向传播，更新参数；
+
+那么根据 $x_t\sim \sqrt{\bar\alpha_t}\times x_0+\sqrt{\bar\beta_t}\times \epsilon$，我们可以得知：
+$$
+x_0=\frac{1}{\sqrt{\bar\alpha_t}}\times\left(x_t-\sqrt{\bar\beta_t}\times M(x_t,t)\right)
+$$
+但是直接一步到位去预测 $x_0$ 是不现实的，下面来推导一下怎么根据 $M(x_t,t)$ 的输出得到每一步加入的噪声 $\epsilon_t$。
+
+#### 逐步逆向
+
+令：
+
+- $P(x_t|x_0)$ 为已知原图为 $x_0$，第 $t$ 步扩散结果等于 $x_t$ 的概率；
+- $P(x_{t-1},x_t|x_0)$ 为已知原图为 $x_0$，第 $t-1$ 步扩散结果等于 $x_{t-1}$ 且第 $t$ 步扩散结果等于 $x_t$ 的概率；
+- $P(x_t|x_{t-1},x_0)$ 为已知第 $t-1$ 步扩散结果等于 $x_{t-1}$ 且原图等于 $x_0$ 的前提下，第 $t$ 步扩散结果等于 $x_{t}$ 的概率，$P(x_{t-1}|x_{t},x_0)$ 同理。
+
+那么只要求出 $P(x_{t-1}|x_{t},x_0)$，我们就能代入 $x_t$ 和模型预测的 $x_0$，依据这个关于 $x_{t-1}$ 的概率密度函数直接采样得到 $x_{t-1}$。
+
+根据贝叶斯公式，有：
+$$
+P(x_{t-1}|x_{t},x_0)=\frac{P(x_{t-1},x_t|x_0)}{P(x_{t}|x_0)}=\frac{P(x_t|x_{t-1},x_0)\times P(x_{t-1}|x_0)}{P(x_{t}|x_0)}
+$$
+根据之前的定义，有：
+
+- $P(x_t|x_{t-1},x_0)$：$x_t\sim \mathcal{N}(\sqrt{\alpha_t}x_{t-1},\beta_t)$；
+- $P(x_{t-1}|x_0)$：$x_{t-1}\sim\mathcal{N}(\sqrt{\bar\alpha_{t-1}}x_{0},\bar\beta_{t-1})$；
+- $P(x_{t}|x_0)$：$x_{t}\sim\mathcal{N}(\sqrt{\bar\alpha_t}x_{0},\bar\beta_t)$；
+
+由于正态分布 $\mathcal{N}(\mu,\sigma^2)$ 的概率密度函数（抽样得到 $x$ 的概率）为 $\exp\left(-\frac{1}{2}\times \frac{(x-\mu)^2}{\sigma^2}\right)$，故 $P(x_{t-1}|x_{t},x_0)$ 等于：
+$$
+\exp\left(-\frac{1}{2}\times \left(\frac{\left(x_t-\sqrt{\alpha_t}x_{t-1}\right)^2}{\beta_t}+\frac{\left(x_{t-1}-\sqrt{\bar\alpha_{t-1}}x_0\right)^2}{\bar\beta_{t-1}}-\frac{\left(x_{t}-\sqrt{\bar\alpha_{t}}x_0\right)^2}{\bar\beta_t}\right)\right)
+$$
+对 $-\frac{1}{2}\times(\dots)$ 里的东西变形，注意到我们只关心和 $x_{t-1}$ 有关的项（常数不影响后续的配方）：
+$$
+\frac{\left(x_t-\sqrt{\alpha_t}x_{t-1}\right)^2}{\beta_t}+\frac{\left(x_{t-1}-\sqrt{\bar\alpha_{t-1}}x_0\right)^2}{\bar\beta_{t-1}}-\frac{\left(x_{t}-\sqrt{\bar\alpha_{t}}x_0\right)^2}{\bar\beta_t}\\
+\frac{x_t^2-2\sqrt{\alpha_t}x_tx_{t-1}+\alpha_tx_{t-1}^2}{\beta_t}+\frac{x_{t-1}^2-2\sqrt{\bar\alpha_{t-1}}x_{t-1}x_0+\bar\alpha_{t-1}x_0^2}{\bar\beta_{t-1}}\\
+\frac{-2\sqrt{\alpha_t}x_t}{\beta_t}\times x_{t-1}+\frac{\alpha_t}{\beta_t}\times x_{t-1}^2+\frac{1}{\bar\beta_{t-1}}\times x_{t-1}^2+\frac{-2\sqrt{\bar\alpha_{t-1}}x_0}{\bar\beta_{t-1}}\times x_{t-1}\\
+\left(\frac{\alpha_t}{\beta_t}+\frac{1}{\bar\beta_{t-1}}\right)\times x_{t-1}^2-2\left(\frac{\sqrt{\alpha_t}x_t}{\beta_t}+\frac{\sqrt{\bar\alpha_{t-1}}x_0}{\bar\beta_{t-1}}\right)\times x_{t-1}\\
+$$
+接下来对其进行配方，使其变为 $\frac{(x_{t-1}-\mu)^2}{\sigma^2}$ 的形式，则：
+$$
+\frac{(x_{t-1}-\mu)^2}{\sigma^2}=\frac{x_{t-1}^2-2\mu x_{t-1}+\mu^2}{\sigma^2}\\
+\frac{1}{\sigma^2}\times x_{t-1}^2-2\frac{\mu}{\sigma^2}\times x_{t-1}
+$$
+所以：
+$$
+\sigma^2=\frac{1}{\frac{\alpha_t}{\beta_t}+\frac{1}{\bar\beta_{t-1}}}\\
+=\frac{\beta_t\bar\beta_{t-1}}{\alpha_t\bar\beta_{t-1}+\beta_t}\\
+=\frac{\beta_t\bar\beta_{t-1}}{\alpha_t-\bar\alpha_{t}+1-\alpha_t}\\
+=\frac{\beta_t\bar\beta_{t-1}}{\bar\beta_t}\\
+\mu=\left(\frac{\sqrt{\alpha_t}x_t}{\beta_t}+\frac{\sqrt{\bar\alpha_{t-1}}x_0}{\bar\beta_{t-1}}\right)\times \sigma^2\\
+=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}x_t+\beta_t\sqrt{\bar\alpha_{t-1}}x_0}{\beta_t\bar\beta_{t-1}}\times \frac{\beta_t\bar\beta_{t-1}}{\bar\beta_t}\\
+=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}x_t+\beta_t\sqrt{\bar\alpha_{t-1}}x_0}{\bar\beta_t}
+$$
+注意到方差与模型的预测无关，所以也有人说 DDPM 就是在预测每一步的均值。
+
+根据模型的预测，将 $x_0$ 代入：
+$$
+\begin{aligned}
+\mu&=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}x_t+\beta_t\sqrt{\bar\alpha_{t-1}}x_0}{\bar\beta_t}\\
+&=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}x_t+\beta_t\sqrt{\bar\alpha_{t-1}}\frac{1}{\sqrt{\bar\alpha_t}}\left(x_t-\sqrt{\bar\beta_t}M(x_t,t)\right)}{\bar\beta_t}\\
+&=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}x_t+\frac{\beta_t\sqrt{\bar\alpha_{t-1}}}{\sqrt{\bar\alpha_t}}x_t-\frac{\beta_t\sqrt{\bar\alpha_{t-1}}\sqrt{\bar\beta_t}}{\sqrt{\bar\alpha_t}}M(x_t,t)}{\bar\beta_t}\\
+&=\frac{\bar\beta_{t-1}\sqrt{\alpha_t}\sqrt{\bar\alpha_t}+\beta_t\sqrt{\bar\alpha_{t-1}}}{\sqrt{\bar\alpha_t}\bar\beta_t}x_t-\frac{\beta_t\sqrt{\bar\alpha_{t-1}}\sqrt{\bar\beta_t}}{\sqrt{\bar\alpha_t}\bar\beta_t}M(x_t,t)\\
+&=\frac{\left(\bar\beta_{t-1}\alpha_t+\beta_t\right)\sqrt{\bar\alpha_{t-1}}}{\sqrt{\bar\alpha_t}\bar\beta_t}x_t-\frac{\beta_t}{\sqrt{\alpha_t}\sqrt{\bar\beta_t}}M(x_t,t)\\
+&=\frac{\left(\alpha_t-\bar\alpha_t+1-\alpha_t\right)\sqrt{\bar\alpha_{t-1}}}{\sqrt{\bar\alpha_t}\bar\beta_t}x_t-\frac{\beta_t}{\sqrt{\alpha_t}\sqrt{\bar\beta_t}}M(x_t,t)\\
+&=\frac{1}{\sqrt{\alpha_t}}x_t-\frac{\beta_t}{\sqrt{\alpha_t}\sqrt{\bar\beta_t}}M(x_t,t)\\
+&=\frac{1}{\sqrt{\alpha_t}}\left(x_t-\frac{\beta_t}{\sqrt{\bar\beta_t}}M(x_t,t)\right)\\
+\end{aligned}
+$$
+那么我们就得到了反向过程中每一步的采样公式：
+$$
+x_{t-1}\sim \frac{1}{\sqrt{\alpha_t}}\left(x_t-\frac{\beta_t}{\sqrt{\bar\beta_t}}M(x_t,t)\right)+\sqrt{\frac{\beta_t\bar\beta_{t-1}}{\bar\beta_t}}\times\mathcal{N}(0,1)
+$$
+将 $\beta$ 和 $\bar\beta$ 展开就得到了原论文中的形式：
+$$
+x_{t-1}\sim \frac{1}{\sqrt{\alpha_t}}\left(x_t-\frac{1-\alpha_t}{\sqrt{1-\bar\alpha_t}}M(x_t,t)\right)+\sqrt{\beta_t\times \frac{1-\bar\alpha_{t-1}}{1-\bar\alpha_{t}}}\times\mathcal{N}(0,1)
+$$
+
+### 实现细节
+
+#### 超参设置
+
+##### Liner Schedule
+
+原论文中 $T=1000$，$\beta_t=10^{-4}+\frac{t}{T}\times (0.02-10^{-4})$，即 $\beta_t$ 从 $10^{-4}$ 线性递增到 $0.02$。
+
+这样设置符合直觉，毕竟 $t$ 越大 $x_t$ 就越接近随机噪声，对 $x_t$ 的破坏量 $\beta_t$ 就可以相应地增大。而经计算可得 $\bar\alpha_{T}\approx 4\times 10^{-5}$，符合 $x_T$ 的分布接近 $\mathcal{N}(0,1)$ 的需求。
+
+##### Cosine Schedule
+
+观察 Liner Schedule 的 $\bar\alpha_t$ 的曲线就会发现，似乎后面有很多步都是没用的，前一半扩散得太快：
+
+![](../post-images/1756524136510.png)
+
+所以后来提出了一种改进方法，设置 $\bar a_t=\cos\left(\frac{\frac{t}{T}+\epsilon}{1+\epsilon}\times \frac{\pi}{2}\right)^2$，其中 $\epsilon$ 是为了稳定数值引入的极小量，一般设置为 $10^{-3}$：（图中蓝色曲线）
+![](../post-images/1756525465639.png)
+
+实验表明，这样设置超参数可以利用好后面的扩散进程，效果更好。
+
+实际应用中，一般令 $f(t)=\cos\left(\frac{\frac{t}{T}+\epsilon}{1+\epsilon}\times \frac{\pi}{2}\right)^2$，$\bar\alpha_t=\frac{f(t)}{f(0)}$，并将 $\alpha_t$ 裁剪到 $[\epsilon,1-\epsilon]$，其中 $\epsilon$ 一般设置为 $10^{-3}$。
+
+#### 模型及损失函数选取
+
+对于这种输入和输出张量形状相同的任务，一般选用 U-Net 模型。而由于模型是在预测一个服从正态分布的变量，故输出应较为接近 $0$，故可用 $\text{MSE}$（均方误差）损失函数。
+
+需要注意的是，时间步 $t$ 也要输入模型中，一般是以 Transformer 中三角函数位置编码的形式嵌入进 U-Net 中的。
+
+这里给出对于 $32\times 32$ 的三通道图片的 U-Net 结构：
+
+![](../post-images/1756527052285.png)
+
+其中 DownBlock 和 UpBlock 结构一样：（TimeEmbedding 即为和 Transformer 中位置编码一样的三角函数编码，经过一个简单的多层感知机（MLP）变换后的结果）
+
+![](../post-images/1756527212193.jpg)
+
+MiddleBlock 则是一个对称的结构，不过其实也可以贪方便直接使用 DownBlock 替代掉：
+
+![](../post-images/1756527299162.jpg)
+
+激活函数则一般使用 SiLU 这种一阶导平滑连续的函数，增强其在 $0$ 附近的表达能力（实测 ReLU 和 Leaky_ReLU 效果都不太好）。
+
+这是一个小小的 Demo，使用了[自己的 C++ 机器学习库](https://github.com/Rebxe/network.h)、[开源库 stb](https://github.com/nothings/stb) 和 [C++ 图形库 EasyX](easyx.cn)，实现了生成指定类型的手写数字：
+
+<details><summary><code>U_NET.h</code></summary><p>
+
+```cpp
+#pragma once
+
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <fstream>
+#include <random>
+#include <ctime>
+#include <vector>
+
+#include &quot;./network_h/network.h&quot;
+
+using namespace std;
+
+using namespace network;
+
+const dim_t Batch_Size = 32;
+const dim_t time_dim = 256, emb_dim = 32, model_dim = 64;
+
+inline void time_embedding(dim_t t, dim_t dim, float* out)
+{
+	for (dim_t i = 0; i < dim; i++)
+	{
+		float wk = pow(10000, -(i / 2 * 2) / (float)dim);
+		if (i & 1 ^ 1) out[i] = sin(wk * t);
+		else out[i] = cos(wk * t);
+	}
+}
+
+class BLOCK : public OP_Base
+{
+public:
+	FC* fc1, * fc2; // time_liner & type_liner
+	CONV* c0, * c1, * c2, * c3;
+	GN* gn1, * gn2, * gn3;
+	BLOCK(OP_Base* fap, dim_t d, dim_t d2, dim_t h, dim_t w) :OP_Base(fap)
+	{
+		if (d != d2) c0 = get<CONV>(af::dim4{ h,w,d,0 }, make_pair(3, 3), d2, make_pair(1, 1), make_pair(1, 1));
+		else c0 = NULL;
+		fc1 = get<FC>(time_dim, d2), fc2 = get<FC>(emb_dim, d2);
+		c1 = get<CONV>(af::dim4{ h,w,d,0 }, make_pair(3, 3), d2, make_pair(1, 1), make_pair(1, 1));
+		gn1 = get<GN>(2, d2, 32, true);
+		c2 = get<CONV>(af::dim4{ h,w,d2,0 }, make_pair(3, 3), d2, make_pair(1, 1), make_pair(1, 1));
+		gn2 = get<GN>(2, d2, 32, true);
+		c3 = get<CONV>(af::dim4{ h,w,d2,0 }, make_pair(3, 3), d2, make_pair(1, 1), make_pair(1, 1));
+		gn3 = get<GN>(2, d2, 32, true);
+	}
+	val4d* operator()(val4d* x, val4d* time_emb, val4d* type_emb)
+	{
+		val4d* y;
+		if (c0 != NULL) y = (*c0)(x), y = silu(y, true);
+		else y = x;
+		// add time_emb
+		x = (*c1)(x), x = silu(x, true);
+		time_emb = (*fc1)(time_emb), time_emb = silu(time_emb, true);
+		x = add(x, tile(time_emb, af::dim4{ x->dims(0),x->dims(1),1,1 }));
+		x = (*gn1)(x);
+		// add type_emb
+		x = (*c2)(x), x = silu(x, true);
+		type_emb = (*fc2)(type_emb), type_emb = silu(type_emb, true);
+		x = add(x, tile(type_emb, af::dim4{ x->dims(0),x->dims(1),1,1 }));
+		x = (*gn2)(x);
+		// add short cut
+		x = (*c3)(x), x = silu(x, true);
+		x = add(x, y);
+		x = (*gn3)(x);
+		return x;
+	}
+};
+
+class DOWN :public OP_Base
+{
+public:
+	CONV* c;
+	GN* gn;
+	DOWN(OP_Base* fap, dim_t d, dim_t h, dim_t w) :OP_Base(fap)
+	{
+		c = get<CONV>(af::dim4{ h,w,d,0 }, make_pair(4, 4), d * 2, make_pair(2, 2), make_pair(1, 1));
+		gn = get<GN>(2, d * 2, 32, true);
+	}
+	val4d* operator()(val4d* x)
+	{
+		x = (*c)(x), x = silu(x, true), x = (*gn)(x);
+		return x;
+	}
+};
+
+class UP :public OP_Base
+{
+public:
+	CONV* c1, *c2;
+	GN* gn1, * gn2;
+	UP(OP_Base* fap, dim_t d, dim_t h, dim_t w) :OP_Base(fap)
+	{
+		c1 = get<CONV>(af::dim4{ h * 2,w * 2,d,0 }, make_pair(3, 3), d, make_pair(1, 1), make_pair(1, 1));
+		gn1 = get<GN>(2, d, 32, true);
+		c2 = get<CONV>(af::dim4{ h * 2,w * 2,d,0 }, make_pair(3, 3), d / 2, make_pair(1, 1), make_pair(1, 1));
+		gn2 = get<GN>(2, d / 2, 32, true);
+	}
+	val4d* operator()(val4d* x)
+	{
+		x = upsample(x, { 2,2 });
+		x = (*c1)(x), x = silu(x, true), x = (*gn1)(x);
+		x = (*c2)(x), x = silu(x, true), x = (*gn2)(x);
+		return x;
+	}
+};
+
+class U_NET : public OP_Base
+{
+public:
+	/****Time Embedding****/
+	FC* fc0, * fc1;
+
+	/****Type Embedding****/
+	EMBEDDING* emb;
+
+
+	/****In****/
+	CONV* c0;
+
+	/****Encoder****/
+	BLOCK* down_b[3][2];
+	DOWN* down[3];
+
+	/****Middle*****/
+	BLOCK* mid[3];
+
+	/****Decoder****/
+	UP* up[3];
+	BLOCK* up_b[3][2];
+
+	/****Out*****/
+	CONV* c1;
+
+	float in[Batch_Size * 1 * 32 * 32];
+	float ftime_emb[Batch_Size * time_dim];
+	dim_t in_t[Batch_Size], in_type[Batch_Size];
+	val4d* out;
+
+	U_NET() :OP_Base(NULL)
+	{
+		// Time Embedding
+		fc0 = get<FC>(time_dim, time_dim * 4), fc1 = get<FC>(time_dim * 4, time_dim);
+		// Type Embedding
+		emb = get<EMBEDDING>(10, 1, emb_dim);
+		// U-Net
+		c0 = get<CONV>(af::dim4{ 32,32,1,0 }, make_pair(3, 3), model_dim, make_pair(1, 1), make_pair(1, 1));
+		dim_t d = model_dim, h = 32, w = 32;
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 2; j++) down_b[i][j] = get<BLOCK>(d, d, h, w);
+			down[i] = get<DOWN>(d, h, w);
+			d *= 2, h /= 2, w /= 2;
+		}
+		for (int i = 0; i < 3; i++) mid[i] = get<BLOCK>(d, d, h, w);
+		for (int i = 0; i < 3; i++)
+		{
+			up[i] = get<UP>(d, h, w);
+			h *= 2, w *= 2, d /= 2;
+			for (int j = 0; j < 2; j++) up_b[i][j] = get<BLOCK>(d * 2, d, h, w);
+		}
+		c1 = get<CONV>(af::dim4{ h,w,d,0 }, make_pair(1, 1), 1, make_pair(1, 1), make_pair(0, 0), make_pair(1, 1), Init_Xavier);
+	}
+	inline void forward()
+	{
+		init_forward();
+		dim_t n = eval ? 1 : Batch_Size;
+		val4d* time_emb, * type_emb;
+		{
+			for (int i = 0; i < n; i++) time_embedding(in_t[i], time_dim, ftime_emb + i * time_dim);
+			af::dim4 emb_s = af::dim4{ 1,1,time_dim,n };
+			time_emb = tmp<val4d>(emb_s);
+			time_emb->data() = af::array(emb_s, ftime_emb);
+			time_emb = (*fc0)(time_emb), time_emb = silu(time_emb, true);
+			time_emb = (*fc1)(time_emb), time_emb = silu(time_emb, true);
+		}
+		{
+			type_emb = (*emb)(n, in_type);
+		}
+		af::dim4 ins = { 32,32,1,eval ? 1 : Batch_Size };
+		val4d* x = tmp<val4d>(ins);
+		x->data() = af::array(ins, in);
+		x = (*c0)(x);
+		vector<val4d*> que;
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 2; j++)
+			{
+				x = (*down_b[i][j])(x, time_emb, type_emb);
+				que.push_back(x);
+			}
+			x = (*down[i])(x);
+		}
+		for (int i = 0; i < 3; i++) x = (*mid[i])(x, time_emb, type_emb);
+		for (int i = 0; i < 3; i++)
+		{
+			x = (*up[i])(x);
+			for (int j = 0; j < 2; j++)
+			{
+				x = (*up_b[i][j])(concat({ x,que.back() }, 2), time_emb, type_emb);
+				que.pop_back();
+			}
+		}
+		x = (*c1)(x), x = tanh(x, true);
+		out = x;
+	}
+};
+
+class WARMUP_COSINE
+{
+private:
+	int t, tot_t;
+	double preres;
+public:
+	double mnl, mxl;
+	int WarmUp;
+	double T_MAX, T_MLT;
+	bool REPET;
+
+public:
+	void save(ofstream& ouf)
+	{
+		writf(ouf, mnl), writf(ouf, mxl);
+		writf(ouf, WarmUp);
+		writf(ouf, T_MAX), writf(ouf, T_MLT);
+		writf(ouf, REPET);
+		writf(ouf, t), writf(ouf, tot_t);
+		writf(ouf, preres);
+	}
+	void load(ifstream& inf)
+	{
+		readf(inf, mnl), readf(inf, mxl);
+		readf(inf, WarmUp);
+		readf(inf, T_MAX), readf(inf, T_MLT);
+		readf(inf, REPET);
+		readf(inf, t), readf(inf, tot_t);
+		readf(inf, preres);
+	}
+
+public:
+	WARMUP_COSINE(double LLRT, double RLRT, int MAX_T, bool REP = true, int WUP = 0, double MLT_T = 1)
+	{
+		mnl = LLRT, mxl = RLRT, T_MAX = MAX_T, T_MLT = MLT_T, WarmUp = WUP;
+		REPET = REP;
+		t = tot_t = 0;
+		preres = WUP == 0 ? mxl : mnl;
+	}
+	double get() { return preres; }
+	void step()
+	{
+		tot_t++;
+		if (tot_t <= WarmUp)
+		{
+			preres += (mxl - mnl) / (double)WarmUp;
+			return;
+		}
+		if (t > T_MAX) return;
+		preres = mnl + (1 / (double)2) * (mxl - mnl) * (1 + cos(t / (double)T_MAX * acos(-1)));
+		t++;
+		if (REPET && t == T_MAX + 1) t = 0, T_MAX *= T_MLT;
+	}
+};
+```
+
+</p></details>
+
+<details><summary><code>main.cpp</code></summary><p>
+
+```cpp
+#define NDEBUG
+
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <fstream>
+#include <random>
+#include <ctime>
+#include <cmath>
+#include <sstream>
+#include <chrono>
+#include <io.h>
+#include <conio.h>
+
+using namespace std;
+
+#include &quot;./U_NET.h&quot;
+
+#include &quot;stb_image.h&quot;
+#include &quot;stb_image_write.h&quot;
+
+#include <easyx.h>
+
+const int tot_dat = 60000;
+const int T = 1000;
+const int save_t = 500;
+const float grad_l = -1, grad_r = 1;
+const float lrt_l = 0.00001, lrt_r = 0.0005;
+const int total_batch = 10000, warm_up = 100;
+
+mt19937 rndgen(time(NULL));
+float a[T + 5], b[T + 5], a_[T + 5];
+float dat[tot_dat][1 * 32 * 32];
+int type[tot_dat];
+U_NET brn;
+ADAM opt(brn.parameter(), lrt_l, 0.9, 0.999, 0.01);
+WARMUP_COSINE lrt_gen(lrt_l, lrt_r, total_batch, false, warm_up);
+
+void loaddata(string imgpath, string anspath)
+{
+	FILE* fimg = fopen(imgpath.c_str(), &quot;rb&quot;);
+	FILE* fans = fopen(anspath.c_str(), &quot;rb&quot;);
+	if (fimg == NULL)
+	{
+		puts(&quot;加载图片数据失败\n&quot;);
+		system(&quot;pause&quot;);
+		exit(1);
+	}
+	if (fans == NULL)
+	{
+		puts(&quot;加载答案数据失败\n&quot;);
+		system(&quot;pause&quot;);
+		exit(1);
+	}
+	fseek(fimg, 16, SEEK_SET);
+	fseek(fans, 8, SEEK_SET);
+	unsigned char* img = new unsigned char[28 * 28];
+	for (int cas = 0; cas < tot_dat; cas++)
+	{
+		fread(img, 1, 28 * 28, fimg);
+		for (int i = 0; i < 32 * 32; i++) dat[cas][i] = -1;
+		for (int i = 0; i < 28 * 28; i++)
+		{
+			int x = i / 28, y = i % 28;
+			dat[cas][(x + 2) * 32 + (y + 2)] = img[i] / (float)255 * 2 - 1;
+		}
+		unsigned char num;
+		fread(&num, 1, 1, fans);
+		type[cas] = num;
+	}
+	delete[] img;
+	fclose(fimg), fclose(fans);
+}
+inline void putimg(int sx, int sy, float* a) // put a 64*64 img
+{
+	for (int i = 0; i < 32; i++)
+	{
+		for (int j = 0; j < 32; j++)
+		{
+			for (int k = 0; k < 2; k++)
+			{
+				for (int l = 0; l < 2; l++)
+				{
+					putpixel(sx + j * 2 + k, sy + i * 2 + l, RGB(
+						(a[i * 32 + j] + 1) / 2 * 255,
+						(a[i * 32 + j] + 1) / 2 * 255,
+						(a[i * 32 + j] + 1) / 2 * 255));
+				}
+			}
+		}
+	}
+}
+
+inline void init()
+{
+	// Liner schedule
+	/*
+	float bl = 1e-4, br = 0.02;
+	for (int i = 1; i <= T; i++)
+	{
+		b[i] = bl + (float)(i - 1) / (T - 1) * (br - bl);
+		a[i] = 1 - b[i];
+	}
+	a_[1] = a[1];
+	for (int i = 2; i <= T; i++) a_[i] = a_[i - 1] * a[i];
+	*/
+	
+	// Cosine schedule
+	float pi = acos(-1), eps = 1e-3;
+	auto f = [&](int t) {return (float)pow(cos(((float)t / T + eps) / (1 + eps) * pi / 2), 2); };
+	a[1] = (std::min)((std::max)(f(1) / f(0), eps), 1 - eps);
+	for (int i = 2; i <= T; i++) a[i] = (std::min)((std::max)(f(i) / f(i - 1), eps), 1 - eps);
+	for (int i = 1; i <= T; i++) b[i] = 1 - a[i];
+	a_[1] = a[1];
+	for (int i = 2; i <= T; i++) a_[i] = a_[i - 1] * a[i];
+}
+
+float x0[1 * 32 * 32], noise[Batch_Size * 1 * 32 * 32];
+
+float train()
+{
+	uniform_int_distribution<int> rndid(0, tot_dat - 1);
+	uniform_int_distribution<int> rndt(1, T);
+	normal_distribution<float> n(0, 1);
+	for (int bs = 0; bs < Batch_Size; bs++)
+	{
+		int id = rndid(rndgen);
+		int ad = bs * 1 * 32 * 32;
+		for (int i = 0; i < 1 * 32 * 32; i++) x0[i] = dat[id][i];
+		for (int i = 0; i < 1 * 32 * 32; i++) noise[ad + i] = n(rndgen);
+		int t = rndt(rndgen);
+		brn.in_t[bs] = t;
+		brn.in_type[bs] = type[id];
+		for (int i = 0; i < 1 * 32 * 32; i++) brn.in[ad + i] = sqrt(a_[t]) * x0[i] + sqrt(1 - a_[t]) * noise[ad + i];
+	}
+	brn.forward();
+	opt.clear_grad();
+	float loss = MSEloss(brn.out, af::array({ 32,32,1,Batch_Size }, noise));
+	brn.out->backward();
+	for (auto t : brn.parameter()) *t.second = (af::max)((af::min)(*t.second, grad_r), grad_l); // grad_clip
+	opt.lrt = lrt_gen.get();
+	opt.step(), lrt_gen.step();
+	return loss;
+}
+
+unsigned char tmp[32][32], res[1 * 32 * 32];
+
+inline void work(int type, int sx, int sy)
+{
+	normal_distribution<float> n(0, 1);
+	for (int i = 0; i < 1 * 32 * 32; i++) brn.in[i] = n(rndgen);
+	for (int i = T; i >= 1; i--)
+	{
+		brn.in_t[0] = i;
+		brn.in_type[0] = type;
+		brn.forward();
+		float* out = brn.out->data().host<float>();
+		for (int j = 0; j < 1 * 32 * 32; j++)
+		{
+			brn.in[j] = 1 / sqrt(a[i]) * (brn.in[j] - b[i] / sqrt(1 - a_[i]) * out[j])
+				+ (i > 1 ? sqrt((1 - a_[i - 1]) / (1 - a_[i]) * b[i]) * n(rndgen) : 0);
+			brn.in[j] = max((float)-1, min((float)1, brn.in[j]));
+		}
+		af::freeHost(out);
+		if (i % 1 == 0)
+		{
+			putimg(sx, sy, brn.in);
+			wstringstream ssm;
+			ssm << &quot;T = &quot; << i - 1 << &quot;   &quot;;
+			outtextxy(80, 180, ssm.str().c_str());
+		}
+	}
+}
+
+void load(int idx)
+{
+	stringstream ssm;
+	ssm << idx << &quot;.ai&quot;;
+	ifstream inf(ssm.str(), ios::in | ios::binary);
+	brn.load(inf);
+	opt.load(inf);
+	lrt_gen.load(inf);
+	inf.close();
+}
+
+void save(int idx)
+{
+	stringstream ssm;
+	ssm << idx << &quot;.ai&quot;;
+	ofstream ouf(ssm.str(), ios::out | ios::binary);
+	brn.save(ouf);
+	opt.save(ouf);
+	lrt_gen.save(ouf);
+	ouf.close();
+}
+
+int main()
+{
+	init();
+	printf(&quot;模式选择：\n&quot;);
+	printf(&quot;[1] 训练\n&quot;);
+	printf(&quot;[2] 运行\n&quot;);
+	int op;
+	scanf(&quot;%d&quot;, &op);
+	if (op == 1)
+	{
+		system(&quot;cls&quot;);
+		string imgpath = &quot;../../../../data/MNIST/&quot;;
+		//string imgpath = &quot;./data/&quot;;
+		printf(&quot;图片文件夹：%s\n\n&quot;, imgpath.c_str());
+		loaddata(imgpath + &quot;img&quot;, imgpath + &quot;ans&quot;);
+		printf(&quot;模式选择：\n&quot;);
+		printf(&quot;[1] 重新训练\n&quot;);
+		printf(&quot;[2] 读取并继续训练（自动填充 ai 路径）\n&quot;);
+		int op;
+		scanf(&quot;%d&quot;, &op);
+		system(&quot;cls&quot;);
+		int idx;
+		if (op == 1) idx = 0;
+		else
+		{
+			printf(&quot;断点 id：\n&quot;);
+			scanf(&quot;%d&quot;, &idx);
+			load(idx);
+			system(&quot;cls&quot;);
+		}
+		initgraph(256, 256, EX_SHOWCONSOLE);
+		putimg(48, 48, dat[0]);
+		brn.set_eval(false);
+		for (int tme = idx + 1;; tme++)
+		{
+			auto start = std::chrono::high_resolution_clock::now();
+			printf(&quot;%d th loss: %f\tlearning rate: %f\n&quot;, tme, train(), opt.lrt);
+			auto stop = std::chrono::high_resolution_clock::now();
+			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+			printf(&quot;Time use: %d ms\n\n&quot;, (int)duration);
+			if (_kbhit())
+			{
+				char ch;
+				while (_kbhit()) ch = _getch();
+				if (ch == 27)
+				{
+					save(tme);
+					break;
+				}
+				if (ch == 't')
+				{
+					printf(&quot;输入一个 [0,9] 中的整数：&quot;);
+					int x;
+					cin >> x;
+					brn.set_eval(true);
+					work(x, 48, 48);
+					outtextxy(80, 180, L&quot;Finished&quot;);
+					brn.set_eval(false);
+				}
+			}
+			if (tme % save_t == 0) save(tme);
+		}
+	}
+	else
+	{
+		system(&quot;cls&quot;);
+		printf(&quot;ai 文件路径：\n&quot;);
+		string path;
+		cin >> path;
+		ifstream inf(path, ios::in | ios::binary);
+		brn.load(inf);
+		inf.close();
+		initgraph(640, 256, EX_SHOWCONSOLE);
+		brn.set_eval(true);
+		for (int i = 0; i < 10; i++)
+		{
+			wstringstream ssm;
+			ssm << i;
+			outtextxy(30 + i * 64, 80, ssm.str().c_str());
+			work(i, i * 64, 0);
+		}
+		system(&quot;pause&quot;);
+	}
+	return 0;
+}
+```
+
+</p></details>
+
+这是训练了 14876 个 Batch 后的生成效果：
+
+![](../post-images/1756566255301.jpg)
+"></div>
+					<div class="post-footer">
+	<ul class="post-copyright">
+		<li class="post-copyright-author">
+			<strong class="language" data-lan="author">本文作者：</strong>Exber
+		</li>
+		<li class="post-copyright-link">
+			<strong class="language" data-lan="link">本文链接：</strong>
+			<a href="https://exber.qzz.io/post/%E7%94%9F%E6%88%90%E5%BC%8F%E6%89%A9%E6%95%A3%E6%A8%A1%E5%9E%8B%E5%88%9D%E6%8E%A2%20%E2%80%94%E2%80%94%20DDPM%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0" title="生成式扩散模型初探 —— DDPM 学习笔记">https://exber.qzz.io/post/%E7%94%9F%E6%88%90%E5%BC%8F%E6%89%A9%E6%95%A3%E6%A8%A1%E5%9E%8B%E5%88%9D%E6%8E%A2%20%E2%80%94%E2%80%94%20DDPM%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0</a>
+		</li>
+		<li class="post-copyright-license">
+			<strong class="language" data-lan="copyright">版权声明： </strong>
+			本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+		</li>
+	</ul>
+	<div class="tags">
+		
+			<a href="https://exber.qzz.io/tags"># 机器学习</a>
+		
+			<a href="https://exber.qzz.io/tags"># 数学</a>
+		
+	</div>
+</div>
+				</div>
+			</div>
+			<script>
+	// 处理目录
+	function work_with_toc() {
+		let lastTop = 0, lList = [], hList = [], postBody, lastIndex = -1;
+		let active = 'active-show', activeClass = 'active-current';
+		let tocWrapper = document.querySelector('#toc_wrapper');
+		let tocContent = tocWrapper.children[0];
+		let autoNumber = tocWrapper && tocWrapper.classList.contains('auto-number');
+
+		function addTocNumber(elem, deep) {
+			if (!elem) {
+				return;
+			}
+			let prop = elem.__proto__;
+
+			if (prop === HTMLUListElement.prototype) {
+				for (let i = 0; i < elem.children.length; i++) {
+					addTocNumber(elem.children[i], deep + (i + 1) + '.');
+				}
+			} else if (prop === HTMLLIElement.prototype) {
+				// 保存li元素
+				if (elem.children[0] && elem.children[0].__proto__ === HTMLAnchorElement.prototype) {
+					lList.push(elem);
+				}
+				for (let i = 0; i < elem.children.length; i++) {
+					let cur = elem.children[i];
+					if (cur.__proto__ === HTMLAnchorElement.prototype) {
+						if (autoNumber) {
+							cur.text = deep + ' ' + cur.text;
+						}
+					} else if (cur.__proto__ === HTMLUListElement.prototype) {
+						addTocNumber(cur, deep);
+					}
+				}
+			}
+		}
+
+		function removeParentActiveClass() {
+			let parents = tocContent.querySelectorAll('.' + active)
+			parents.forEach(function (elem) {
+				elem.classList.remove(active);
+			});
+		}
+
+		function addActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.add(activeClass);
+			}
+		}
+
+		function removeActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.remove(activeClass);
+			}
+		}
+
+		function addActiveLiElemment(elem, parent) {
+			if (!elem || elem === parent) {
+				return;
+			} else {
+				if (elem.__proto__ === HTMLLIElement.prototype) {
+					elem.classList.add(active);
+				}
+				addActiveLiElemment(elem.parentElement, parent);
+			}
+		}
+
+		function showToc() {
+			if (tocWrapper) {
+				postBody = document.querySelector('#post_body');
+				for (let i = 0; i < postBody.children.length; i++) {
+					if (postBody.children[i].__proto__ === HTMLHeadingElement.prototype) {
+						hList.push(postBody.children[i]);
+					}
+				}
+				if (tocWrapper.classList.contains('compress')) {
+					tocContent.classList.add('closed');
+				} else if (tocWrapper.classList.contains('no_compress')) {
+					tocContent.classList.add('expanded');
+				} else {
+					if (hList.length > 10) {
+						active = 'active-hidden'
+						tocContent.classList.add('closed');
+					} else {
+						tocContent.classList.add('expanded');
+					}
+				}
+			}
+		}
+
+		(function () {
+			// 处理不是从一级标题开始目录
+			while (tocContent.children.length === 1 && tocContent.children[0].__proto__ === HTMLUListElement.prototype) {
+				let con = tocContent.children[0];
+				tocContent.innerHTML = con.innerHTML;
+			}
+			addTocNumber(tocContent, '');
+		})();
+
+		document.addEventListener('scroll', function (e) {
+			if (lList.length <= 0) {
+				return;
+			}
+			let scrollTop = document.scrollingElement.scrollTop + 10;
+			let dir;
+
+			if (lastTop - scrollTop > 0) {
+				dir = 'up';
+			} else {
+				dir = 'down';
+			}
+
+			lastTop = scrollTop;
+			if (scrollTop <= 0) {
+				if (lastIndex >= 0 && lastIndex < hList.length) {
+					lList[lastIndex].classList.remove(activeClass);
+				}
+				return;
+			}
+
+			let current = 0, hasFind = false;
+			for (let i = 0; i < hList.length; i++) {
+				if (hList[i].offsetTop > scrollTop) {
+					current = i;
+					hasFind = true;
+					break;
+				}
+			}
+			if (!hasFind && scrollTop > lList[lList.length - 1].offsetTop) {
+				current = hList.length - 1;
+			} else {
+				current--;
+			}
+			if (dir === 'down') {
+				if (current > lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex)
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			} else {
+				if (current < lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex);
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			}
+		});
+
+
+		window.addEventListener('load', function () {
+			showToc();
+			document.querySelector('#sidebar').style = 'display: block;';
+			tocWrapper.classList.add('toc-active');
+			setTimeout(function () {
+				if ("createEvent" in document) {
+					let evt = document.createEvent("HTMLEvents");
+					evt.initEvent("scroll", false, true);
+					document.dispatchEvent(evt);
+				}
+				else {
+					document.fireEvent("scroll");
+				}
+			}, 500)
+		})
+		
+		const SIDEBAR_TITLE_ACTIVE = 'sidebar-title-active';
+		const SIDEBAR_BODY_ACTIVE = 'sidebar-body-active';
+		const SLIDE_UP_IN = 'slide-up-in';
+
+		let tocSideBar = document.querySelector('#tocSideBar'),
+		metaSideBar = document.querySelector('#metaSideBar'),
+		postToc = document.querySelector('#post_toc'),
+		postSiteMeta = document.querySelector('#post_side_meta'),
+		sidebarTitle = document.querySelector('.sidebar-title'),
+		sidebarBody = document.querySelector('#sidebar_body');
+
+		tocSideBar && tocSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		metaSideBar && metaSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		function toggleSidebar(e) {
+			let currentTitle = document.querySelector("."+SIDEBAR_TITLE_ACTIVE);
+			if (currentTitle == e.srcElement) {
+				return ;
+			}
+			let current, showElement, hideElement;
+			if (e.srcElement == metaSideBar) {
+				showElement = postSiteMeta;
+				hideElement = postToc;
+			} else if (e.srcElement == tocSideBar){
+				showElement = postToc;
+				hideElement = postSiteMeta;
+			}
+			currentTitle.classList.remove(SIDEBAR_TITLE_ACTIVE);
+			e.srcElement.classList.add(SIDEBAR_TITLE_ACTIVE);
+
+			jQuery.Velocity(hideElement, 'stop');
+			jQuery.Velocity(hideElement, 'transition.slideUpOut', {
+				display: 'none',
+				duration: 200,
+				complete: function () {
+					jQuery.Velocity(showElement, 'transition.slideDownIn', {
+						duration: 200
+					});
+				}
+			})
+			hideElement.classList.remove(SIDEBAR_BODY_ACTIVE);
+			showElement.classList.add(SIDEBAR_BODY_ACTIVE);
+		}
+
+		postToc && postToc.addEventListener('transitionend', function() {
+			this.classList.remove(SLIDE_UP_IN);
+		});
+	}
+</script>
+<script>
+	// 没有目录时删除侧边栏目录相关
+	function remove_toc(){
+		document.querySelector('#sidebar-selector').remove();
+		document.querySelector('#post_toc').remove();
+		document.querySelector('#post_side_meta').classList.remove("post-side-meta");
+	}
+</script>
+<script>
+	// 渲染文章 markdown 并生成目录
+	function render_post_markdown(content)
+	{
+		let markdown = window.markdownit({ html: true })
+				.use(markdownItLinkEncodeFixed)
+				.use(window.markdownItAnchor, {
+					permalink: false,
+					permalinkBefore: false
+				})
+				.use(window.texmath, {
+					engine: katex,
+					delimiters: 'dollars'
+				});
+		// 处理图片路径
+		let temp_container = document.createElement('div');
+		temp_container.innerHTML = markdown.render(content);
+		{
+			let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		{
+			let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		return temp_container.innerHTML;
+	}
+	function generateToc() {
+		const contentElement = document.getElementById('post_body');
+		const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+		const tocElement = document.getElementById('toc_wrapper');
+		
+		if (headings.length === 0) {
+			return false;
+		}
+		let toc_ul = "<ul style='list-style: none;'>";
+		let toc_li = "<li style='list-style: none;'>";
+		let tocHtml = toc_ul;
+		let currentLevel = 1;
+		let stack = [0];
+		
+		headings.forEach((heading, index) => {
+			const level = parseInt(heading.tagName.substring(1));
+			const id = heading.id || `heading-${index}`;
+			heading.id = id;
+			
+			// 提取包含公式的 HTML 内容
+			let headingContent = heading.innerHTML;
+			
+			// 调整层级逻辑
+			if (level > currentLevel) {
+				for (let i = currentLevel; i < level; i++) {
+					tocHtml += toc_ul;
+					stack[i] = 0;
+				}
+			} else if (level < currentLevel) {
+				for (let i = currentLevel; i > level; i--) {
+					tocHtml += '</ul></li>';
+					stack.pop();
+				}
+			} else if (index > 0) {
+				tocHtml += '</li>';
+			}
+			
+			stack[level-1] = (stack[level-1] || 0) + 1;
+			for (let i = level; i < stack.length; i++) {
+				stack[i] = 0;
+			}
+			
+			// 使用渲染后的内容（包含已处理的公式）
+			tocHtml += toc_li+`<a href="#${id}">${headingContent}</a>`;
+			currentLevel = level;
+		});
+		
+		for (let i = 1; i < currentLevel; i++) {
+			tocHtml += '</ul></li>';
+		}
+		if (headings.length > 0) {
+			tocHtml += '</li>';
+		}
+		
+		tocHtml += '</ul>';
+		tocElement.innerHTML = tocHtml;
+		
+		return true;
+	}
+</script>
+<script>
+	!function () {
+		const post_body = document.querySelector('div[data-post-markdown]');
+		
+		try {
+			const markdownContent = post_body.getAttribute('data-post-markdown');
+			
+			if (markdownContent) {
+				const renderedHTML = render_post_markdown(markdownContent);
+				post_body.innerHTML = renderedHTML;
+				post_body.removeAttribute('data-post-markdown');
+				if(generateToc()) work_with_toc();
+				else remove_toc();
+			}
+		} catch (error) {
+			post_body.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+		}
+	}();
+</script>
+		</div>
+	</div>
+	
+
+
+
+
+
+
+<div class="footer-box">
+	<footer class="footer">
+		<center id="runTimeBox">
+			已运行: <span id="run_time"></span>
+		</center>
+		<script>
+			BirthDay = new Date('2023-03-01');
+			if (BirthDay.getTime()) {
+				function runTime() {
+					str = "";
+					today = new Date();
+					timeold = today.getTime() - BirthDay.getTime();
+					msPerDay = 24 * 60 * 60 * 1000;
+					e_daysold = timeold / msPerDay;
+					daysold = Math.floor(e_daysold);
+					str += daysold + " 天";
+					return str;
+				}
+				setInterval(function () {
+					$("#run_time").html(runTime());
+				}, 1000);
+			} else {
+				document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+			}
+		</script>
+		<div class="poweredby">
+			Powered by Exber
+		</div>
+	</footer>
+	<div class="pisces back-to-top" id="back_to_top">
+		<i class="fa fa-arrow-up"></i>
+		<span class="scrollpercent">
+			<span id="back_to_top_text">0</span>%
+		</span>
+	</div>
+</div>
+<script>
+	// back2top
+	let back2Top = document.querySelector("#back_to_top"),
+		back2TopText = document.querySelector("#back_to_top_text");
+
+	function scrollAnimation(currentY, targetY) {
+		let needScrollTop = targetY - currentY;
+		let _currentY = currentY;
+		setTimeout(() => {
+			const dist = Math.ceil(needScrollTop / 10);
+			_currentY += dist;
+			window.scrollTo(_currentY, currentY);
+			if (needScrollTop > 10 || needScrollTop < -10) {
+				scrollAnimation(_currentY, targetY);
+			} else {
+				window.scrollTo(_currentY, targetY);
+			}
+		}, 1);
+	}
+
+	back2Top.addEventListener("click", function(e) {
+		scrollAnimation(document.scrollingElement.scrollTop, 0);
+		e.stopPropagation();
+		return false;
+	});
+
+	window.addEventListener("scroll", function(e) {
+		let percent =
+			(document.scrollingElement.scrollTop /
+				(document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight)) *
+			100;
+		if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+			back2Top.classList.add("back-top-active");
+		}
+		if (percent == 0) {
+			back2Top.classList.remove("back-top-active");
+		}
+		if (back2TopText) {
+			back2TopText.textContent = Math.floor(percent);
+		}
+	});
+</script>
+	</div>
+</body>
+
+
+
+
+
+
+
+<input hidden id="copy" />
+<link rel="stylesheet" href="https://exber.qzz.io/media/css/jquery.fancybox.css" />
+<script src="https://exber.qzz.io/media/js/jquery.fancybox.js"></script>
+<script>
+	// 渲染所有带有 data-markdown 属性的 div 元素
+	!function () {
+		const markdownElements = document.querySelectorAll('div[data-markdown]');
+		
+		markdownElements.forEach((element, index) => {
+			try {
+				const markdownContent = element.getAttribute('data-markdown');
+				
+				if (markdownContent) {
+					const renderedHTML = render_markdown(markdownContent);
+					element.innerHTML = renderedHTML;
+					element.removeAttribute('data-markdown');
+				}
+			} catch (error) {
+				element.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+			}
+		});
+	}();
+</script>
+<script>
+	document.querySelectorAll(".section img").forEach((image) => {
+		var parent = image.parentElement;
+		var next = image.nextElementSibling;
+		parent.removeChild(image);
+		var aelem = document.createElement("a");
+		aelem.href = image.src;
+		aelem.dataset["fancybox"] = "images";
+		aelem.dataset["rel"] = "fancybox-button";
+		aelem.classList.add("fancybox");
+		aelem.appendChild(image);
+		parent.insertBefore(aelem, next);
+	});
+	
+	!function () {
+		let times = document.querySelectorAll('.publish-time');
+		for (let i = 0; i < times.length; i++) {
+			let date = times[i].dataset.t;
+			let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+			if (time < 60) {
+				str = time + '秒之前';
+			} else if (time < 3600) {
+				str = Math.floor(time / 60) + '分钟之前';
+			} else if (time >= 3600 && time < 86400) {
+				str = Math.floor(time / 3600) + '小时之前';
+			} else if (time >= 86400 && time < 259200) {
+				str = Math.floor(time / 86400) + '天之前';
+			} else {
+				str = times[i].textContent;
+			}
+			times[i].textContent = str;
+		}
+	}();
+	
+	let language = '';
+	if (language !== '') {
+		let map = new Map();
+		if (language === 'en') {
+			map.set('search', 'Search');
+			map.set('category', 'Categories');
+			map.set('article', 'Articles');
+			map.set('tag', 'Tags');
+			map.set('top', 'Top');
+			map.set('publish', 'published');
+			map.set('minute', ' minutes');
+			map.set('read-more', 'Read More');
+			map.set('view', 'View');
+			map.set('words', ' words');
+			map.set('category-in', 'category in');
+			map.set('preview', 'Meta');
+			map.set('index', 'Toc');
+			map.set('no-archives', "You haven't created yet");
+			map.set('archives', " articles in total");
+			map.set('cloud-tags', " tags in total");
+			map.set('copyright', "Copyright: ");
+			map.set('author', "Author: ");
+			map.set('link', "Link: ");
+			map.set('leave-message', "Leave a message");
+			map.set('format', "Links Format");
+			map.set('site-name', "Name: ");
+			map.set('site-link', "Link: ");
+			map.set('site-desc', "Desc: ");
+			map.set('stat', " related results, taking ");
+			map.set('stat-time', " ms");
+			map.set('site-img', "Image: ");
+			map.set('copy-markdown', "Copy Markdown");
+		}
+
+		if (map.size > 0) {
+			let lanElems = document.querySelectorAll('.language');
+			lanElems.forEach(elem => {
+				let lan = elem.dataset.lan, text = map.get(lan);
+				if (elem.__proto__ === HTMLInputElement.prototype) {
+					elem.placeholder = text
+				} else {
+					if (elem.dataset.count) {
+						text = elem.dataset.count + text;
+					}
+					elem.textContent = text;
+				}
+			})
+		}
+	}
+
+	function copyCode(e) {
+		if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+			let code = e.currentTarget.querySelector('code');
+			var text = code.innerText;
+			if (e.srcElement.textContent === '复制成功') {
+				return;
+			}
+			e.srcElement.textContent = '复制成功';
+			(function (elem) {
+				setTimeout(() => {
+					if (elem.textContent === '复制成功') {
+						elem.textContent = '复制代码'
+					}
+				}, 1000);
+			})(e.srcElement)
+			Clipboard.copy(text);
+		}
+	}
+
+	let pres = document.querySelectorAll('pre');
+	pres.forEach(pre => {
+		let code = pre.querySelector('code');
+		let copyElem = document.createElement('span');
+		copyElem.classList.add('copy-code');
+		copyElem.textContent = '复制代码';
+		pre.appendChild(copyElem);
+		pre.onclick = copyCode
+	})
+</script>
+<script src="https://exber.qzz.io/media/js/motion.js"></script>
+<script src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+<script>
+	var scroll = new SmoothScroll('a[href*="#"]', {
+		speed: 200
+	});
+</script>
+<script>
+	// 动态调整站点概览位置
+	let hasCacu = false;
+	window.addEventListener("resize", function(e) {
+		calcuHeight();
+	});
+
+	function calcuHeight() {
+		if (!hasCacu) {
+			let sideBar = document.querySelector(".sidebar");
+			let navUl = document.querySelector("#site_nav");
+			sideBar.style =
+				"margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+			hasCacu = true;
+		}
+	}
+	calcuHeight();
+	
+	// 侧边栏固定逻辑
+	let sidebar = document.querySelector('.sidebar');
+	let sidebarWrapper = document.querySelector('#sidebar');
+	if (sidebar) {
+		let hasFix = false;
+		document.addEventListener('scroll', function(e) {
+		  if (document.scrollingElement.scrollTop > parseInt(sidebar.style.marginTop) + 15) {
+			if (!hasFix) {
+				sidebarWrapper.classList.add('sidebar-fixed')
+				hasFix = true;
+			}
+		  } else {
+			if (hasFix) {
+				sidebarWrapper.classList.remove('sidebar-fixed')
+				hasFix = false;
+			}
+		  }
+		});
+	}
+</script>
+<script>
+	// 链接跳转
+	let newWindow = "true";
+	if (newWindow === "true") {
+		let links = document.querySelectorAll(".post-body a");
+		links.forEach((item) => {
+			if (!item.classList.contains("btn")) {
+				item.setAttribute("target", "_blank");
+			}
+		});
+	}
+
+	// 代码高亮
+	hljs.initHighlightingOnLoad();
+
+	// 离开当前页title变化
+	var leaveTitle = "";
+	var normal_title = document.title;
+	if (leaveTitle) {
+		document.addEventListener("visibilitychange", function() {
+			if (document.visibilityState == "hidden") {
+				normal_title = document.title;
+				document.title = leaveTitle;
+			} else {
+				document.title = normal_title;
+			}
+		});
+	}
+</script>
+</html>

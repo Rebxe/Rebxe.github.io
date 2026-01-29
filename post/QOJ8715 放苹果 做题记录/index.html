@@ -1,0 +1,1318 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	
+
+
+
+
+
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="静态个人博客">
+<meta name="description" content="Exber's Blog">
+<meta name="theme-color" content="#000">
+
+<title>QOJ8715 放苹果 做题记录|Exber's Blog</title>
+
+<link rel="shortcut icon" href="https://exber.qzz.io/favicon.ico?v=1769647447">
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/css/pisces.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/fonts/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/hljs/styles/default.css">
+
+<link
+  href="https://fonts.font.im/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet"
+  type="text/css"
+>
+
+<link rel="stylesheet/less" type="text/css" href="https://exber.qzz.io/styles/main.less">
+<script src="https://cdn.jsdmirror.com/npm/less@4"></script>
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/main.css">
+
+<script src="https://exber.qzz.io/media/js/jquery.js"></script>
+<script src="https://exber.qzz.io/media/hljs/highlight.js"></script>
+
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+<script src="https://cdn.jsdmirror.com/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-texmath/texmath.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-anchor/dist/markdownItAnchor.umd.js"></script>
+
+<script>
+// 处理带空格的链接
+function markdownItLinkEncodeFixed(md) {
+	// 1. 修复链接打开规则
+	const defaultLinkOpenRender = md.renderer.rules.link_open || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const hrefIndex = token.attrIndex('href');
+		
+		if (hrefIndex >= 0) {
+			const originalHref = token.attrs[hrefIndex][1];
+			// 更健壮的编码处理
+			const encodedHref = encodeURI(originalHref).replace(/%20/g, '%20');
+			token.attrs[hrefIndex][1] = encodedHref;
+		}
+		
+		return defaultLinkOpenRender(tokens, idx, options, env, self);
+	};
+
+	// 2. 修复图片规则
+	const defaultImageRender = md.renderer.rules.image || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.image = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const srcIndex = token.attrIndex('src');
+		
+		if (srcIndex >= 0) {
+			const originalSrc = token.attrs[srcIndex][1];
+			const encodedSrc = encodeURI(originalSrc).replace(/%20/g, '%20');
+			token.attrs[srcIndex][1] = encodedSrc;
+		}
+		
+		return defaultImageRender(tokens, idx, options, env, self);
+	};
+
+	// 3. 新增：处理可能被误解析为text的链接[1](@ref)
+	const defaultTextRender = md.renderer.rules.text || 
+		function(tokens, idx, options, env, self) {
+			const token = tokens[idx];
+			return token.content;
+		};
+
+	md.renderer.rules.text = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const content = token.content;
+		
+		// 检测类似链接模式的text token[1](@ref)
+		if (content.includes('[') && content.includes(']') && content.includes('(') && content.includes(')')) {
+			try {
+				// 尝试提取和编码链接
+				const linkMatch = content.match(/\[([^\]]+)\]\(([^)]+)\)/);
+				if (linkMatch) {
+					const linkText = linkMatch[1];
+					const linkUrl = encodeURI(linkMatch[2]).replace(/%20/g, '%20');
+					return `<a href="${linkUrl}">${linkText}</a>`;
+				}
+			} catch (e) {
+				console.warn('链接提取失败:', e);
+			}
+		}
+		
+		return defaultTextRender(tokens, idx, options, env, self);
+	};
+}
+function render_markdown(content)
+{
+	let markdown = window.markdownit({ html: true })
+			 .use(markdownItLinkEncodeFixed)
+			 .use(window.texmath, {
+				 engine: katex,
+				 delimiters: 'dollars'
+			 });
+	// 处理图片路径
+	let temp_container = document.createElement('div');
+	temp_container.innerHTML = markdown.render(content);
+	{
+		let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	{
+		let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	return temp_container.innerHTML;
+}
+</script>
+<script>
+	window.Clipboard = (function (window, document, navigator) {
+		var textArea,
+			copy;
+
+		// 判断是不是ios端
+		function isOS() {
+			return navigator.userAgent.match(/ipad|iphone/i);
+		}
+		//创建文本元素
+		function createTextArea(text) {
+			textArea = document.createElement('textArea');
+			textArea.value = text;
+			textArea.style.width = 0;
+			textArea.style.height = 0;
+			textArea.clientHeight = 0;
+			textArea.clientWidth = 0;
+			document.body.appendChild(textArea);
+		}
+		//选择内容
+		function selectText() {
+			var range,
+				selection;
+
+			if (isOS()) {
+				range = document.createRange();
+				range.selectNodeContents(textArea);
+				selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				textArea.setSelectionRange(0, 999999);
+			} else {
+				textArea.select();
+			}
+		}
+
+		//复制到剪贴板
+		function copyToClipboard() {
+			try {
+				document.execCommand("Copy")
+			} catch (err) {
+				alert("复制错误！请手动复制！")
+			}
+			document.body.removeChild(textArea);
+		}
+
+		copy = function (text) {
+			createTextArea(text);
+			selectText();
+			copyToClipboard();
+		};
+
+		return {
+			copy: copy
+		};
+	})(window, document, navigator);
+</script>
+	<meta name="description" content="QOJ8715 放苹果 做题记录" />
+</head>
+
+<body>
+	<div class="head-top-line"></div>
+	<div class="header-box">
+		
+		
+	<style> /* 搜索相关 */
+		.gridea-search-input{
+			height: 30px;
+			width: 200px;
+			box-sizing: border-box;
+			padding: 0 15px 0 30px;
+			border: 1px solid #e3e3e3;
+			border-radius: 15px;
+			color: #273849;
+			outline: none;
+			transition: border-color 0.2s ease;
+			background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+			background-size: 20px;
+			vertical-align: middle !important;
+		}
+		.gridea-search-input:focus {
+		  border-color: #666666;
+		  right: 0;
+		}
+		/* 自适应轨道 */
+		.slider-track {
+			--track-height: 0.4em; /* 轨道基础高度 */
+			width: 100%;
+			height: var(--track-height);
+			background: #e0e0e0;
+			border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+			position: relative;
+			cursor: default;
+			margin: 0.5em 0; /* 垂直间距自适应 */
+		}
+		
+		/* 进度填充 */
+		.slider-fill {
+			height: 100%;
+			background: #555;
+			border-radius: inherit; /* 继承父级圆角 */
+			width: 50%; /* 初始值 */
+		}
+		
+		/* 自适应滑块 */
+		.slider-thumb {
+			--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+			position: absolute;
+			width: var(--thumb-size);
+			height: var(--thumb-size);
+			background: #555;
+			border-radius: 50%;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: 
+				transform 0.2s ease,
+				box-shadow 0.2s ease;
+			border: 2px solid white; /* 增加辨识度 */
+		}
+		
+		/* 悬停效果 */
+		.slider-thumb:hover {
+			background: #333;
+			transform: translate(-50%, -50%) scale(1.1);
+			box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+		}
+		
+		/* 拖动效果 */
+		.slider-thumb:active {
+			cursor: grabbing;
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		}
+		
+		/* 数值显示 */
+		.value-display {
+			text-align: center;
+			font-family: Arial, sans-serif;
+			color: #555;
+			font-size: 1.2em; /* 基于容器字体大小 */
+			margin-top: 0.5em;
+		}
+	</style>
+
+<div class="pisces">
+  <header class="header">
+    <div class="blog-header box-shadow-wrapper" id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+            <a href="https://exber.qzz.io" class="brand">
+              <span>Exber's Blog</span>
+            </a>  
+        </div>
+        
+			<p class="subtitle">Can't go up</p>
+        
+      </div>
+      <nav class="site-nav bg-color" id="site_nav">
+        <ul id="nav_ul">
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io" target="">
+					首页
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io/tags" target="">
+					按标签筛选
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://csacademy.com/app/graph_editor/" target="_blank">
+					图论编辑器
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="http://yuantiji.ac/zh/" target="_blank">
+					原题机
+				</a>
+            </li>
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://exber.qzz.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.6</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script>
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+
+
+	<script>
+		// 获取DOM元素
+		const sliderTrack = document.getElementById('sliderTrack');
+		const sliderThumb = document.getElementById('sliderThumb');
+		const sliderFill = document.getElementById('sliderFill');
+		const sliderValue = document.getElementById('sliderValue');
+		
+		// 初始化变量
+		let isDragging = false;
+		let currentValue = 0.6;
+		
+		// 更新滑块位置和数值显示
+		function updateSlider(positionX) {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			let newPosition;
+
+			// 检查轨道宽度是否有效
+			if (trackRect.width <= 0) {
+				// 如果轨道宽度无效，则直接使用当前的 currentValue
+				newPosition = currentValue;
+			} else {
+				// 正常计算位置
+				newPosition = (positionX - trackRect.left) / trackRect.width;
+				newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+			}
+
+			// 更新UI
+			sliderThumb.style.left = `${newPosition * 100}%`;
+			sliderFill.style.width = `${newPosition * 100}%`;
+
+			// 更新当前值和表单隐藏域的值
+			currentValue = newPosition;
+			document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+
+			// 更新显示值（保留两位小数）
+			// 使用 Number.isNaN 进行严格检查，确保显示正常
+			const displayValue = Number.isNaN(newPosition) ? '0.60' : newPosition.toFixed(2);
+			sliderValue.textContent = displayValue;
+		}
+		
+		// 响应父容器大小变化
+		function handleResize() {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			const positionX = trackRect.left + trackRect.width * currentValue;
+			updateSlider(positionX);
+		}
+		
+		// 鼠标按下事件 - 仅在圆点上触发
+		sliderThumb.addEventListener('mousedown', (e) => {
+			isDragging = true;
+			sliderThumb.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		
+		// 鼠标移动事件
+		document.addEventListener('mousemove', (e) => {
+			if (!isDragging) return;
+			updateSlider(e.clientX);
+		});
+		
+		// 鼠标释放事件
+		document.addEventListener('mouseup', () => {
+			if (isDragging) {
+				isDragging = false;
+				sliderThumb.style.cursor = 'grab';
+			}
+		});
+		
+		// 监听父容器大小变化
+		const resizeObserver = new ResizeObserver(() => {
+			handleResize();
+		});
+		
+		// 开始观察相关元素
+		resizeObserver.observe(sliderTrack.parentElement);
+		resizeObserver.observe(sliderTrack);
+		
+		// 初始化
+		handleResize();
+	</script>
+
+	</div>
+	<div class="main-continer">
+	<div class="section-layout pisces">
+		<div class="section-layout-wrapper">
+			<div class="sidebar">
+	<div class="sidebar-box box-shadow-wrapper bg-color right-motion" id="sidebar">
+		<div class="post-list-sidebar" id="sidebar-selector">
+			<div class="sidebar-title">
+				<span id="tocSideBar" class="sidebar-title-item sidebar-title-active language" data-lan="index">文章目录</span>
+				<span id="metaSideBar" class="sidebar-title-item language" data-lan="preview">站点概览</span>
+			</div>
+		</div>
+		<div class="sidebar-body pisces" id="sidebar_body">
+			<div class="post-side-meta" id="post_side_meta">
+				
+
+
+
+
+
+
+<div class="sidebar-item">
+	<img class="site-author-image right-motion" src="https://exber.qzz.io/avatar.png"/>
+	<p class="site-author-name">Exber</p>
+	
+	<div class="site-description right-motion">
+		<p>洛谷 @Exber</p>
+<p>Codeforces @Rebex</p>
+
+	</div>
+	
+</div>
+<div class="sidebar-item side-item-stat right-motion">
+	<div class="sidebar-item-box">
+		<a href="https://exber.qzz.io/tags">
+			<span class="site-item-stat-count">26</span>
+			<span class="site-item-stat-name language" data-lan="tag">标签</span>
+		</a>
+	</div>
+	<div class="sidebar-item-box">
+		<a>
+			
+			<span class="site-item-stat-count">330</span>
+			<span class="site-item-stat-name language" data-lan="article">文章</span>
+		</a>
+	</div>
+</div>
+
+			</div>
+			<div class="post-toc sidebar-body-active" id="post_toc" style="opacity: 1;">
+				<div class="toc-box right-motion">
+					<div class="toc-wrapper  no_compress" id="toc_wrapper">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+			<div class="section-box box-shadow-wrapper">
+				<div class="section bg-color post post-page">
+					
+					<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/QOJ8715%20%E6%94%BE%E8%8B%B9%E6%9E%9C%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95">QOJ8715 放苹果 做题记录</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2026-01-20 20:34:24">2026-01-20 20:34:24</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>做题记录</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>结论</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>组合计数</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>多项式、生成函数</span>
+				</a>
+			
+		</span>
+		
+		
+		
+		<span class="meta-item pc-show">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-copy"></i>
+			<a class="language" data-lan="copy-markdown" data-src-markdown="
+
+> 有 $m$ 个互不相同的盘子和 $n$ 个互不相同的苹果，现在要把每个苹果都放到 $m$ 个盘子里面的一个，总共 $m^n$ 种情况。 
+>
+> 定义一次操作为将一个苹果移动到某个相邻的盘子里。 对于一种放苹果的情况，代价为将所有苹果放到同一个盘子的最少操作的次数。 求所有 $m^n$ 种情况的代价的和。
+>
+> $1\le n\le 2\times 10^5$，$1\le m\le 10^9$。
+
+
+$$
+\sum\limits_{i=0}^n\min(i,n-i)\binom{n}{i}\sum\limits_{j=1}^{m-1}j^i(m-j)^{n-i}\\
+\sum\limits_{i=0}^n\min(i,n-i)\binom{n}{i}\sum\limits_{j=1}^{m-1}\sum \limits_{k=0}^{n-i}\binom{n-i}{k}j^{i+k}m^{n-i-k}\\
+\sum\limits_{i=0}^n\min(i,n-i)\binom{n}{i}\sum \limits_{k=0}^{n-i}\binom{n-i}{k}m^{n-i-k}\sum\limits_{j=1}^{m-1}j^{i+k}\\
+$$
+
+仅需求 $\sum\limits_{j=1}^{m-1}j^r$，剩余部分是卷积。
+
+发动注意力，注意到 $[\frac{x^r}{r!}]e^{jx}=j^r$，那么仅需求 $[\frac{x^r}{r!}]\sum\limits_{j=1}^{m-1}e^{jx}=[\frac{x^r}{r!}]\frac{e^{mx}-e^x}{e^x-1}$，多项式求逆即可。
+
+时间复杂度 $O(n\log n)$。
+" onclick="copyMarkdown(this)">复制 Markdown</a>
+		</span>
+		
+	</div>
+</section>
+
+<script>
+	function copyMarkdown(e) {
+		let text = e.getAttribute('data-src-markdown');
+		if (e.innerHTML == '复制成功') {
+			return;
+		}
+		e.innerHTML = '复制成功';
+		(function (elem) {
+			setTimeout(() => {
+				if (elem.innerHTML == '复制成功') {
+					elem.innerHTML = '复制 Markdown'
+				}
+			}, 1000);
+		})(e)
+		Clipboard.copy(text);
+	}
+</script>
+
+					<div class="post-body next-md-body" id="post_body" data-post-markdown="
+
+> 有 $m$ 个互不相同的盘子和 $n$ 个互不相同的苹果，现在要把每个苹果都放到 $m$ 个盘子里面的一个，总共 $m^n$ 种情况。 
+>
+> 定义一次操作为将一个苹果移动到某个相邻的盘子里。 对于一种放苹果的情况，代价为将所有苹果放到同一个盘子的最少操作的次数。 求所有 $m^n$ 种情况的代价的和。
+>
+> $1\le n\le 2\times 10^5$，$1\le m\le 10^9$。
+
+
+$$
+\sum\limits_{i=0}^n\min(i,n-i)\binom{n}{i}\sum\limits_{j=1}^{m-1}j^i(m-j)^{n-i}\\
+\sum\limits_{i=0}^n\min(i,n-i)\binom{n}{i}\sum\limits_{j=1}^{m-1}\sum \limits_{k=0}^{n-i}\binom{n-i}{k}j^{i+k}m^{n-i-k}\\
+\sum\limits_{i=0}^n\min(i,n-i)\binom{n}{i}\sum \limits_{k=0}^{n-i}\binom{n-i}{k}m^{n-i-k}\sum\limits_{j=1}^{m-1}j^{i+k}\\
+$$
+
+仅需求 $\sum\limits_{j=1}^{m-1}j^r$，剩余部分是卷积。
+
+发动注意力，注意到 $[\frac{x^r}{r!}]e^{jx}=j^r$，那么仅需求 $[\frac{x^r}{r!}]\sum\limits_{j=1}^{m-1}e^{jx}=[\frac{x^r}{r!}]\frac{e^{mx}-e^x}{e^x-1}$，多项式求逆即可。
+
+时间复杂度 $O(n\log n)$。
+"></div>
+					<div class="post-footer">
+	<ul class="post-copyright">
+		<li class="post-copyright-author">
+			<strong class="language" data-lan="author">本文作者：</strong>Exber
+		</li>
+		<li class="post-copyright-link">
+			<strong class="language" data-lan="link">本文链接：</strong>
+			<a href="https://exber.qzz.io/post/QOJ8715%20%E6%94%BE%E8%8B%B9%E6%9E%9C%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95" title="QOJ8715 放苹果 做题记录">https://exber.qzz.io/post/QOJ8715%20%E6%94%BE%E8%8B%B9%E6%9E%9C%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95</a>
+		</li>
+		<li class="post-copyright-license">
+			<strong class="language" data-lan="copyright">版权声明： </strong>
+			本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+		</li>
+	</ul>
+	<div class="tags">
+		
+			<a href="https://exber.qzz.io/tags"># 做题记录</a>
+		
+			<a href="https://exber.qzz.io/tags"># 结论</a>
+		
+			<a href="https://exber.qzz.io/tags"># 组合计数</a>
+		
+			<a href="https://exber.qzz.io/tags"># 多项式、生成函数</a>
+		
+	</div>
+</div>
+				</div>
+			</div>
+			<script>
+	// 处理目录
+	function work_with_toc() {
+		let lastTop = 0, lList = [], hList = [], postBody, lastIndex = -1;
+		let active = 'active-show', activeClass = 'active-current';
+		let tocWrapper = document.querySelector('#toc_wrapper');
+		let tocContent = tocWrapper.children[0];
+		let autoNumber = tocWrapper && tocWrapper.classList.contains('auto-number');
+
+		function addTocNumber(elem, deep) {
+			if (!elem) {
+				return;
+			}
+			let prop = elem.__proto__;
+
+			if (prop === HTMLUListElement.prototype) {
+				for (let i = 0; i < elem.children.length; i++) {
+					addTocNumber(elem.children[i], deep + (i + 1) + '.');
+				}
+			} else if (prop === HTMLLIElement.prototype) {
+				// 保存li元素
+				if (elem.children[0] && elem.children[0].__proto__ === HTMLAnchorElement.prototype) {
+					lList.push(elem);
+				}
+				for (let i = 0; i < elem.children.length; i++) {
+					let cur = elem.children[i];
+					if (cur.__proto__ === HTMLAnchorElement.prototype) {
+						if (autoNumber) {
+							cur.text = deep + ' ' + cur.text;
+						}
+					} else if (cur.__proto__ === HTMLUListElement.prototype) {
+						addTocNumber(cur, deep);
+					}
+				}
+			}
+		}
+
+		function removeParentActiveClass() {
+			let parents = tocContent.querySelectorAll('.' + active)
+			parents.forEach(function (elem) {
+				elem.classList.remove(active);
+			});
+		}
+
+		function addActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.add(activeClass);
+			}
+		}
+
+		function removeActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.remove(activeClass);
+			}
+		}
+
+		function addActiveLiElemment(elem, parent) {
+			if (!elem || elem === parent) {
+				return;
+			} else {
+				if (elem.__proto__ === HTMLLIElement.prototype) {
+					elem.classList.add(active);
+				}
+				addActiveLiElemment(elem.parentElement, parent);
+			}
+		}
+
+		function showToc() {
+			if (tocWrapper) {
+				postBody = document.querySelector('#post_body');
+				for (let i = 0; i < postBody.children.length; i++) {
+					if (postBody.children[i].__proto__ === HTMLHeadingElement.prototype) {
+						hList.push(postBody.children[i]);
+					}
+				}
+				if (tocWrapper.classList.contains('compress')) {
+					tocContent.classList.add('closed');
+				} else if (tocWrapper.classList.contains('no_compress')) {
+					tocContent.classList.add('expanded');
+				} else {
+					if (hList.length > 10) {
+						active = 'active-hidden'
+						tocContent.classList.add('closed');
+					} else {
+						tocContent.classList.add('expanded');
+					}
+				}
+			}
+		}
+
+		(function () {
+			// 处理不是从一级标题开始目录
+			while (tocContent.children.length === 1 && tocContent.children[0].__proto__ === HTMLUListElement.prototype) {
+				let con = tocContent.children[0];
+				tocContent.innerHTML = con.innerHTML;
+			}
+			addTocNumber(tocContent, '');
+		})();
+
+		document.addEventListener('scroll', function (e) {
+			if (lList.length <= 0) {
+				return;
+			}
+			let scrollTop = document.scrollingElement.scrollTop + 10;
+			let dir;
+
+			if (lastTop - scrollTop > 0) {
+				dir = 'up';
+			} else {
+				dir = 'down';
+			}
+
+			lastTop = scrollTop;
+			if (scrollTop <= 0) {
+				if (lastIndex >= 0 && lastIndex < hList.length) {
+					lList[lastIndex].classList.remove(activeClass);
+				}
+				return;
+			}
+
+			let current = 0, hasFind = false;
+			for (let i = 0; i < hList.length; i++) {
+				if (hList[i].offsetTop > scrollTop) {
+					current = i;
+					hasFind = true;
+					break;
+				}
+			}
+			if (!hasFind && scrollTop > lList[lList.length - 1].offsetTop) {
+				current = hList.length - 1;
+			} else {
+				current--;
+			}
+			if (dir === 'down') {
+				if (current > lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex)
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			} else {
+				if (current < lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex);
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			}
+		});
+
+
+		window.addEventListener('load', function () {
+			showToc();
+			document.querySelector('#sidebar').style = 'display: block;';
+			tocWrapper.classList.add('toc-active');
+			setTimeout(function () {
+				if ("createEvent" in document) {
+					let evt = document.createEvent("HTMLEvents");
+					evt.initEvent("scroll", false, true);
+					document.dispatchEvent(evt);
+				}
+				else {
+					document.fireEvent("scroll");
+				}
+			}, 500)
+		})
+		
+		const SIDEBAR_TITLE_ACTIVE = 'sidebar-title-active';
+		const SIDEBAR_BODY_ACTIVE = 'sidebar-body-active';
+		const SLIDE_UP_IN = 'slide-up-in';
+
+		let tocSideBar = document.querySelector('#tocSideBar'),
+		metaSideBar = document.querySelector('#metaSideBar'),
+		postToc = document.querySelector('#post_toc'),
+		postSiteMeta = document.querySelector('#post_side_meta'),
+		sidebarTitle = document.querySelector('.sidebar-title'),
+		sidebarBody = document.querySelector('#sidebar_body');
+
+		tocSideBar && tocSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		metaSideBar && metaSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		function toggleSidebar(e) {
+			let currentTitle = document.querySelector("."+SIDEBAR_TITLE_ACTIVE);
+			if (currentTitle == e.srcElement) {
+				return ;
+			}
+			let current, showElement, hideElement;
+			if (e.srcElement == metaSideBar) {
+				showElement = postSiteMeta;
+				hideElement = postToc;
+			} else if (e.srcElement == tocSideBar){
+				showElement = postToc;
+				hideElement = postSiteMeta;
+			}
+			currentTitle.classList.remove(SIDEBAR_TITLE_ACTIVE);
+			e.srcElement.classList.add(SIDEBAR_TITLE_ACTIVE);
+
+			jQuery.Velocity(hideElement, 'stop');
+			jQuery.Velocity(hideElement, 'transition.slideUpOut', {
+				display: 'none',
+				duration: 200,
+				complete: function () {
+					jQuery.Velocity(showElement, 'transition.slideDownIn', {
+						duration: 200
+					});
+				}
+			})
+			hideElement.classList.remove(SIDEBAR_BODY_ACTIVE);
+			showElement.classList.add(SIDEBAR_BODY_ACTIVE);
+		}
+
+		postToc && postToc.addEventListener('transitionend', function() {
+			this.classList.remove(SLIDE_UP_IN);
+		});
+	}
+</script>
+<script>
+	// 没有目录时删除侧边栏目录相关
+	function remove_toc(){
+		document.querySelector('#sidebar-selector').remove();
+		document.querySelector('#post_toc').remove();
+		document.querySelector('#post_side_meta').classList.remove("post-side-meta");
+	}
+</script>
+<script>
+	// 渲染文章 markdown 并生成目录
+	function render_post_markdown(content)
+	{
+		let markdown = window.markdownit({ html: true })
+				.use(markdownItLinkEncodeFixed)
+				.use(window.markdownItAnchor, {
+					permalink: false,
+					permalinkBefore: false
+				})
+				.use(window.texmath, {
+					engine: katex,
+					delimiters: 'dollars'
+				});
+		// 处理图片路径
+		let temp_container = document.createElement('div');
+		temp_container.innerHTML = markdown.render(content);
+		{
+			let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		{
+			let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		return temp_container.innerHTML;
+	}
+	function generateToc() {
+		const contentElement = document.getElementById('post_body');
+		const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+		const tocElement = document.getElementById('toc_wrapper');
+		
+		if (headings.length === 0) {
+			return false;
+		}
+		let toc_ul = "<ul style='list-style: none;'>";
+		let toc_li = "<li style='list-style: none;'>";
+		let tocHtml = toc_ul;
+		let currentLevel = 1;
+		let stack = [0];
+		
+		headings.forEach((heading, index) => {
+			const level = parseInt(heading.tagName.substring(1));
+			const id = heading.id || `heading-${index}`;
+			heading.id = id;
+			
+			// 提取包含公式的 HTML 内容
+			let headingContent = heading.innerHTML;
+			
+			// 调整层级逻辑
+			if (level > currentLevel) {
+				for (let i = currentLevel; i < level; i++) {
+					tocHtml += toc_ul;
+					stack[i] = 0;
+				}
+			} else if (level < currentLevel) {
+				for (let i = currentLevel; i > level; i--) {
+					tocHtml += '</ul></li>';
+					stack.pop();
+				}
+			} else if (index > 0) {
+				tocHtml += '</li>';
+			}
+			
+			stack[level-1] = (stack[level-1] || 0) + 1;
+			for (let i = level; i < stack.length; i++) {
+				stack[i] = 0;
+			}
+			
+			// 使用渲染后的内容（包含已处理的公式）
+			tocHtml += toc_li+`<a href="#${id}">${headingContent}</a>`;
+			currentLevel = level;
+		});
+		
+		for (let i = 1; i < currentLevel; i++) {
+			tocHtml += '</ul></li>';
+		}
+		if (headings.length > 0) {
+			tocHtml += '</li>';
+		}
+		
+		tocHtml += '</ul>';
+		tocElement.innerHTML = tocHtml;
+		
+		return true;
+	}
+</script>
+<script>
+	!function () {
+		const post_body = document.querySelector('div[data-post-markdown]');
+		
+		try {
+			const markdownContent = post_body.getAttribute('data-post-markdown');
+			
+			if (markdownContent) {
+				const renderedHTML = render_post_markdown(markdownContent);
+				post_body.innerHTML = renderedHTML;
+				post_body.removeAttribute('data-post-markdown');
+				if(generateToc()) work_with_toc();
+				else remove_toc();
+			}
+		} catch (error) {
+			post_body.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+		}
+	}();
+</script>
+		</div>
+	</div>
+	
+
+
+
+
+
+
+<div class="footer-box">
+	<footer class="footer">
+		<center id="runTimeBox">
+			已运行: <span id="run_time"></span>
+		</center>
+		<script>
+			BirthDay = new Date('2023-03-01');
+			if (BirthDay.getTime()) {
+				function runTime() {
+					str = "";
+					today = new Date();
+					timeold = today.getTime() - BirthDay.getTime();
+					msPerDay = 24 * 60 * 60 * 1000;
+					e_daysold = timeold / msPerDay;
+					daysold = Math.floor(e_daysold);
+					str += daysold + " 天";
+					return str;
+				}
+				setInterval(function () {
+					$("#run_time").html(runTime());
+				}, 1000);
+			} else {
+				document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+			}
+		</script>
+		<div class="poweredby">
+			Powered by Exber
+		</div>
+	</footer>
+	<div class="pisces back-to-top" id="back_to_top">
+		<i class="fa fa-arrow-up"></i>
+		<span class="scrollpercent">
+			<span id="back_to_top_text">0</span>%
+		</span>
+	</div>
+</div>
+<script>
+	// back2top
+	let back2Top = document.querySelector("#back_to_top"),
+		back2TopText = document.querySelector("#back_to_top_text");
+
+	function scrollAnimation(currentY, targetY) {
+		let needScrollTop = targetY - currentY;
+		let _currentY = currentY;
+		setTimeout(() => {
+			const dist = Math.ceil(needScrollTop / 10);
+			_currentY += dist;
+			window.scrollTo(_currentY, currentY);
+			if (needScrollTop > 10 || needScrollTop < -10) {
+				scrollAnimation(_currentY, targetY);
+			} else {
+				window.scrollTo(_currentY, targetY);
+			}
+		}, 1);
+	}
+
+	back2Top.addEventListener("click", function(e) {
+		scrollAnimation(document.scrollingElement.scrollTop, 0);
+		e.stopPropagation();
+		return false;
+	});
+
+	window.addEventListener("scroll", function(e) {
+		let percent =
+			(document.scrollingElement.scrollTop /
+				(document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight)) *
+			100;
+		if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+			back2Top.classList.add("back-top-active");
+		}
+		if (percent == 0) {
+			back2Top.classList.remove("back-top-active");
+		}
+		if (back2TopText) {
+			back2TopText.textContent = Math.floor(percent);
+		}
+	});
+</script>
+	</div>
+</body>
+
+
+
+
+
+
+
+<input hidden id="copy" />
+<link rel="stylesheet" href="https://exber.qzz.io/media/css/jquery.fancybox.css" />
+<script src="https://exber.qzz.io/media/js/jquery.fancybox.js"></script>
+<script>
+	// 渲染所有带有 data-markdown 属性的 div 元素
+	!function () {
+		const markdownElements = document.querySelectorAll('div[data-markdown]');
+		
+		markdownElements.forEach((element, index) => {
+			try {
+				const markdownContent = element.getAttribute('data-markdown');
+				
+				if (markdownContent) {
+					const renderedHTML = render_markdown(markdownContent);
+					element.innerHTML = renderedHTML;
+					element.removeAttribute('data-markdown');
+				}
+			} catch (error) {
+				element.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+			}
+		});
+	}();
+</script>
+<script>
+	document.querySelectorAll(".section img").forEach((image) => {
+		var parent = image.parentElement;
+		var next = image.nextElementSibling;
+		parent.removeChild(image);
+		var aelem = document.createElement("a");
+		aelem.href = image.src;
+		aelem.dataset["fancybox"] = "images";
+		aelem.dataset["rel"] = "fancybox-button";
+		aelem.classList.add("fancybox");
+		aelem.appendChild(image);
+		parent.insertBefore(aelem, next);
+	});
+	
+	!function () {
+		let times = document.querySelectorAll('.publish-time');
+		for (let i = 0; i < times.length; i++) {
+			let date = times[i].dataset.t;
+			let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+			if (time < 60) {
+				str = time + '秒之前';
+			} else if (time < 3600) {
+				str = Math.floor(time / 60) + '分钟之前';
+			} else if (time >= 3600 && time < 86400) {
+				str = Math.floor(time / 3600) + '小时之前';
+			} else if (time >= 86400 && time < 259200) {
+				str = Math.floor(time / 86400) + '天之前';
+			} else {
+				str = times[i].textContent;
+			}
+			times[i].textContent = str;
+		}
+	}();
+	
+	let language = '';
+	if (language !== '') {
+		let map = new Map();
+		if (language === 'en') {
+			map.set('search', 'Search');
+			map.set('category', 'Categories');
+			map.set('article', 'Articles');
+			map.set('tag', 'Tags');
+			map.set('top', 'Top');
+			map.set('publish', 'published');
+			map.set('minute', ' minutes');
+			map.set('read-more', 'Read More');
+			map.set('view', 'View');
+			map.set('words', ' words');
+			map.set('category-in', 'category in');
+			map.set('preview', 'Meta');
+			map.set('index', 'Toc');
+			map.set('no-archives', "You haven't created yet");
+			map.set('archives', " articles in total");
+			map.set('cloud-tags', " tags in total");
+			map.set('copyright', "Copyright: ");
+			map.set('author', "Author: ");
+			map.set('link', "Link: ");
+			map.set('leave-message', "Leave a message");
+			map.set('format', "Links Format");
+			map.set('site-name', "Name: ");
+			map.set('site-link', "Link: ");
+			map.set('site-desc', "Desc: ");
+			map.set('stat', " related results, taking ");
+			map.set('stat-time', " ms");
+			map.set('site-img', "Image: ");
+			map.set('copy-markdown', "Copy Markdown");
+		}
+
+		if (map.size > 0) {
+			let lanElems = document.querySelectorAll('.language');
+			lanElems.forEach(elem => {
+				let lan = elem.dataset.lan, text = map.get(lan);
+				if (elem.__proto__ === HTMLInputElement.prototype) {
+					elem.placeholder = text
+				} else {
+					if (elem.dataset.count) {
+						text = elem.dataset.count + text;
+					}
+					elem.textContent = text;
+				}
+			})
+		}
+	}
+
+	function copyCode(e) {
+		if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+			let code = e.currentTarget.querySelector('code');
+			var text = code.innerText;
+			if (e.srcElement.textContent === '复制成功') {
+				return;
+			}
+			e.srcElement.textContent = '复制成功';
+			(function (elem) {
+				setTimeout(() => {
+					if (elem.textContent === '复制成功') {
+						elem.textContent = '复制代码'
+					}
+				}, 1000);
+			})(e.srcElement)
+			Clipboard.copy(text);
+		}
+	}
+
+	let pres = document.querySelectorAll('pre');
+	pres.forEach(pre => {
+		let code = pre.querySelector('code');
+		let copyElem = document.createElement('span');
+		copyElem.classList.add('copy-code');
+		copyElem.textContent = '复制代码';
+		pre.appendChild(copyElem);
+		pre.onclick = copyCode
+	})
+</script>
+<script src="https://exber.qzz.io/media/js/motion.js"></script>
+<script src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+<script>
+	var scroll = new SmoothScroll('a[href*="#"]', {
+		speed: 200
+	});
+</script>
+<script>
+	// 动态调整站点概览位置
+	let hasCacu = false;
+	window.addEventListener("resize", function(e) {
+		calcuHeight();
+	});
+
+	function calcuHeight() {
+		if (!hasCacu) {
+			let sideBar = document.querySelector(".sidebar");
+			let navUl = document.querySelector("#site_nav");
+			sideBar.style =
+				"margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+			hasCacu = true;
+		}
+	}
+	calcuHeight();
+	
+	// 侧边栏固定逻辑
+	let sidebar = document.querySelector('.sidebar');
+	let sidebarWrapper = document.querySelector('#sidebar');
+	if (sidebar) {
+		let hasFix = false;
+		document.addEventListener('scroll', function(e) {
+		  if (document.scrollingElement.scrollTop > parseInt(sidebar.style.marginTop) + 15) {
+			if (!hasFix) {
+				sidebarWrapper.classList.add('sidebar-fixed')
+				hasFix = true;
+			}
+		  } else {
+			if (hasFix) {
+				sidebarWrapper.classList.remove('sidebar-fixed')
+				hasFix = false;
+			}
+		  }
+		});
+	}
+</script>
+<script>
+	// 链接跳转
+	let newWindow = "true";
+	if (newWindow === "true") {
+		let links = document.querySelectorAll(".post-body a");
+		links.forEach((item) => {
+			if (!item.classList.contains("btn")) {
+				item.setAttribute("target", "_blank");
+			}
+		});
+	}
+
+	// 代码高亮
+	hljs.initHighlightingOnLoad();
+
+	// 离开当前页title变化
+	var leaveTitle = "";
+	var normal_title = document.title;
+	if (leaveTitle) {
+		document.addEventListener("visibilitychange", function() {
+			if (document.visibilityState == "hidden") {
+				normal_title = document.title;
+				document.title = leaveTitle;
+			} else {
+				document.title = normal_title;
+			}
+		});
+	}
+</script>
+</html>

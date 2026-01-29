@@ -1,0 +1,2282 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	
+
+
+
+
+
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="静态个人博客">
+<meta name="description" content="Exber's Blog">
+<meta name="theme-color" content="#000">
+
+<title>基本子串结构 学习笔记|Exber's Blog</title>
+
+<link rel="shortcut icon" href="https://exber.qzz.io/favicon.ico?v=1769647447">
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/css/pisces.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/fonts/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/hljs/styles/default.css">
+
+<link
+  href="https://fonts.font.im/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet"
+  type="text/css"
+>
+
+<link rel="stylesheet/less" type="text/css" href="https://exber.qzz.io/styles/main.less">
+<script src="https://cdn.jsdmirror.com/npm/less@4"></script>
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/main.css">
+
+<script src="https://exber.qzz.io/media/js/jquery.js"></script>
+<script src="https://exber.qzz.io/media/hljs/highlight.js"></script>
+
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+<script src="https://cdn.jsdmirror.com/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-texmath/texmath.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-anchor/dist/markdownItAnchor.umd.js"></script>
+
+<script>
+// 处理带空格的链接
+function markdownItLinkEncodeFixed(md) {
+	// 1. 修复链接打开规则
+	const defaultLinkOpenRender = md.renderer.rules.link_open || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const hrefIndex = token.attrIndex('href');
+		
+		if (hrefIndex >= 0) {
+			const originalHref = token.attrs[hrefIndex][1];
+			// 更健壮的编码处理
+			const encodedHref = encodeURI(originalHref).replace(/%20/g, '%20');
+			token.attrs[hrefIndex][1] = encodedHref;
+		}
+		
+		return defaultLinkOpenRender(tokens, idx, options, env, self);
+	};
+
+	// 2. 修复图片规则
+	const defaultImageRender = md.renderer.rules.image || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.image = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const srcIndex = token.attrIndex('src');
+		
+		if (srcIndex >= 0) {
+			const originalSrc = token.attrs[srcIndex][1];
+			const encodedSrc = encodeURI(originalSrc).replace(/%20/g, '%20');
+			token.attrs[srcIndex][1] = encodedSrc;
+		}
+		
+		return defaultImageRender(tokens, idx, options, env, self);
+	};
+
+	// 3. 新增：处理可能被误解析为text的链接[1](@ref)
+	const defaultTextRender = md.renderer.rules.text || 
+		function(tokens, idx, options, env, self) {
+			const token = tokens[idx];
+			return token.content;
+		};
+
+	md.renderer.rules.text = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const content = token.content;
+		
+		// 检测类似链接模式的text token[1](@ref)
+		if (content.includes('[') && content.includes(']') && content.includes('(') && content.includes(')')) {
+			try {
+				// 尝试提取和编码链接
+				const linkMatch = content.match(/\[([^\]]+)\]\(([^)]+)\)/);
+				if (linkMatch) {
+					const linkText = linkMatch[1];
+					const linkUrl = encodeURI(linkMatch[2]).replace(/%20/g, '%20');
+					return `<a href="${linkUrl}">${linkText}</a>`;
+				}
+			} catch (e) {
+				console.warn('链接提取失败:', e);
+			}
+		}
+		
+		return defaultTextRender(tokens, idx, options, env, self);
+	};
+}
+function render_markdown(content)
+{
+	let markdown = window.markdownit({ html: true })
+			 .use(markdownItLinkEncodeFixed)
+			 .use(window.texmath, {
+				 engine: katex,
+				 delimiters: 'dollars'
+			 });
+	// 处理图片路径
+	let temp_container = document.createElement('div');
+	temp_container.innerHTML = markdown.render(content);
+	{
+		let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	{
+		let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	return temp_container.innerHTML;
+}
+</script>
+<script>
+	window.Clipboard = (function (window, document, navigator) {
+		var textArea,
+			copy;
+
+		// 判断是不是ios端
+		function isOS() {
+			return navigator.userAgent.match(/ipad|iphone/i);
+		}
+		//创建文本元素
+		function createTextArea(text) {
+			textArea = document.createElement('textArea');
+			textArea.value = text;
+			textArea.style.width = 0;
+			textArea.style.height = 0;
+			textArea.clientHeight = 0;
+			textArea.clientWidth = 0;
+			document.body.appendChild(textArea);
+		}
+		//选择内容
+		function selectText() {
+			var range,
+				selection;
+
+			if (isOS()) {
+				range = document.createRange();
+				range.selectNodeContents(textArea);
+				selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				textArea.setSelectionRange(0, 999999);
+			} else {
+				textArea.select();
+			}
+		}
+
+		//复制到剪贴板
+		function copyToClipboard() {
+			try {
+				document.execCommand("Copy")
+			} catch (err) {
+				alert("复制错误！请手动复制！")
+			}
+			document.body.removeChild(textArea);
+		}
+
+		copy = function (text) {
+			createTextArea(text);
+			selectText();
+			copyToClipboard();
+		};
+
+		return {
+			copy: copy
+		};
+	})(window, document, navigator);
+</script>
+	<meta name="description" content="基本子串结构 学习笔记" />
+</head>
+
+<body>
+	<div class="head-top-line"></div>
+	<div class="header-box">
+		
+		
+	<style> /* 搜索相关 */
+		.gridea-search-input{
+			height: 30px;
+			width: 200px;
+			box-sizing: border-box;
+			padding: 0 15px 0 30px;
+			border: 1px solid #e3e3e3;
+			border-radius: 15px;
+			color: #273849;
+			outline: none;
+			transition: border-color 0.2s ease;
+			background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+			background-size: 20px;
+			vertical-align: middle !important;
+		}
+		.gridea-search-input:focus {
+		  border-color: #666666;
+		  right: 0;
+		}
+		/* 自适应轨道 */
+		.slider-track {
+			--track-height: 0.4em; /* 轨道基础高度 */
+			width: 100%;
+			height: var(--track-height);
+			background: #e0e0e0;
+			border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+			position: relative;
+			cursor: default;
+			margin: 0.5em 0; /* 垂直间距自适应 */
+		}
+		
+		/* 进度填充 */
+		.slider-fill {
+			height: 100%;
+			background: #555;
+			border-radius: inherit; /* 继承父级圆角 */
+			width: 50%; /* 初始值 */
+		}
+		
+		/* 自适应滑块 */
+		.slider-thumb {
+			--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+			position: absolute;
+			width: var(--thumb-size);
+			height: var(--thumb-size);
+			background: #555;
+			border-radius: 50%;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: 
+				transform 0.2s ease,
+				box-shadow 0.2s ease;
+			border: 2px solid white; /* 增加辨识度 */
+		}
+		
+		/* 悬停效果 */
+		.slider-thumb:hover {
+			background: #333;
+			transform: translate(-50%, -50%) scale(1.1);
+			box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+		}
+		
+		/* 拖动效果 */
+		.slider-thumb:active {
+			cursor: grabbing;
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		}
+		
+		/* 数值显示 */
+		.value-display {
+			text-align: center;
+			font-family: Arial, sans-serif;
+			color: #555;
+			font-size: 1.2em; /* 基于容器字体大小 */
+			margin-top: 0.5em;
+		}
+	</style>
+
+<div class="pisces">
+  <header class="header">
+    <div class="blog-header box-shadow-wrapper" id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+            <a href="https://exber.qzz.io" class="brand">
+              <span>Exber's Blog</span>
+            </a>  
+        </div>
+        
+			<p class="subtitle">Can't go up</p>
+        
+      </div>
+      <nav class="site-nav bg-color" id="site_nav">
+        <ul id="nav_ul">
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io" target="">
+					首页
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io/tags" target="">
+					按标签筛选
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://csacademy.com/app/graph_editor/" target="_blank">
+					图论编辑器
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="http://yuantiji.ac/zh/" target="_blank">
+					原题机
+				</a>
+            </li>
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://exber.qzz.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.6</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script>
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+
+
+	<script>
+		// 获取DOM元素
+		const sliderTrack = document.getElementById('sliderTrack');
+		const sliderThumb = document.getElementById('sliderThumb');
+		const sliderFill = document.getElementById('sliderFill');
+		const sliderValue = document.getElementById('sliderValue');
+		
+		// 初始化变量
+		let isDragging = false;
+		let currentValue = 0.6;
+		
+		// 更新滑块位置和数值显示
+		function updateSlider(positionX) {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			let newPosition;
+
+			// 检查轨道宽度是否有效
+			if (trackRect.width <= 0) {
+				// 如果轨道宽度无效，则直接使用当前的 currentValue
+				newPosition = currentValue;
+			} else {
+				// 正常计算位置
+				newPosition = (positionX - trackRect.left) / trackRect.width;
+				newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+			}
+
+			// 更新UI
+			sliderThumb.style.left = `${newPosition * 100}%`;
+			sliderFill.style.width = `${newPosition * 100}%`;
+
+			// 更新当前值和表单隐藏域的值
+			currentValue = newPosition;
+			document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+
+			// 更新显示值（保留两位小数）
+			// 使用 Number.isNaN 进行严格检查，确保显示正常
+			const displayValue = Number.isNaN(newPosition) ? '0.60' : newPosition.toFixed(2);
+			sliderValue.textContent = displayValue;
+		}
+		
+		// 响应父容器大小变化
+		function handleResize() {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			const positionX = trackRect.left + trackRect.width * currentValue;
+			updateSlider(positionX);
+		}
+		
+		// 鼠标按下事件 - 仅在圆点上触发
+		sliderThumb.addEventListener('mousedown', (e) => {
+			isDragging = true;
+			sliderThumb.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		
+		// 鼠标移动事件
+		document.addEventListener('mousemove', (e) => {
+			if (!isDragging) return;
+			updateSlider(e.clientX);
+		});
+		
+		// 鼠标释放事件
+		document.addEventListener('mouseup', () => {
+			if (isDragging) {
+				isDragging = false;
+				sliderThumb.style.cursor = 'grab';
+			}
+		});
+		
+		// 监听父容器大小变化
+		const resizeObserver = new ResizeObserver(() => {
+			handleResize();
+		});
+		
+		// 开始观察相关元素
+		resizeObserver.observe(sliderTrack.parentElement);
+		resizeObserver.observe(sliderTrack);
+		
+		// 初始化
+		handleResize();
+	</script>
+
+	</div>
+	<div class="main-continer">
+	<div class="section-layout pisces">
+		<div class="section-layout-wrapper">
+			<div class="sidebar">
+	<div class="sidebar-box box-shadow-wrapper bg-color right-motion" id="sidebar">
+		<div class="post-list-sidebar" id="sidebar-selector">
+			<div class="sidebar-title">
+				<span id="tocSideBar" class="sidebar-title-item sidebar-title-active language" data-lan="index">文章目录</span>
+				<span id="metaSideBar" class="sidebar-title-item language" data-lan="preview">站点概览</span>
+			</div>
+		</div>
+		<div class="sidebar-body pisces" id="sidebar_body">
+			<div class="post-side-meta" id="post_side_meta">
+				
+
+
+
+
+
+
+<div class="sidebar-item">
+	<img class="site-author-image right-motion" src="https://exber.qzz.io/avatar.png"/>
+	<p class="site-author-name">Exber</p>
+	
+	<div class="site-description right-motion">
+		<p>洛谷 @Exber</p>
+<p>Codeforces @Rebex</p>
+
+	</div>
+	
+</div>
+<div class="sidebar-item side-item-stat right-motion">
+	<div class="sidebar-item-box">
+		<a href="https://exber.qzz.io/tags">
+			<span class="site-item-stat-count">26</span>
+			<span class="site-item-stat-name language" data-lan="tag">标签</span>
+		</a>
+	</div>
+	<div class="sidebar-item-box">
+		<a>
+			
+			<span class="site-item-stat-count">330</span>
+			<span class="site-item-stat-name language" data-lan="article">文章</span>
+		</a>
+	</div>
+</div>
+
+			</div>
+			<div class="post-toc sidebar-body-active" id="post_toc" style="opacity: 1;">
+				<div class="toc-box right-motion">
+					<div class="toc-wrapper  no_compress" id="toc_wrapper">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+			<div class="section-box box-shadow-wrapper">
+				<div class="section bg-color post post-page">
+					
+					<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/%E5%9F%BA%E6%9C%AC%E5%AD%90%E4%B8%B2%E7%BB%93%E6%9E%84%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0">基本子串结构 学习笔记</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-08-15 15:26:18">2023-08-15 15:26:18</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>学习笔记</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>字符串</span>
+				</a>
+			
+		</span>
+		
+		
+		
+		<span class="meta-item pc-show">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-copy"></i>
+			<a class="language" data-lan="copy-markdown" data-src-markdown="## Part 1 前言
+
+基本子串结构是许廷强在 2023 年集训队论文《一类基础子串数据结构》中提出的一种新型字符串数据结构，可以同时处理前缀和后缀的信息，是一种很强力的字符串数据结构。
+
+论文链接：[国家集训队2023论文集](https://github.com/OI-wiki/libs/blob/master/集训队历年论文/国家集训队2023论文集.pdf)
+
+另外感谢 [《一类基础子串数据结构》摘抄及注解 - crashed](https://www.cnblogs.com/crashed/p/17382894.html)。
+
+## Part 2 基础定义
+
+- 字符串 $S$：若无特殊说明，$S$ 为给定的某个字符串；
+
+- 字符集大小：默认 $O(1)$；
+
+- $|S|$ 和 $S_{[l,r]}$：
+
+  - $|S|$ 为字符串 $S$ 的长度；
+  - $S_{[l,r]}$ 为字符串 $S_lS_{l+1}\dots S_r$ 即字符串 $S$ 从 $S_l$ 到 $S_r$ 的子串；
+
+- $\text{occ}_S(T)$、$\text{endpos}_S(T)$ 和 $\text{srtpos}_S(T)$：
+
+  - $\text{occ}_S(T)$ 为字符串 $T$ 在字符串 $S$ 中的出现次数；
+  - $\text{endpos}_S(T)$ 为字符串 $T$ 在 $S$ 中出现时的**右**端点位置的集合；
+  - $\text{srtpos}_S(T)$ 为字符串 $T$ 在 $S$ 中出现时的**左**端点位置的集合；
+
+  易知 $\text{occ}_S(T)=\text{endpos}_S(T)=\text{srtpos}_S(T)$。
+
+  若无特殊说明，下标中的 $S$ 略去时表示 $S$ 为给定的字符串 $S$；
+
+- $S\in T$：表示字符串 $S$ 是字符串 $T$ 的子串，$S\notin T$ 同理；
+
+- $T_0$ 和 $T_1$：
+
+  - $T_0$ 为正串的 SAM 的 parent 树；
+  - $T_1$ 为反串的 SAM 的 parent 树；
+  
+  默认 parent 树上的节点等价于 SAM 中的对应节点；
+
+## Part 3 理论
+
+### 3.1 拓展串
+
+##### 定义 3.1（拓展串）
+
+> $\forall t\in S$，定义 $\text{ext}(t)$ 为最长的 $S$ 的子串 $t'$ 满足 $t\in t'$ 且 $\text{occ}(t)=\text{occ}(t')$。
+
+这个显然是良定义的，对于子串 $t$，只要不断往左往右添加字符即可找到 $\text{ext}(t)$。
+
+##### 定理 3.1
+
+> 设 $t=S_{[l,r]},\text{ext}(t)=S_{[L,R]}$，则  $\forall l'\in[L,l],r'\in[r,R]$ 都有 $\text{ext}(S_{[l',r']})=S_{L,R}$。
+
+由于子串 $t$ 找 $\text{ext}(t)$ 是往左往右不断添加字符。
+
+### 3.2 等价类
+
+##### 定义 3.2.1（等价关系）
+
+> $\forall s\in S,t\in S$，$s$ 与 $t$ 等价当且仅当 $\text{ext(s)}=\text{ext(t)}$。
+
+易证明该关系具有传递性、自反性、对称性。
+
+##### 定义 3.2.2（等价类和代表元）
+
+> $\forall s\in S$：
+>
+> - 定义 $s$ 所在的等价类 $\text{E}(s)=\{t|t\in S,\text{ext}(t)=\text{ext}(s)\}$。
+>
+> - 定义 $s$ 所在的等价类的代表元 $\text{R}(s)=t|t\in \text{E}(s),t=\text{ext}(t)$。
+
+容易发现根据定理 3.1，$\forall s\in S$，$\text{R}(s)$ 存在且唯一。
+
+##### 定理 3.2
+
+>$t\in \text{E}(s)$ 当且仅当存在一个可空字符串 $c$ 满足以下两者之一：
+>
+>- $s$ 和 $t$ 每次在 $S$ 中出现都是以 $tcs$ 的形式出现；
+>- $s$ 和 $t$ 每次在 $S$ 中出现都是以 $sct$ 的形式出现；
+
+根据定理 3.1 易得。
+
+### 3.3 引入二维平面
+
+将 $S$ 的 $\frac{n(n+1)}{2}$ 个子串放在二维平面上，$(i,j)$ 即第 $i$ 行第 $j$ 列的点表示 $S_{[i,j]}$。
+
+若无特殊说明，$(i,j)$ 等价于 $S_{[i,j]}$。
+
+##### 定理 3.3（阶梯）
+
+> 每个等价类中的字符串对应的**坐标最小的点**在二维平面中构成了一个的右、上边界与坐标轴平行，左、下边界呈阶梯状的图形。
+>
+> **注意：一个等价类构成的阶梯状图形可能会重复出现很多次。**
+
+根据定理 3.1 易得。
+
+直观感受一下，这里以 $S=abaab$ 为例：
+
+![](../post-images/1692084425285.png)
+
+相同颜色的串在同一个等价类中，这里一共有三个等价类。
+
+##### 定义 3.3（周长）
+
+> 定义一个等价类 $g$ 的周长 $\text{len}(g)$ 为 $g$ 对应的阶梯状图形的宽度加上长度。
+
+##### 推论 3.3.1（凸性）
+
+> - 对于任意两行 $(a,*),(b,*)$，存在某个 $i$ 满足：
+>   - $\forall j\ge i$，$(a,j)$ 与 $(b,j)$ 在同一个等价类中；
+>   - $\forall j<i$，$(a,j)$ 与 $(b,j)$ 在同一个等价类中；
+> - 对于任意两列 $(*,a),(*,b)$，存在某个 $i$ 满足：
+>   - $\forall j\le i$，$(j,a)$ 与 $(j,b)$ 在同一个等价类中；
+>   - $\forall j>i$，$(j,a)$ 与 $(j,b)$ 在同一个等价类中；
+>
+> 即不存在这样的情况：
+>
+> ![](../post-images/1692087042691.png)
+>
+> <details><summary>证明</summary><p>
+>
+> > ![](../post-images/1692087668956.png)
+> >
+> > 由于 $T$ 和 $aT$ 在同一个等价类中，所以 $\text{endpos}(T)=\text{endpos}(aT)$。所以 $T$ 每次都是以 $aT$ 的形式出现的，那么 $Tb$ 每次肯定都是以 $aTb$ 的形式出现的，根据定理 3.2，$aTb$ 一定和 $Tb$ 在一个等价类中。
+>
+> </p></details>
+
+##### 推论 3.3.2
+
+> $\forall t\in S$，$\text{occ}(t)$ 等于 $\text{E}(t)$ 对应的阶梯型出现的次数。
+
+### 3.4 与 SAM 的关系
+
+和 SAM 联系起来。
+
+#### 3.4.1 与节点以及 parent 树中的边的关系
+
+##### 定理 3.4.1.1（与节点的关系）
+
+> 对于某个等价类对应的阶梯形，每一**列**对应 $T_0$ 中的一个节点，每一**行**对应 $T_1$ 中的一个节点。
+>
+> <details><summary>证明</summary><p>
+>
+> > 单看一行，所有字符串都是最长的那个的前缀，所以这些字符串等价当且仅当它们的 $\text{srtpos}$ 相等。
+>>
+> > 单看一列，所有字符串都是最长的那个的后缀，所以这些字符串等价当且仅当它们的 $\text{endpos}$ 相等。
+> </p></details>
+
+
+##### 定理 3.4.1.2（与边的关系）
+
+> - 对于二维平面中的第 $u$ **列**，若 $(u,i)$ 和 $(u,i+1)$ 不在同一个等价类中则 $(u,i+1)$ 对应的 $T_0$ 中的节点是  $(u,i)$ 对应的 $T_0$ 中的节点的儿子；
+>
+> - 对于二维平面中的第 $u$ **行**，若 $(i,u)$ 和 $(i+1,u)$ 不在同一个等价类中则 $(i+1,u)$ 对应的 $T_1$ 中的节点是  $(i,u)$ 对应的 $T_1$ 中的节点的儿子；
+>
+> 反过来：
+>
+> - 在 $T_0$ 上往父亲走相当于在平面上往**上**走到相邻的等价类；
+> - 在 $T_1$ 上往父亲走相当于在平面上往**右**走到相邻的等价类；
+>
+> 直观一点：（$T_1$ 上的连边在平面上的体现）
+>
+> ![](../post-images/1692094211555.png)
+
+挺显然的，根据定理 3.4.1.1 立得。
+
+##### 推论 3.4.1（总周长线性）
+
+> 对于所有等价类 $g$，$\text{len}(g)$ 的和是 $O(|S|)$ 级别的。
+>
+> **注意：同一个等价类对应的阶梯状图形只算一次。**
+>
+> <details><summary>证明</summary><p>
+>
+> > $\text{len}(g)$ 的和相当于满足属于不同等价类的相邻点的对数，根据定理 3.4.1.2，这样的一对点对应着 $T_0$ 或 $T_1$ 中的一条边，由于 $T_0$ 和 $T_1$ 中的边的条数都是 $O(|S|)$ 的，所以这样的点对也是 $O(|S|)$ 的。
+> 
+> </p></details>
+
+##### 定理 3.4.1.3（同等价类同构）
+
+> 对于在同一个等价类中的同一棵 parent 树上的节点 $u,v$，它们的子树同构。
+>
+> 即把它们的子树看作无标号有根树后节点一一对应，且对应的两个点满足：包含的串的个数，包含的串的 $\text{occ}$ 相同，它们在二维平面上的位置差（两横/竖条的横纵距离）和 $u,v$ 在二维平面上的位置差相同。
+>
+> <details><summary>证明</summary><p>
+>
+> > 等价于对应的两个点在同一个等价类中。
+> >
+> > 根据定理 3.4.1.2，$u$ 和 $v$ 的子树中的点一定在 $u$ 和 $v$ 对应的横/竖条的上/右边，而根据推论 3.3.1，同一行/列且在同一个的两个点同时往上/右走后还在同一个等价类中。
+>
+> </p></details>
+
+#### 3.4.2 再见，SAM 中的边
+
+考虑正串 SAM 中的一条边，体现在二维平面上就是往右走，而反串 SAM 中的一条边体现在二维平面上就是往上走。
+
+##### 定理 3.4.2
+
+> 对于 SAM 中的一条边，它连接的两个节点对应的横条/竖列在同一个等价类当且仅当它们中字符串的 $\text{endpos}$ 集合大小相同，且这样的边构成若干条链。
+
+该定理根据定理 3.4.1.1 以及 SAM 的性质易得。
+
+根据定理 3.4.2 和定理 3.4.1.2，容易发现正串 SAM 中的一条连接不同两个等价类的边等价于 $T_1$ 中的一条边，反串 SAM 中的一条连接不同等价类的边等价于 $T_0$ 中的一条边。
+
+而若把一个等价类看作一个点，去掉自环，只保留每个等价类代表元的出边，那么 SAM 中的边就和另一棵 parent 树中的边一一对应了！
+
+## Part 4 实践
+
+### 4.1 构建
+
+先想清楚需要什么：
+
+- 每个等价类的阶梯状结构（底边长、每个竖条的长度）；
+- 每个等价类的代表元的第一次出现的左右端点；
+- 不同等价类之间的连边：
+  - 只保留每个等价类代表元的出边；
+  - 横向边的和纵向边的分开；
+  - 边上标注上 SAM 中对应边的字符所在的可能的最小的位置（方便定位等价类的相对位置）；
+
+根据定理 3.4.2，把**正串** SAM 中满足连接的两个节点的 $\text{endpos}$ 集合大小相同的边抽出来，不妨把这些边叫做关键边。
+
+找到这些关键边构成的若干条链，每条链对应了一个等价类：
+
+![](../post-images/1692171174405.png)
+
+链的长度（点数）就是等价类底边的长度，链中每个点对应等价类中的一竖条，点中字符串的个数就是对应竖条的长度。
+
+链尾的点中最长的字符串就是这个等价类的代表元，第一次出现的右端点可以通过在 parent 树上做子树 min 得到，第一次出现的左端点可以通过第一次出现的右端点得出。
+
+对于不同等价类之间的边，只需要通过哈希表找到代表元在正反串 SAM 中对应的节点 $A$ 和 $B$（$A$ 是正串 SAM 上的），$A$ 的所有出边即为代表元横向的出边，$B$ 的则为代表元纵向的出边。
+
+每条出边的字符所在的可能的最小的位置就是出边指向的节点的 $\text{endpos}$ 集合中的最小值，可以通过在 parent 树上做子树 min 得到。
+
+梳理一下流程：
+
+1. 建出正反 SAM，通过在 parent 树上做子树 min 得到每个节点的 $\text{endpos}$ 集合中的最小值；
+2. 在**正** SAM 中找到满足连接的两个节点的 $\text{endpos}$ 集合大小相同的边构成的若干条链；
+3. 遍历一次所有链，对于每条链：
+   1. 给这条链代表的等价类分配一个新的点 $id$，把链上节点都标记上 $id$；
+   2. 得出链代表的等价类的宽度（链的长度）；
+   3. 遍历一次链，得出链代表的等价类每一列的长度；
+   4. 找到链尾节点 $T$ 中最长的字符串第一次出现的位置 $S_{[l,r]}$，在哈希表把 $(l,r)$ 标记为 $id$；
+4. 再遍历一次所有链，对于每条链：
+   1. 找到链代表的节点 $A$；
+   2. 遍历链尾节点 $T$ 的所有出边 $u$：
+      1. 找到 $u$ 连向的点的 $\text{endpos}$ 集合中的最小值 $x$；
+      2. 找到 $u$ 连向的点的标记 $B$；
+      3. 从 $A$ 向 $B$ 连一条权值为 $x$ 的**横向边**；
+5. 在**反** SAM 中找到满足连接的两个节点的 $\text{endpos}$ 集合大小相同的边构成的若干条链；
+6. 遍历一次所有链，对于每条链：
+   1. 找到链尾节点 $T$ 中最长的字符串第一次出现的位置 $S_{[l,r]}$，找到哈希表中 $(l,r)$ 的标记 $id$（这条链代表的节点）；
+   2. 把链上节点都标记上 $id$；
+7. 再遍历一次所有链，对于每条链：
+   1. 找到链代表的节点 $A$；
+   2. 遍历链尾节点 $T$ 的所有出边 $u$：
+      1. 找到 $u$ 连向的点的 $\text{endpos}$ 集合中的最小值 $x$；
+      2. 找到 $u$ 连向的点的标记 $B$；
+      3. 从 $A$ 向 $B$ 连一条权值为 $x$ 的**纵向边**；
+
+时间复杂度 $O(n)$，哈希表使用 map 实现则为 $O(n\log n)$。
+
+看起来很复杂，但是看代码应该很好懂。
+
+<details><summary>展开代码</summary><p>
+
+```cpp
+struct SBOOK
+{
+	int n;
+	char str[S];
+	int tot;
+	struct node
+	{
+		int l,r;         // 代表元位置
+		vector<int> len; // 每一列的长度
+		vector<pair<int,int>> tor,tol; // 横向边，纵向边
+	}a[S*2];
+	int nxt[S*2],til[S*2],idx[S*2];
+	bool vis[S*2];
+	struct SAM
+	{
+		int lst;
+		int cnt,len[S*2],to[S*2][V],link[S*2];
+		vector<int> son[S*2];
+		int siz[S*2],mnr[S*2];
+		inline void init()
+		{
+			for(int i=0;i<=cnt;i++)
+			{
+				len[i]=link[i]=siz[i]=0;
+				mnr[i]=1e8;
+				memset(to[i],0,sizeof(to[i]));
+				son[i].clear();
+			}
+			cnt=lst=0;
+			link[0]=-1;
+		}
+		inline void ins(int r,int x)
+		{
+			int pre=++cnt;
+			len[pre]=len[lst]+1;
+			int p=lst;
+			while(p!=-1&&to[p][x]==0) to[p][x]=pre,p=link[p];
+			if(p==-1) link[pre]=0;
+			else
+			{
+				int q=to[p][x];
+				if(len[q]==len[p]+1) link[pre]=q;
+				else
+				{
+					int cpy=++cnt;
+					len[cpy]=len[p]+1;
+					siz[cpy]=0,mnr[cpy]=1e8;
+					memcpy(to[cpy],to[q],sizeof(to[q]));
+					link[cpy]=link[q];
+					link[pre]=cpy;
+					while(p!=-1&&to[p][x]==q) to[p][x]=cpy,p=link[p];
+					link[q]=cpy;
+				}
+			}
+			lst=pre;
+			siz[pre]=1;
+			mnr[pre]=r;
+		}
+		inline void build(){for(int i=1;i<=cnt;i++) son[link[i]].push_back(i);}
+		void dfs(int u=0)
+		{
+			for(int v:son[u])
+			{
+				dfs(v);
+				siz[u]+=siz[v];
+				mnr[u]=min(mnr[u],mnr[v]);
+			}
+		}
+	}sam[2];
+	struct HASH
+	{
+		int n;
+		static const int mod=114547;
+		vector<pair<pair<int,int>,int>> vec[mod];
+		inline void init(int x)
+		{
+			n=x;
+			for(int i=0;i<mod;i++) vec[i].clear();
+		}
+		inline void ins(pair<int,int> u,int val)
+		{
+			int idx=(1ll*u.first*n%mod+u.second)%mod;
+			for(auto &v:vec[idx]) if(v.first==u) return v.second=val,void();
+			vec[idx].push_back(make_pair(u,val));
+		}
+		inline int que(pair<int,int> u)
+		{
+			int idx=(1ll*u.first*n%mod+u.second)%mod;
+			for(auto &v:vec[idx]) if(v.first==u) return v.second;
+			return -1;
+		}
+	}mp;
+	inline void build()
+	{
+		// 清空
+		for(int i=1;i<=tot;i++) a[i].l=a[i].r=0,a[i].len.clear(),a[i].tor.clear(),a[i].tol.clear();
+		tot=0;
+		mp.init(n);
+		// 建正反 SAM & 预处理节点 endpos 集合中最小值
+		sam[0].init(),sam[1].init();
+		for(int i=1;i<=n;i++) sam[0].ins(i,str[i]-'a');
+		for(int i=n;i>=1;i--) sam[1].ins(i,str[i]-'a');
+		sam[0].build(),sam[1].build();
+		sam[0].dfs(),sam[1].dfs();
+		// 正 SAM 找链
+		for(int i=1;i<=sam[0].cnt;i++) nxt[i]=vis[i]=til[i]=0;
+		for(int u=1;u<=sam[0].cnt;u++)
+		{
+			for(int i=0;i<V;i++)
+			{
+				int v=sam[0].to[u][i];
+				if(v!=0&&sam[0].siz[u]==sam[0].siz[v])
+				{
+					nxt[u]=v;
+					vis[v]=true;
+				}
+			}
+		}
+		// 正 SAM 第一次遍历链
+		for(int u=1;u<=sam[0].cnt;u++)
+		{
+			if(!vis[u])
+			{
+				tot++;
+				int x=u;
+				while(1)
+				{
+					idx[x]=tot;
+					a[tot].len.push_back(sam[0].len[x]-sam[0].len[sam[0].link[x]]);
+					if(nxt[x]==0) break;
+					x=nxt[x];
+				}
+				til[u]=x;
+				a[tot].r=sam[0].mnr[x],a[tot].l=a[tot].r-sam[0].len[x]+1;
+				mp.ins(make_pair(a[tot].l,a[tot].r),tot);
+			}
+		}
+		// 正 SAM 第二次遍历链
+		for(int u=1;u<=sam[0].cnt;u++)
+		{
+			if(!vis[u])
+			{
+				int x=til[u];
+				for(int j=0;j<V;j++)
+				{
+					int y=sam[0].to[x][j];
+					if(y==0) continue;
+					int B=idx[y],val=sam[0].mnr[y];
+					a[idx[x]].tor.push_back(make_pair(B,val));
+				}
+			}
+		}
+		// 反 SAM 找链
+		for(int i=1;i<=sam[1].cnt;i++) nxt[i]=vis[i]=til[i]=0;
+		for(int u=1;u<=sam[1].cnt;u++)
+		{
+			for(int i=0;i<V;i++)
+			{
+				int v=sam[1].to[u][i];
+				if(v!=0&&sam[1].siz[u]==sam[1].siz[v])
+				{
+					nxt[u]=v;
+					vis[v]=true;
+				}
+			}
+		}
+		// 反 SAM 第一次遍历链
+		for(int u=1;u<=sam[1].cnt;u++)
+		{
+			if(!vis[u])
+			{
+				int x=u;
+				while(1)
+				{
+					if(nxt[x]==0) break;
+					x=nxt[x];
+				}
+				til[u]=x;
+				int l=sam[1].mnr[x],r=l+sam[1].len[x]-1;
+				int id=mp.que(make_pair(l,r));
+				x=u;
+				while(x!=0)
+				{
+					idx[x]=id;
+					x=nxt[x];
+				}
+			}
+		}
+		// 反 SAM 第二次遍历链
+		for(int u=1;u<=sam[1].cnt;u++)
+		{
+			if(!vis[u])
+			{
+				int x=til[u];
+				for(int j=0;j<V;j++)
+				{
+					int y=sam[1].to[x][j];
+					if(y==0) continue;
+					int B=idx[y],val=sam[1].mnr[y];
+					a[idx[x]].tol.push_back(make_pair(B,val));
+				}
+			}
+		}
+	}
+};
+```
+
+</p></details>
+
+### 4.2 例题
+
+- [CF1817F Entangled Substrings](https://www.luogu.com.cn/problem/CF1817F)
+
+  <details><summary>题解</summary><p>
+  
+  > 建出基本子串结构后，合法的 $a$ 和 $b$ 一定在同一个等价类中且满足它们在 $S$ 中第一次出现位置不交。
+  >
+  > 由于已知代表元第一次出现的位置，所以等价类中每个字符串的第一次出现的位置都是可以求出来的，由于阶梯型本身具有单调性，所以对于每个阶梯型做一遍双指针即可。
+  >
+  > 时间复杂度 $O(n)$。
+  >
+  > 核心代码：
+  >
+  > ```cpp
+  > __int128 ans=0;
+  > for(int i=1;i<=bok.tot;i++)
+  > {
+  >        SBOOK::node &pre=bok.a[i];
+  >        int m=pre.len.size();
+  >        int lb=pre.l,rb=pre.r-m+1;
+  >        __int128 sm=0;
+  >        for(int j=m-1,k=m;j>=0;j--)
+  >        {
+  >            int pr=rb+j;
+  >            while(k>=1&&lb+pre.len[k-1]-1>=pr) sm+=pre.len[--k];
+  >            ans+=pre.len[j]*(sm-1ll*(pr-lb+1)*(m-k));
+  >        }
+  > }
+  > ```
+  
+  </p></details>
+  
+- 【2023NOI模拟赛35】字符串
+" onclick="copyMarkdown(this)">复制 Markdown</a>
+		</span>
+		
+	</div>
+</section>
+
+<script>
+	function copyMarkdown(e) {
+		let text = e.getAttribute('data-src-markdown');
+		if (e.innerHTML == '复制成功') {
+			return;
+		}
+		e.innerHTML = '复制成功';
+		(function (elem) {
+			setTimeout(() => {
+				if (elem.innerHTML == '复制成功') {
+					elem.innerHTML = '复制 Markdown'
+				}
+			}, 1000);
+		})(e)
+		Clipboard.copy(text);
+	}
+</script>
+
+					<div class="post-body next-md-body" id="post_body" data-post-markdown="## Part 1 前言
+
+基本子串结构是许廷强在 2023 年集训队论文《一类基础子串数据结构》中提出的一种新型字符串数据结构，可以同时处理前缀和后缀的信息，是一种很强力的字符串数据结构。
+
+论文链接：[国家集训队2023论文集](https://github.com/OI-wiki/libs/blob/master/集训队历年论文/国家集训队2023论文集.pdf)
+
+另外感谢 [《一类基础子串数据结构》摘抄及注解 - crashed](https://www.cnblogs.com/crashed/p/17382894.html)。
+
+## Part 2 基础定义
+
+- 字符串 $S$：若无特殊说明，$S$ 为给定的某个字符串；
+
+- 字符集大小：默认 $O(1)$；
+
+- $|S|$ 和 $S_{[l,r]}$：
+
+  - $|S|$ 为字符串 $S$ 的长度；
+  - $S_{[l,r]}$ 为字符串 $S_lS_{l+1}\dots S_r$ 即字符串 $S$ 从 $S_l$ 到 $S_r$ 的子串；
+
+- $\text{occ}_S(T)$、$\text{endpos}_S(T)$ 和 $\text{srtpos}_S(T)$：
+
+  - $\text{occ}_S(T)$ 为字符串 $T$ 在字符串 $S$ 中的出现次数；
+  - $\text{endpos}_S(T)$ 为字符串 $T$ 在 $S$ 中出现时的**右**端点位置的集合；
+  - $\text{srtpos}_S(T)$ 为字符串 $T$ 在 $S$ 中出现时的**左**端点位置的集合；
+
+  易知 $\text{occ}_S(T)=\text{endpos}_S(T)=\text{srtpos}_S(T)$。
+
+  若无特殊说明，下标中的 $S$ 略去时表示 $S$ 为给定的字符串 $S$；
+
+- $S\in T$：表示字符串 $S$ 是字符串 $T$ 的子串，$S\notin T$ 同理；
+
+- $T_0$ 和 $T_1$：
+
+  - $T_0$ 为正串的 SAM 的 parent 树；
+  - $T_1$ 为反串的 SAM 的 parent 树；
+  
+  默认 parent 树上的节点等价于 SAM 中的对应节点；
+
+## Part 3 理论
+
+### 3.1 拓展串
+
+##### 定义 3.1（拓展串）
+
+> $\forall t\in S$，定义 $\text{ext}(t)$ 为最长的 $S$ 的子串 $t'$ 满足 $t\in t'$ 且 $\text{occ}(t)=\text{occ}(t')$。
+
+这个显然是良定义的，对于子串 $t$，只要不断往左往右添加字符即可找到 $\text{ext}(t)$。
+
+##### 定理 3.1
+
+> 设 $t=S_{[l,r]},\text{ext}(t)=S_{[L,R]}$，则  $\forall l'\in[L,l],r'\in[r,R]$ 都有 $\text{ext}(S_{[l',r']})=S_{L,R}$。
+
+由于子串 $t$ 找 $\text{ext}(t)$ 是往左往右不断添加字符。
+
+### 3.2 等价类
+
+##### 定义 3.2.1（等价关系）
+
+> $\forall s\in S,t\in S$，$s$ 与 $t$ 等价当且仅当 $\text{ext(s)}=\text{ext(t)}$。
+
+易证明该关系具有传递性、自反性、对称性。
+
+##### 定义 3.2.2（等价类和代表元）
+
+> $\forall s\in S$：
+>
+> - 定义 $s$ 所在的等价类 $\text{E}(s)=\{t|t\in S,\text{ext}(t)=\text{ext}(s)\}$。
+>
+> - 定义 $s$ 所在的等价类的代表元 $\text{R}(s)=t|t\in \text{E}(s),t=\text{ext}(t)$。
+
+容易发现根据定理 3.1，$\forall s\in S$，$\text{R}(s)$ 存在且唯一。
+
+##### 定理 3.2
+
+>$t\in \text{E}(s)$ 当且仅当存在一个可空字符串 $c$ 满足以下两者之一：
+>
+>- $s$ 和 $t$ 每次在 $S$ 中出现都是以 $tcs$ 的形式出现；
+>- $s$ 和 $t$ 每次在 $S$ 中出现都是以 $sct$ 的形式出现；
+
+根据定理 3.1 易得。
+
+### 3.3 引入二维平面
+
+将 $S$ 的 $\frac{n(n+1)}{2}$ 个子串放在二维平面上，$(i,j)$ 即第 $i$ 行第 $j$ 列的点表示 $S_{[i,j]}$。
+
+若无特殊说明，$(i,j)$ 等价于 $S_{[i,j]}$。
+
+##### 定理 3.3（阶梯）
+
+> 每个等价类中的字符串对应的**坐标最小的点**在二维平面中构成了一个的右、上边界与坐标轴平行，左、下边界呈阶梯状的图形。
+>
+> **注意：一个等价类构成的阶梯状图形可能会重复出现很多次。**
+
+根据定理 3.1 易得。
+
+直观感受一下，这里以 $S=abaab$ 为例：
+
+![](../post-images/1692084425285.png)
+
+相同颜色的串在同一个等价类中，这里一共有三个等价类。
+
+##### 定义 3.3（周长）
+
+> 定义一个等价类 $g$ 的周长 $\text{len}(g)$ 为 $g$ 对应的阶梯状图形的宽度加上长度。
+
+##### 推论 3.3.1（凸性）
+
+> - 对于任意两行 $(a,*),(b,*)$，存在某个 $i$ 满足：
+>   - $\forall j\ge i$，$(a,j)$ 与 $(b,j)$ 在同一个等价类中；
+>   - $\forall j<i$，$(a,j)$ 与 $(b,j)$ 在同一个等价类中；
+> - 对于任意两列 $(*,a),(*,b)$，存在某个 $i$ 满足：
+>   - $\forall j\le i$，$(j,a)$ 与 $(j,b)$ 在同一个等价类中；
+>   - $\forall j>i$，$(j,a)$ 与 $(j,b)$ 在同一个等价类中；
+>
+> 即不存在这样的情况：
+>
+> ![](../post-images/1692087042691.png)
+>
+> <details><summary>证明</summary><p>
+>
+> > ![](../post-images/1692087668956.png)
+> >
+> > 由于 $T$ 和 $aT$ 在同一个等价类中，所以 $\text{endpos}(T)=\text{endpos}(aT)$。所以 $T$ 每次都是以 $aT$ 的形式出现的，那么 $Tb$ 每次肯定都是以 $aTb$ 的形式出现的，根据定理 3.2，$aTb$ 一定和 $Tb$ 在一个等价类中。
+>
+> </p></details>
+
+##### 推论 3.3.2
+
+> $\forall t\in S$，$\text{occ}(t)$ 等于 $\text{E}(t)$ 对应的阶梯型出现的次数。
+
+### 3.4 与 SAM 的关系
+
+和 SAM 联系起来。
+
+#### 3.4.1 与节点以及 parent 树中的边的关系
+
+##### 定理 3.4.1.1（与节点的关系）
+
+> 对于某个等价类对应的阶梯形，每一**列**对应 $T_0$ 中的一个节点，每一**行**对应 $T_1$ 中的一个节点。
+>
+> <details><summary>证明</summary><p>
+>
+> > 单看一行，所有字符串都是最长的那个的前缀，所以这些字符串等价当且仅当它们的 $\text{srtpos}$ 相等。
+>>
+> > 单看一列，所有字符串都是最长的那个的后缀，所以这些字符串等价当且仅当它们的 $\text{endpos}$ 相等。
+> </p></details>
+
+
+##### 定理 3.4.1.2（与边的关系）
+
+> - 对于二维平面中的第 $u$ **列**，若 $(u,i)$ 和 $(u,i+1)$ 不在同一个等价类中则 $(u,i+1)$ 对应的 $T_0$ 中的节点是  $(u,i)$ 对应的 $T_0$ 中的节点的儿子；
+>
+> - 对于二维平面中的第 $u$ **行**，若 $(i,u)$ 和 $(i+1,u)$ 不在同一个等价类中则 $(i+1,u)$ 对应的 $T_1$ 中的节点是  $(i,u)$ 对应的 $T_1$ 中的节点的儿子；
+>
+> 反过来：
+>
+> - 在 $T_0$ 上往父亲走相当于在平面上往**上**走到相邻的等价类；
+> - 在 $T_1$ 上往父亲走相当于在平面上往**右**走到相邻的等价类；
+>
+> 直观一点：（$T_1$ 上的连边在平面上的体现）
+>
+> ![](../post-images/1692094211555.png)
+
+挺显然的，根据定理 3.4.1.1 立得。
+
+##### 推论 3.4.1（总周长线性）
+
+> 对于所有等价类 $g$，$\text{len}(g)$ 的和是 $O(|S|)$ 级别的。
+>
+> **注意：同一个等价类对应的阶梯状图形只算一次。**
+>
+> <details><summary>证明</summary><p>
+>
+> > $\text{len}(g)$ 的和相当于满足属于不同等价类的相邻点的对数，根据定理 3.4.1.2，这样的一对点对应着 $T_0$ 或 $T_1$ 中的一条边，由于 $T_0$ 和 $T_1$ 中的边的条数都是 $O(|S|)$ 的，所以这样的点对也是 $O(|S|)$ 的。
+> 
+> </p></details>
+
+##### 定理 3.4.1.3（同等价类同构）
+
+> 对于在同一个等价类中的同一棵 parent 树上的节点 $u,v$，它们的子树同构。
+>
+> 即把它们的子树看作无标号有根树后节点一一对应，且对应的两个点满足：包含的串的个数，包含的串的 $\text{occ}$ 相同，它们在二维平面上的位置差（两横/竖条的横纵距离）和 $u,v$ 在二维平面上的位置差相同。
+>
+> <details><summary>证明</summary><p>
+>
+> > 等价于对应的两个点在同一个等价类中。
+> >
+> > 根据定理 3.4.1.2，$u$ 和 $v$ 的子树中的点一定在 $u$ 和 $v$ 对应的横/竖条的上/右边，而根据推论 3.3.1，同一行/列且在同一个的两个点同时往上/右走后还在同一个等价类中。
+>
+> </p></details>
+
+#### 3.4.2 再见，SAM 中的边
+
+考虑正串 SAM 中的一条边，体现在二维平面上就是往右走，而反串 SAM 中的一条边体现在二维平面上就是往上走。
+
+##### 定理 3.4.2
+
+> 对于 SAM 中的一条边，它连接的两个节点对应的横条/竖列在同一个等价类当且仅当它们中字符串的 $\text{endpos}$ 集合大小相同，且这样的边构成若干条链。
+
+该定理根据定理 3.4.1.1 以及 SAM 的性质易得。
+
+根据定理 3.4.2 和定理 3.4.1.2，容易发现正串 SAM 中的一条连接不同两个等价类的边等价于 $T_1$ 中的一条边，反串 SAM 中的一条连接不同等价类的边等价于 $T_0$ 中的一条边。
+
+而若把一个等价类看作一个点，去掉自环，只保留每个等价类代表元的出边，那么 SAM 中的边就和另一棵 parent 树中的边一一对应了！
+
+## Part 4 实践
+
+### 4.1 构建
+
+先想清楚需要什么：
+
+- 每个等价类的阶梯状结构（底边长、每个竖条的长度）；
+- 每个等价类的代表元的第一次出现的左右端点；
+- 不同等价类之间的连边：
+  - 只保留每个等价类代表元的出边；
+  - 横向边的和纵向边的分开；
+  - 边上标注上 SAM 中对应边的字符所在的可能的最小的位置（方便定位等价类的相对位置）；
+
+根据定理 3.4.2，把**正串** SAM 中满足连接的两个节点的 $\text{endpos}$ 集合大小相同的边抽出来，不妨把这些边叫做关键边。
+
+找到这些关键边构成的若干条链，每条链对应了一个等价类：
+
+![](../post-images/1692171174405.png)
+
+链的长度（点数）就是等价类底边的长度，链中每个点对应等价类中的一竖条，点中字符串的个数就是对应竖条的长度。
+
+链尾的点中最长的字符串就是这个等价类的代表元，第一次出现的右端点可以通过在 parent 树上做子树 min 得到，第一次出现的左端点可以通过第一次出现的右端点得出。
+
+对于不同等价类之间的边，只需要通过哈希表找到代表元在正反串 SAM 中对应的节点 $A$ 和 $B$（$A$ 是正串 SAM 上的），$A$ 的所有出边即为代表元横向的出边，$B$ 的则为代表元纵向的出边。
+
+每条出边的字符所在的可能的最小的位置就是出边指向的节点的 $\text{endpos}$ 集合中的最小值，可以通过在 parent 树上做子树 min 得到。
+
+梳理一下流程：
+
+1. 建出正反 SAM，通过在 parent 树上做子树 min 得到每个节点的 $\text{endpos}$ 集合中的最小值；
+2. 在**正** SAM 中找到满足连接的两个节点的 $\text{endpos}$ 集合大小相同的边构成的若干条链；
+3. 遍历一次所有链，对于每条链：
+   1. 给这条链代表的等价类分配一个新的点 $id$，把链上节点都标记上 $id$；
+   2. 得出链代表的等价类的宽度（链的长度）；
+   3. 遍历一次链，得出链代表的等价类每一列的长度；
+   4. 找到链尾节点 $T$ 中最长的字符串第一次出现的位置 $S_{[l,r]}$，在哈希表把 $(l,r)$ 标记为 $id$；
+4. 再遍历一次所有链，对于每条链：
+   1. 找到链代表的节点 $A$；
+   2. 遍历链尾节点 $T$ 的所有出边 $u$：
+      1. 找到 $u$ 连向的点的 $\text{endpos}$ 集合中的最小值 $x$；
+      2. 找到 $u$ 连向的点的标记 $B$；
+      3. 从 $A$ 向 $B$ 连一条权值为 $x$ 的**横向边**；
+5. 在**反** SAM 中找到满足连接的两个节点的 $\text{endpos}$ 集合大小相同的边构成的若干条链；
+6. 遍历一次所有链，对于每条链：
+   1. 找到链尾节点 $T$ 中最长的字符串第一次出现的位置 $S_{[l,r]}$，找到哈希表中 $(l,r)$ 的标记 $id$（这条链代表的节点）；
+   2. 把链上节点都标记上 $id$；
+7. 再遍历一次所有链，对于每条链：
+   1. 找到链代表的节点 $A$；
+   2. 遍历链尾节点 $T$ 的所有出边 $u$：
+      1. 找到 $u$ 连向的点的 $\text{endpos}$ 集合中的最小值 $x$；
+      2. 找到 $u$ 连向的点的标记 $B$；
+      3. 从 $A$ 向 $B$ 连一条权值为 $x$ 的**纵向边**；
+
+时间复杂度 $O(n)$，哈希表使用 map 实现则为 $O(n\log n)$。
+
+看起来很复杂，但是看代码应该很好懂。
+
+<details><summary>展开代码</summary><p>
+
+```cpp
+struct SBOOK
+{
+	int n;
+	char str[S];
+	int tot;
+	struct node
+	{
+		int l,r;         // 代表元位置
+		vector<int> len; // 每一列的长度
+		vector<pair<int,int>> tor,tol; // 横向边，纵向边
+	}a[S*2];
+	int nxt[S*2],til[S*2],idx[S*2];
+	bool vis[S*2];
+	struct SAM
+	{
+		int lst;
+		int cnt,len[S*2],to[S*2][V],link[S*2];
+		vector<int> son[S*2];
+		int siz[S*2],mnr[S*2];
+		inline void init()
+		{
+			for(int i=0;i<=cnt;i++)
+			{
+				len[i]=link[i]=siz[i]=0;
+				mnr[i]=1e8;
+				memset(to[i],0,sizeof(to[i]));
+				son[i].clear();
+			}
+			cnt=lst=0;
+			link[0]=-1;
+		}
+		inline void ins(int r,int x)
+		{
+			int pre=++cnt;
+			len[pre]=len[lst]+1;
+			int p=lst;
+			while(p!=-1&&to[p][x]==0) to[p][x]=pre,p=link[p];
+			if(p==-1) link[pre]=0;
+			else
+			{
+				int q=to[p][x];
+				if(len[q]==len[p]+1) link[pre]=q;
+				else
+				{
+					int cpy=++cnt;
+					len[cpy]=len[p]+1;
+					siz[cpy]=0,mnr[cpy]=1e8;
+					memcpy(to[cpy],to[q],sizeof(to[q]));
+					link[cpy]=link[q];
+					link[pre]=cpy;
+					while(p!=-1&&to[p][x]==q) to[p][x]=cpy,p=link[p];
+					link[q]=cpy;
+				}
+			}
+			lst=pre;
+			siz[pre]=1;
+			mnr[pre]=r;
+		}
+		inline void build(){for(int i=1;i<=cnt;i++) son[link[i]].push_back(i);}
+		void dfs(int u=0)
+		{
+			for(int v:son[u])
+			{
+				dfs(v);
+				siz[u]+=siz[v];
+				mnr[u]=min(mnr[u],mnr[v]);
+			}
+		}
+	}sam[2];
+	struct HASH
+	{
+		int n;
+		static const int mod=114547;
+		vector<pair<pair<int,int>,int>> vec[mod];
+		inline void init(int x)
+		{
+			n=x;
+			for(int i=0;i<mod;i++) vec[i].clear();
+		}
+		inline void ins(pair<int,int> u,int val)
+		{
+			int idx=(1ll*u.first*n%mod+u.second)%mod;
+			for(auto &v:vec[idx]) if(v.first==u) return v.second=val,void();
+			vec[idx].push_back(make_pair(u,val));
+		}
+		inline int que(pair<int,int> u)
+		{
+			int idx=(1ll*u.first*n%mod+u.second)%mod;
+			for(auto &v:vec[idx]) if(v.first==u) return v.second;
+			return -1;
+		}
+	}mp;
+	inline void build()
+	{
+		// 清空
+		for(int i=1;i<=tot;i++) a[i].l=a[i].r=0,a[i].len.clear(),a[i].tor.clear(),a[i].tol.clear();
+		tot=0;
+		mp.init(n);
+		// 建正反 SAM & 预处理节点 endpos 集合中最小值
+		sam[0].init(),sam[1].init();
+		for(int i=1;i<=n;i++) sam[0].ins(i,str[i]-'a');
+		for(int i=n;i>=1;i--) sam[1].ins(i,str[i]-'a');
+		sam[0].build(),sam[1].build();
+		sam[0].dfs(),sam[1].dfs();
+		// 正 SAM 找链
+		for(int i=1;i<=sam[0].cnt;i++) nxt[i]=vis[i]=til[i]=0;
+		for(int u=1;u<=sam[0].cnt;u++)
+		{
+			for(int i=0;i<V;i++)
+			{
+				int v=sam[0].to[u][i];
+				if(v!=0&&sam[0].siz[u]==sam[0].siz[v])
+				{
+					nxt[u]=v;
+					vis[v]=true;
+				}
+			}
+		}
+		// 正 SAM 第一次遍历链
+		for(int u=1;u<=sam[0].cnt;u++)
+		{
+			if(!vis[u])
+			{
+				tot++;
+				int x=u;
+				while(1)
+				{
+					idx[x]=tot;
+					a[tot].len.push_back(sam[0].len[x]-sam[0].len[sam[0].link[x]]);
+					if(nxt[x]==0) break;
+					x=nxt[x];
+				}
+				til[u]=x;
+				a[tot].r=sam[0].mnr[x],a[tot].l=a[tot].r-sam[0].len[x]+1;
+				mp.ins(make_pair(a[tot].l,a[tot].r),tot);
+			}
+		}
+		// 正 SAM 第二次遍历链
+		for(int u=1;u<=sam[0].cnt;u++)
+		{
+			if(!vis[u])
+			{
+				int x=til[u];
+				for(int j=0;j<V;j++)
+				{
+					int y=sam[0].to[x][j];
+					if(y==0) continue;
+					int B=idx[y],val=sam[0].mnr[y];
+					a[idx[x]].tor.push_back(make_pair(B,val));
+				}
+			}
+		}
+		// 反 SAM 找链
+		for(int i=1;i<=sam[1].cnt;i++) nxt[i]=vis[i]=til[i]=0;
+		for(int u=1;u<=sam[1].cnt;u++)
+		{
+			for(int i=0;i<V;i++)
+			{
+				int v=sam[1].to[u][i];
+				if(v!=0&&sam[1].siz[u]==sam[1].siz[v])
+				{
+					nxt[u]=v;
+					vis[v]=true;
+				}
+			}
+		}
+		// 反 SAM 第一次遍历链
+		for(int u=1;u<=sam[1].cnt;u++)
+		{
+			if(!vis[u])
+			{
+				int x=u;
+				while(1)
+				{
+					if(nxt[x]==0) break;
+					x=nxt[x];
+				}
+				til[u]=x;
+				int l=sam[1].mnr[x],r=l+sam[1].len[x]-1;
+				int id=mp.que(make_pair(l,r));
+				x=u;
+				while(x!=0)
+				{
+					idx[x]=id;
+					x=nxt[x];
+				}
+			}
+		}
+		// 反 SAM 第二次遍历链
+		for(int u=1;u<=sam[1].cnt;u++)
+		{
+			if(!vis[u])
+			{
+				int x=til[u];
+				for(int j=0;j<V;j++)
+				{
+					int y=sam[1].to[x][j];
+					if(y==0) continue;
+					int B=idx[y],val=sam[1].mnr[y];
+					a[idx[x]].tol.push_back(make_pair(B,val));
+				}
+			}
+		}
+	}
+};
+```
+
+</p></details>
+
+### 4.2 例题
+
+- [CF1817F Entangled Substrings](https://www.luogu.com.cn/problem/CF1817F)
+
+  <details><summary>题解</summary><p>
+  
+  > 建出基本子串结构后，合法的 $a$ 和 $b$ 一定在同一个等价类中且满足它们在 $S$ 中第一次出现位置不交。
+  >
+  > 由于已知代表元第一次出现的位置，所以等价类中每个字符串的第一次出现的位置都是可以求出来的，由于阶梯型本身具有单调性，所以对于每个阶梯型做一遍双指针即可。
+  >
+  > 时间复杂度 $O(n)$。
+  >
+  > 核心代码：
+  >
+  > ```cpp
+  > __int128 ans=0;
+  > for(int i=1;i<=bok.tot;i++)
+  > {
+  >        SBOOK::node &pre=bok.a[i];
+  >        int m=pre.len.size();
+  >        int lb=pre.l,rb=pre.r-m+1;
+  >        __int128 sm=0;
+  >        for(int j=m-1,k=m;j>=0;j--)
+  >        {
+  >            int pr=rb+j;
+  >            while(k>=1&&lb+pre.len[k-1]-1>=pr) sm+=pre.len[--k];
+  >            ans+=pre.len[j]*(sm-1ll*(pr-lb+1)*(m-k));
+  >        }
+  > }
+  > ```
+  
+  </p></details>
+  
+- 【2023NOI模拟赛35】字符串
+"></div>
+					<div class="post-footer">
+	<ul class="post-copyright">
+		<li class="post-copyright-author">
+			<strong class="language" data-lan="author">本文作者：</strong>Exber
+		</li>
+		<li class="post-copyright-link">
+			<strong class="language" data-lan="link">本文链接：</strong>
+			<a href="https://exber.qzz.io/post/%E5%9F%BA%E6%9C%AC%E5%AD%90%E4%B8%B2%E7%BB%93%E6%9E%84%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0" title="基本子串结构 学习笔记">https://exber.qzz.io/post/%E5%9F%BA%E6%9C%AC%E5%AD%90%E4%B8%B2%E7%BB%93%E6%9E%84%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0</a>
+		</li>
+		<li class="post-copyright-license">
+			<strong class="language" data-lan="copyright">版权声明： </strong>
+			本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+		</li>
+	</ul>
+	<div class="tags">
+		
+			<a href="https://exber.qzz.io/tags"># 学习笔记</a>
+		
+			<a href="https://exber.qzz.io/tags"># 字符串</a>
+		
+	</div>
+</div>
+				</div>
+			</div>
+			<script>
+	// 处理目录
+	function work_with_toc() {
+		let lastTop = 0, lList = [], hList = [], postBody, lastIndex = -1;
+		let active = 'active-show', activeClass = 'active-current';
+		let tocWrapper = document.querySelector('#toc_wrapper');
+		let tocContent = tocWrapper.children[0];
+		let autoNumber = tocWrapper && tocWrapper.classList.contains('auto-number');
+
+		function addTocNumber(elem, deep) {
+			if (!elem) {
+				return;
+			}
+			let prop = elem.__proto__;
+
+			if (prop === HTMLUListElement.prototype) {
+				for (let i = 0; i < elem.children.length; i++) {
+					addTocNumber(elem.children[i], deep + (i + 1) + '.');
+				}
+			} else if (prop === HTMLLIElement.prototype) {
+				// 保存li元素
+				if (elem.children[0] && elem.children[0].__proto__ === HTMLAnchorElement.prototype) {
+					lList.push(elem);
+				}
+				for (let i = 0; i < elem.children.length; i++) {
+					let cur = elem.children[i];
+					if (cur.__proto__ === HTMLAnchorElement.prototype) {
+						if (autoNumber) {
+							cur.text = deep + ' ' + cur.text;
+						}
+					} else if (cur.__proto__ === HTMLUListElement.prototype) {
+						addTocNumber(cur, deep);
+					}
+				}
+			}
+		}
+
+		function removeParentActiveClass() {
+			let parents = tocContent.querySelectorAll('.' + active)
+			parents.forEach(function (elem) {
+				elem.classList.remove(active);
+			});
+		}
+
+		function addActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.add(activeClass);
+			}
+		}
+
+		function removeActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.remove(activeClass);
+			}
+		}
+
+		function addActiveLiElemment(elem, parent) {
+			if (!elem || elem === parent) {
+				return;
+			} else {
+				if (elem.__proto__ === HTMLLIElement.prototype) {
+					elem.classList.add(active);
+				}
+				addActiveLiElemment(elem.parentElement, parent);
+			}
+		}
+
+		function showToc() {
+			if (tocWrapper) {
+				postBody = document.querySelector('#post_body');
+				for (let i = 0; i < postBody.children.length; i++) {
+					if (postBody.children[i].__proto__ === HTMLHeadingElement.prototype) {
+						hList.push(postBody.children[i]);
+					}
+				}
+				if (tocWrapper.classList.contains('compress')) {
+					tocContent.classList.add('closed');
+				} else if (tocWrapper.classList.contains('no_compress')) {
+					tocContent.classList.add('expanded');
+				} else {
+					if (hList.length > 10) {
+						active = 'active-hidden'
+						tocContent.classList.add('closed');
+					} else {
+						tocContent.classList.add('expanded');
+					}
+				}
+			}
+		}
+
+		(function () {
+			// 处理不是从一级标题开始目录
+			while (tocContent.children.length === 1 && tocContent.children[0].__proto__ === HTMLUListElement.prototype) {
+				let con = tocContent.children[0];
+				tocContent.innerHTML = con.innerHTML;
+			}
+			addTocNumber(tocContent, '');
+		})();
+
+		document.addEventListener('scroll', function (e) {
+			if (lList.length <= 0) {
+				return;
+			}
+			let scrollTop = document.scrollingElement.scrollTop + 10;
+			let dir;
+
+			if (lastTop - scrollTop > 0) {
+				dir = 'up';
+			} else {
+				dir = 'down';
+			}
+
+			lastTop = scrollTop;
+			if (scrollTop <= 0) {
+				if (lastIndex >= 0 && lastIndex < hList.length) {
+					lList[lastIndex].classList.remove(activeClass);
+				}
+				return;
+			}
+
+			let current = 0, hasFind = false;
+			for (let i = 0; i < hList.length; i++) {
+				if (hList[i].offsetTop > scrollTop) {
+					current = i;
+					hasFind = true;
+					break;
+				}
+			}
+			if (!hasFind && scrollTop > lList[lList.length - 1].offsetTop) {
+				current = hList.length - 1;
+			} else {
+				current--;
+			}
+			if (dir === 'down') {
+				if (current > lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex)
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			} else {
+				if (current < lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex);
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			}
+		});
+
+
+		window.addEventListener('load', function () {
+			showToc();
+			document.querySelector('#sidebar').style = 'display: block;';
+			tocWrapper.classList.add('toc-active');
+			setTimeout(function () {
+				if ("createEvent" in document) {
+					let evt = document.createEvent("HTMLEvents");
+					evt.initEvent("scroll", false, true);
+					document.dispatchEvent(evt);
+				}
+				else {
+					document.fireEvent("scroll");
+				}
+			}, 500)
+		})
+		
+		const SIDEBAR_TITLE_ACTIVE = 'sidebar-title-active';
+		const SIDEBAR_BODY_ACTIVE = 'sidebar-body-active';
+		const SLIDE_UP_IN = 'slide-up-in';
+
+		let tocSideBar = document.querySelector('#tocSideBar'),
+		metaSideBar = document.querySelector('#metaSideBar'),
+		postToc = document.querySelector('#post_toc'),
+		postSiteMeta = document.querySelector('#post_side_meta'),
+		sidebarTitle = document.querySelector('.sidebar-title'),
+		sidebarBody = document.querySelector('#sidebar_body');
+
+		tocSideBar && tocSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		metaSideBar && metaSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		function toggleSidebar(e) {
+			let currentTitle = document.querySelector("."+SIDEBAR_TITLE_ACTIVE);
+			if (currentTitle == e.srcElement) {
+				return ;
+			}
+			let current, showElement, hideElement;
+			if (e.srcElement == metaSideBar) {
+				showElement = postSiteMeta;
+				hideElement = postToc;
+			} else if (e.srcElement == tocSideBar){
+				showElement = postToc;
+				hideElement = postSiteMeta;
+			}
+			currentTitle.classList.remove(SIDEBAR_TITLE_ACTIVE);
+			e.srcElement.classList.add(SIDEBAR_TITLE_ACTIVE);
+
+			jQuery.Velocity(hideElement, 'stop');
+			jQuery.Velocity(hideElement, 'transition.slideUpOut', {
+				display: 'none',
+				duration: 200,
+				complete: function () {
+					jQuery.Velocity(showElement, 'transition.slideDownIn', {
+						duration: 200
+					});
+				}
+			})
+			hideElement.classList.remove(SIDEBAR_BODY_ACTIVE);
+			showElement.classList.add(SIDEBAR_BODY_ACTIVE);
+		}
+
+		postToc && postToc.addEventListener('transitionend', function() {
+			this.classList.remove(SLIDE_UP_IN);
+		});
+	}
+</script>
+<script>
+	// 没有目录时删除侧边栏目录相关
+	function remove_toc(){
+		document.querySelector('#sidebar-selector').remove();
+		document.querySelector('#post_toc').remove();
+		document.querySelector('#post_side_meta').classList.remove("post-side-meta");
+	}
+</script>
+<script>
+	// 渲染文章 markdown 并生成目录
+	function render_post_markdown(content)
+	{
+		let markdown = window.markdownit({ html: true })
+				.use(markdownItLinkEncodeFixed)
+				.use(window.markdownItAnchor, {
+					permalink: false,
+					permalinkBefore: false
+				})
+				.use(window.texmath, {
+					engine: katex,
+					delimiters: 'dollars'
+				});
+		// 处理图片路径
+		let temp_container = document.createElement('div');
+		temp_container.innerHTML = markdown.render(content);
+		{
+			let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		{
+			let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		return temp_container.innerHTML;
+	}
+	function generateToc() {
+		const contentElement = document.getElementById('post_body');
+		const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+		const tocElement = document.getElementById('toc_wrapper');
+		
+		if (headings.length === 0) {
+			return false;
+		}
+		let toc_ul = "<ul style='list-style: none;'>";
+		let toc_li = "<li style='list-style: none;'>";
+		let tocHtml = toc_ul;
+		let currentLevel = 1;
+		let stack = [0];
+		
+		headings.forEach((heading, index) => {
+			const level = parseInt(heading.tagName.substring(1));
+			const id = heading.id || `heading-${index}`;
+			heading.id = id;
+			
+			// 提取包含公式的 HTML 内容
+			let headingContent = heading.innerHTML;
+			
+			// 调整层级逻辑
+			if (level > currentLevel) {
+				for (let i = currentLevel; i < level; i++) {
+					tocHtml += toc_ul;
+					stack[i] = 0;
+				}
+			} else if (level < currentLevel) {
+				for (let i = currentLevel; i > level; i--) {
+					tocHtml += '</ul></li>';
+					stack.pop();
+				}
+			} else if (index > 0) {
+				tocHtml += '</li>';
+			}
+			
+			stack[level-1] = (stack[level-1] || 0) + 1;
+			for (let i = level; i < stack.length; i++) {
+				stack[i] = 0;
+			}
+			
+			// 使用渲染后的内容（包含已处理的公式）
+			tocHtml += toc_li+`<a href="#${id}">${headingContent}</a>`;
+			currentLevel = level;
+		});
+		
+		for (let i = 1; i < currentLevel; i++) {
+			tocHtml += '</ul></li>';
+		}
+		if (headings.length > 0) {
+			tocHtml += '</li>';
+		}
+		
+		tocHtml += '</ul>';
+		tocElement.innerHTML = tocHtml;
+		
+		return true;
+	}
+</script>
+<script>
+	!function () {
+		const post_body = document.querySelector('div[data-post-markdown]');
+		
+		try {
+			const markdownContent = post_body.getAttribute('data-post-markdown');
+			
+			if (markdownContent) {
+				const renderedHTML = render_post_markdown(markdownContent);
+				post_body.innerHTML = renderedHTML;
+				post_body.removeAttribute('data-post-markdown');
+				if(generateToc()) work_with_toc();
+				else remove_toc();
+			}
+		} catch (error) {
+			post_body.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+		}
+	}();
+</script>
+		</div>
+	</div>
+	
+
+
+
+
+
+
+<div class="footer-box">
+	<footer class="footer">
+		<center id="runTimeBox">
+			已运行: <span id="run_time"></span>
+		</center>
+		<script>
+			BirthDay = new Date('2023-03-01');
+			if (BirthDay.getTime()) {
+				function runTime() {
+					str = "";
+					today = new Date();
+					timeold = today.getTime() - BirthDay.getTime();
+					msPerDay = 24 * 60 * 60 * 1000;
+					e_daysold = timeold / msPerDay;
+					daysold = Math.floor(e_daysold);
+					str += daysold + " 天";
+					return str;
+				}
+				setInterval(function () {
+					$("#run_time").html(runTime());
+				}, 1000);
+			} else {
+				document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+			}
+		</script>
+		<div class="poweredby">
+			Powered by Exber
+		</div>
+	</footer>
+	<div class="pisces back-to-top" id="back_to_top">
+		<i class="fa fa-arrow-up"></i>
+		<span class="scrollpercent">
+			<span id="back_to_top_text">0</span>%
+		</span>
+	</div>
+</div>
+<script>
+	// back2top
+	let back2Top = document.querySelector("#back_to_top"),
+		back2TopText = document.querySelector("#back_to_top_text");
+
+	function scrollAnimation(currentY, targetY) {
+		let needScrollTop = targetY - currentY;
+		let _currentY = currentY;
+		setTimeout(() => {
+			const dist = Math.ceil(needScrollTop / 10);
+			_currentY += dist;
+			window.scrollTo(_currentY, currentY);
+			if (needScrollTop > 10 || needScrollTop < -10) {
+				scrollAnimation(_currentY, targetY);
+			} else {
+				window.scrollTo(_currentY, targetY);
+			}
+		}, 1);
+	}
+
+	back2Top.addEventListener("click", function(e) {
+		scrollAnimation(document.scrollingElement.scrollTop, 0);
+		e.stopPropagation();
+		return false;
+	});
+
+	window.addEventListener("scroll", function(e) {
+		let percent =
+			(document.scrollingElement.scrollTop /
+				(document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight)) *
+			100;
+		if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+			back2Top.classList.add("back-top-active");
+		}
+		if (percent == 0) {
+			back2Top.classList.remove("back-top-active");
+		}
+		if (back2TopText) {
+			back2TopText.textContent = Math.floor(percent);
+		}
+	});
+</script>
+	</div>
+</body>
+
+
+
+
+
+
+
+<input hidden id="copy" />
+<link rel="stylesheet" href="https://exber.qzz.io/media/css/jquery.fancybox.css" />
+<script src="https://exber.qzz.io/media/js/jquery.fancybox.js"></script>
+<script>
+	// 渲染所有带有 data-markdown 属性的 div 元素
+	!function () {
+		const markdownElements = document.querySelectorAll('div[data-markdown]');
+		
+		markdownElements.forEach((element, index) => {
+			try {
+				const markdownContent = element.getAttribute('data-markdown');
+				
+				if (markdownContent) {
+					const renderedHTML = render_markdown(markdownContent);
+					element.innerHTML = renderedHTML;
+					element.removeAttribute('data-markdown');
+				}
+			} catch (error) {
+				element.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+			}
+		});
+	}();
+</script>
+<script>
+	document.querySelectorAll(".section img").forEach((image) => {
+		var parent = image.parentElement;
+		var next = image.nextElementSibling;
+		parent.removeChild(image);
+		var aelem = document.createElement("a");
+		aelem.href = image.src;
+		aelem.dataset["fancybox"] = "images";
+		aelem.dataset["rel"] = "fancybox-button";
+		aelem.classList.add("fancybox");
+		aelem.appendChild(image);
+		parent.insertBefore(aelem, next);
+	});
+	
+	!function () {
+		let times = document.querySelectorAll('.publish-time');
+		for (let i = 0; i < times.length; i++) {
+			let date = times[i].dataset.t;
+			let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+			if (time < 60) {
+				str = time + '秒之前';
+			} else if (time < 3600) {
+				str = Math.floor(time / 60) + '分钟之前';
+			} else if (time >= 3600 && time < 86400) {
+				str = Math.floor(time / 3600) + '小时之前';
+			} else if (time >= 86400 && time < 259200) {
+				str = Math.floor(time / 86400) + '天之前';
+			} else {
+				str = times[i].textContent;
+			}
+			times[i].textContent = str;
+		}
+	}();
+	
+	let language = '';
+	if (language !== '') {
+		let map = new Map();
+		if (language === 'en') {
+			map.set('search', 'Search');
+			map.set('category', 'Categories');
+			map.set('article', 'Articles');
+			map.set('tag', 'Tags');
+			map.set('top', 'Top');
+			map.set('publish', 'published');
+			map.set('minute', ' minutes');
+			map.set('read-more', 'Read More');
+			map.set('view', 'View');
+			map.set('words', ' words');
+			map.set('category-in', 'category in');
+			map.set('preview', 'Meta');
+			map.set('index', 'Toc');
+			map.set('no-archives', "You haven't created yet");
+			map.set('archives', " articles in total");
+			map.set('cloud-tags', " tags in total");
+			map.set('copyright', "Copyright: ");
+			map.set('author', "Author: ");
+			map.set('link', "Link: ");
+			map.set('leave-message', "Leave a message");
+			map.set('format', "Links Format");
+			map.set('site-name', "Name: ");
+			map.set('site-link', "Link: ");
+			map.set('site-desc', "Desc: ");
+			map.set('stat', " related results, taking ");
+			map.set('stat-time', " ms");
+			map.set('site-img', "Image: ");
+			map.set('copy-markdown', "Copy Markdown");
+		}
+
+		if (map.size > 0) {
+			let lanElems = document.querySelectorAll('.language');
+			lanElems.forEach(elem => {
+				let lan = elem.dataset.lan, text = map.get(lan);
+				if (elem.__proto__ === HTMLInputElement.prototype) {
+					elem.placeholder = text
+				} else {
+					if (elem.dataset.count) {
+						text = elem.dataset.count + text;
+					}
+					elem.textContent = text;
+				}
+			})
+		}
+	}
+
+	function copyCode(e) {
+		if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+			let code = e.currentTarget.querySelector('code');
+			var text = code.innerText;
+			if (e.srcElement.textContent === '复制成功') {
+				return;
+			}
+			e.srcElement.textContent = '复制成功';
+			(function (elem) {
+				setTimeout(() => {
+					if (elem.textContent === '复制成功') {
+						elem.textContent = '复制代码'
+					}
+				}, 1000);
+			})(e.srcElement)
+			Clipboard.copy(text);
+		}
+	}
+
+	let pres = document.querySelectorAll('pre');
+	pres.forEach(pre => {
+		let code = pre.querySelector('code');
+		let copyElem = document.createElement('span');
+		copyElem.classList.add('copy-code');
+		copyElem.textContent = '复制代码';
+		pre.appendChild(copyElem);
+		pre.onclick = copyCode
+	})
+</script>
+<script src="https://exber.qzz.io/media/js/motion.js"></script>
+<script src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+<script>
+	var scroll = new SmoothScroll('a[href*="#"]', {
+		speed: 200
+	});
+</script>
+<script>
+	// 动态调整站点概览位置
+	let hasCacu = false;
+	window.addEventListener("resize", function(e) {
+		calcuHeight();
+	});
+
+	function calcuHeight() {
+		if (!hasCacu) {
+			let sideBar = document.querySelector(".sidebar");
+			let navUl = document.querySelector("#site_nav");
+			sideBar.style =
+				"margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+			hasCacu = true;
+		}
+	}
+	calcuHeight();
+	
+	// 侧边栏固定逻辑
+	let sidebar = document.querySelector('.sidebar');
+	let sidebarWrapper = document.querySelector('#sidebar');
+	if (sidebar) {
+		let hasFix = false;
+		document.addEventListener('scroll', function(e) {
+		  if (document.scrollingElement.scrollTop > parseInt(sidebar.style.marginTop) + 15) {
+			if (!hasFix) {
+				sidebarWrapper.classList.add('sidebar-fixed')
+				hasFix = true;
+			}
+		  } else {
+			if (hasFix) {
+				sidebarWrapper.classList.remove('sidebar-fixed')
+				hasFix = false;
+			}
+		  }
+		});
+	}
+</script>
+<script>
+	// 链接跳转
+	let newWindow = "true";
+	if (newWindow === "true") {
+		let links = document.querySelectorAll(".post-body a");
+		links.forEach((item) => {
+			if (!item.classList.contains("btn")) {
+				item.setAttribute("target", "_blank");
+			}
+		});
+	}
+
+	// 代码高亮
+	hljs.initHighlightingOnLoad();
+
+	// 离开当前页title变化
+	var leaveTitle = "";
+	var normal_title = document.title;
+	if (leaveTitle) {
+		document.addEventListener("visibilitychange", function() {
+			if (document.visibilityState == "hidden") {
+				normal_title = document.title;
+				document.title = leaveTitle;
+			} else {
+				document.title = normal_title;
+			}
+		});
+	}
+</script>
+</html>

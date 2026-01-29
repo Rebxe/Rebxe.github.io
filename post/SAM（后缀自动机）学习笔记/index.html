@@ -1,0 +1,3606 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	
+
+
+
+
+
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="静态个人博客">
+<meta name="description" content="Exber's Blog">
+<meta name="theme-color" content="#000">
+
+<title>SAM（后缀自动机）学习笔记|Exber's Blog</title>
+
+<link rel="shortcut icon" href="https://exber.qzz.io/favicon.ico?v=1769647447">
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/css/pisces.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/fonts/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/hljs/styles/default.css">
+
+<link
+  href="https://fonts.font.im/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet"
+  type="text/css"
+>
+
+<link rel="stylesheet/less" type="text/css" href="https://exber.qzz.io/styles/main.less">
+<script src="https://cdn.jsdmirror.com/npm/less@4"></script>
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/main.css">
+
+<script src="https://exber.qzz.io/media/js/jquery.js"></script>
+<script src="https://exber.qzz.io/media/hljs/highlight.js"></script>
+
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+<script src="https://cdn.jsdmirror.com/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-texmath/texmath.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-anchor/dist/markdownItAnchor.umd.js"></script>
+
+<script>
+// 处理带空格的链接
+function markdownItLinkEncodeFixed(md) {
+	// 1. 修复链接打开规则
+	const defaultLinkOpenRender = md.renderer.rules.link_open || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const hrefIndex = token.attrIndex('href');
+		
+		if (hrefIndex >= 0) {
+			const originalHref = token.attrs[hrefIndex][1];
+			// 更健壮的编码处理
+			const encodedHref = encodeURI(originalHref).replace(/%20/g, '%20');
+			token.attrs[hrefIndex][1] = encodedHref;
+		}
+		
+		return defaultLinkOpenRender(tokens, idx, options, env, self);
+	};
+
+	// 2. 修复图片规则
+	const defaultImageRender = md.renderer.rules.image || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.image = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const srcIndex = token.attrIndex('src');
+		
+		if (srcIndex >= 0) {
+			const originalSrc = token.attrs[srcIndex][1];
+			const encodedSrc = encodeURI(originalSrc).replace(/%20/g, '%20');
+			token.attrs[srcIndex][1] = encodedSrc;
+		}
+		
+		return defaultImageRender(tokens, idx, options, env, self);
+	};
+
+	// 3. 新增：处理可能被误解析为text的链接[1](@ref)
+	const defaultTextRender = md.renderer.rules.text || 
+		function(tokens, idx, options, env, self) {
+			const token = tokens[idx];
+			return token.content;
+		};
+
+	md.renderer.rules.text = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const content = token.content;
+		
+		// 检测类似链接模式的text token[1](@ref)
+		if (content.includes('[') && content.includes(']') && content.includes('(') && content.includes(')')) {
+			try {
+				// 尝试提取和编码链接
+				const linkMatch = content.match(/\[([^\]]+)\]\(([^)]+)\)/);
+				if (linkMatch) {
+					const linkText = linkMatch[1];
+					const linkUrl = encodeURI(linkMatch[2]).replace(/%20/g, '%20');
+					return `<a href="${linkUrl}">${linkText}</a>`;
+				}
+			} catch (e) {
+				console.warn('链接提取失败:', e);
+			}
+		}
+		
+		return defaultTextRender(tokens, idx, options, env, self);
+	};
+}
+function render_markdown(content)
+{
+	let markdown = window.markdownit({ html: true })
+			 .use(markdownItLinkEncodeFixed)
+			 .use(window.texmath, {
+				 engine: katex,
+				 delimiters: 'dollars'
+			 });
+	// 处理图片路径
+	let temp_container = document.createElement('div');
+	temp_container.innerHTML = markdown.render(content);
+	{
+		let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	{
+		let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	return temp_container.innerHTML;
+}
+</script>
+<script>
+	window.Clipboard = (function (window, document, navigator) {
+		var textArea,
+			copy;
+
+		// 判断是不是ios端
+		function isOS() {
+			return navigator.userAgent.match(/ipad|iphone/i);
+		}
+		//创建文本元素
+		function createTextArea(text) {
+			textArea = document.createElement('textArea');
+			textArea.value = text;
+			textArea.style.width = 0;
+			textArea.style.height = 0;
+			textArea.clientHeight = 0;
+			textArea.clientWidth = 0;
+			document.body.appendChild(textArea);
+		}
+		//选择内容
+		function selectText() {
+			var range,
+				selection;
+
+			if (isOS()) {
+				range = document.createRange();
+				range.selectNodeContents(textArea);
+				selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				textArea.setSelectionRange(0, 999999);
+			} else {
+				textArea.select();
+			}
+		}
+
+		//复制到剪贴板
+		function copyToClipboard() {
+			try {
+				document.execCommand("Copy")
+			} catch (err) {
+				alert("复制错误！请手动复制！")
+			}
+			document.body.removeChild(textArea);
+		}
+
+		copy = function (text) {
+			createTextArea(text);
+			selectText();
+			copyToClipboard();
+		};
+
+		return {
+			copy: copy
+		};
+	})(window, document, navigator);
+</script>
+	<meta name="description" content="SAM（后缀自动机）学习笔记" />
+</head>
+
+<body>
+	<div class="head-top-line"></div>
+	<div class="header-box">
+		
+		
+	<style> /* 搜索相关 */
+		.gridea-search-input{
+			height: 30px;
+			width: 200px;
+			box-sizing: border-box;
+			padding: 0 15px 0 30px;
+			border: 1px solid #e3e3e3;
+			border-radius: 15px;
+			color: #273849;
+			outline: none;
+			transition: border-color 0.2s ease;
+			background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+			background-size: 20px;
+			vertical-align: middle !important;
+		}
+		.gridea-search-input:focus {
+		  border-color: #666666;
+		  right: 0;
+		}
+		/* 自适应轨道 */
+		.slider-track {
+			--track-height: 0.4em; /* 轨道基础高度 */
+			width: 100%;
+			height: var(--track-height);
+			background: #e0e0e0;
+			border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+			position: relative;
+			cursor: default;
+			margin: 0.5em 0; /* 垂直间距自适应 */
+		}
+		
+		/* 进度填充 */
+		.slider-fill {
+			height: 100%;
+			background: #555;
+			border-radius: inherit; /* 继承父级圆角 */
+			width: 50%; /* 初始值 */
+		}
+		
+		/* 自适应滑块 */
+		.slider-thumb {
+			--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+			position: absolute;
+			width: var(--thumb-size);
+			height: var(--thumb-size);
+			background: #555;
+			border-radius: 50%;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: 
+				transform 0.2s ease,
+				box-shadow 0.2s ease;
+			border: 2px solid white; /* 增加辨识度 */
+		}
+		
+		/* 悬停效果 */
+		.slider-thumb:hover {
+			background: #333;
+			transform: translate(-50%, -50%) scale(1.1);
+			box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+		}
+		
+		/* 拖动效果 */
+		.slider-thumb:active {
+			cursor: grabbing;
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		}
+		
+		/* 数值显示 */
+		.value-display {
+			text-align: center;
+			font-family: Arial, sans-serif;
+			color: #555;
+			font-size: 1.2em; /* 基于容器字体大小 */
+			margin-top: 0.5em;
+		}
+	</style>
+
+<div class="pisces">
+  <header class="header">
+    <div class="blog-header box-shadow-wrapper" id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+            <a href="https://exber.qzz.io" class="brand">
+              <span>Exber's Blog</span>
+            </a>  
+        </div>
+        
+			<p class="subtitle">Can't go up</p>
+        
+      </div>
+      <nav class="site-nav bg-color" id="site_nav">
+        <ul id="nav_ul">
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io" target="">
+					首页
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io/tags" target="">
+					按标签筛选
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://csacademy.com/app/graph_editor/" target="_blank">
+					图论编辑器
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="http://yuantiji.ac/zh/" target="_blank">
+					原题机
+				</a>
+            </li>
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://exber.qzz.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.6</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script>
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+
+
+	<script>
+		// 获取DOM元素
+		const sliderTrack = document.getElementById('sliderTrack');
+		const sliderThumb = document.getElementById('sliderThumb');
+		const sliderFill = document.getElementById('sliderFill');
+		const sliderValue = document.getElementById('sliderValue');
+		
+		// 初始化变量
+		let isDragging = false;
+		let currentValue = 0.6;
+		
+		// 更新滑块位置和数值显示
+		function updateSlider(positionX) {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			let newPosition;
+
+			// 检查轨道宽度是否有效
+			if (trackRect.width <= 0) {
+				// 如果轨道宽度无效，则直接使用当前的 currentValue
+				newPosition = currentValue;
+			} else {
+				// 正常计算位置
+				newPosition = (positionX - trackRect.left) / trackRect.width;
+				newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+			}
+
+			// 更新UI
+			sliderThumb.style.left = `${newPosition * 100}%`;
+			sliderFill.style.width = `${newPosition * 100}%`;
+
+			// 更新当前值和表单隐藏域的值
+			currentValue = newPosition;
+			document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+
+			// 更新显示值（保留两位小数）
+			// 使用 Number.isNaN 进行严格检查，确保显示正常
+			const displayValue = Number.isNaN(newPosition) ? '0.60' : newPosition.toFixed(2);
+			sliderValue.textContent = displayValue;
+		}
+		
+		// 响应父容器大小变化
+		function handleResize() {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			const positionX = trackRect.left + trackRect.width * currentValue;
+			updateSlider(positionX);
+		}
+		
+		// 鼠标按下事件 - 仅在圆点上触发
+		sliderThumb.addEventListener('mousedown', (e) => {
+			isDragging = true;
+			sliderThumb.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		
+		// 鼠标移动事件
+		document.addEventListener('mousemove', (e) => {
+			if (!isDragging) return;
+			updateSlider(e.clientX);
+		});
+		
+		// 鼠标释放事件
+		document.addEventListener('mouseup', () => {
+			if (isDragging) {
+				isDragging = false;
+				sliderThumb.style.cursor = 'grab';
+			}
+		});
+		
+		// 监听父容器大小变化
+		const resizeObserver = new ResizeObserver(() => {
+			handleResize();
+		});
+		
+		// 开始观察相关元素
+		resizeObserver.observe(sliderTrack.parentElement);
+		resizeObserver.observe(sliderTrack);
+		
+		// 初始化
+		handleResize();
+	</script>
+
+	</div>
+	<div class="main-continer">
+	<div class="section-layout pisces">
+		<div class="section-layout-wrapper">
+			<div class="sidebar">
+	<div class="sidebar-box box-shadow-wrapper bg-color right-motion" id="sidebar">
+		<div class="post-list-sidebar" id="sidebar-selector">
+			<div class="sidebar-title">
+				<span id="tocSideBar" class="sidebar-title-item sidebar-title-active language" data-lan="index">文章目录</span>
+				<span id="metaSideBar" class="sidebar-title-item language" data-lan="preview">站点概览</span>
+			</div>
+		</div>
+		<div class="sidebar-body pisces" id="sidebar_body">
+			<div class="post-side-meta" id="post_side_meta">
+				
+
+
+
+
+
+
+<div class="sidebar-item">
+	<img class="site-author-image right-motion" src="https://exber.qzz.io/avatar.png"/>
+	<p class="site-author-name">Exber</p>
+	
+	<div class="site-description right-motion">
+		<p>洛谷 @Exber</p>
+<p>Codeforces @Rebex</p>
+
+	</div>
+	
+</div>
+<div class="sidebar-item side-item-stat right-motion">
+	<div class="sidebar-item-box">
+		<a href="https://exber.qzz.io/tags">
+			<span class="site-item-stat-count">26</span>
+			<span class="site-item-stat-name language" data-lan="tag">标签</span>
+		</a>
+	</div>
+	<div class="sidebar-item-box">
+		<a>
+			
+			<span class="site-item-stat-count">330</span>
+			<span class="site-item-stat-name language" data-lan="article">文章</span>
+		</a>
+	</div>
+</div>
+
+			</div>
+			<div class="post-toc sidebar-body-active" id="post_toc" style="opacity: 1;">
+				<div class="toc-box right-motion">
+					<div class="toc-wrapper  no_compress" id="toc_wrapper">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+			<div class="section-box box-shadow-wrapper">
+				<div class="section bg-color post post-page">
+					
+					<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/SAM%EF%BC%88%E5%90%8E%E7%BC%80%E8%87%AA%E5%8A%A8%E6%9C%BA%EF%BC%89%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0">SAM（后缀自动机）学习笔记</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-04-15 12:04:09">2023-04-15 12:04:09</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>学习笔记</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>字符串</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>数据结构</span>
+				</a>
+			
+		</span>
+		
+		
+		
+		<span class="meta-item pc-show">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-copy"></i>
+			<a class="language" data-lan="copy-markdown" data-src-markdown="**后缀树（数据结构）和本文中的后缀树其实不是一个东西，更规范的叫法应该是 parent 树，但是由于 $S$ 的后缀树就是其反串的 parent 树，所以并没有加以区分**。
+
+## 前言
+
+SAM（后缀自动机） 是一种强大的数据结构，在应用上可以完全包含 SA（后缀数组），往往比 SA 好写好调且时间复杂度更优。
+
+本文借鉴了 [后缀自动机(SAM)奶妈式教程 - 一铭君一 - 博客园 (cnblogs.com)](https://www.cnblogs.com/zaza-zt/p/15419181.html)（算法思想、实现、技巧）和 [后缀自动机 - star_road_xyz - 博客园 (cnblogs.com)](https://www.cnblogs.com/starroadxyz/p/17077259.html)（状态个数、转移个数证明）。
+
+为了表述方便，这里为本文规定一些记号：
+
+- $|S|$：字符串 $S$ 的长度；
+- $V$：字符集大小；
+
+## 基本定义
+
+1. SAM 是一个 DAG，它的**节点被称作“状态”，边被称作“转移”**；
+2. SAM 有一个初始状态 $rt$（代表空串），所有其它状态都能通过转移从 $rt$ 到达；
+3. 每个转移会被标记上字符集中的一个字符（类似边权），从**一个状态出发的所有转移的字符互不相同**；
+4. 存在**至少一个**终止状态，从 $rt$ 出发到终止状态的每一条路径上的所有转移依次拼接得到的字符串都是原串的后缀，也就是说**原串的每个后缀都能表示成从 $rt$ 到终止状态的路径**；
+5. SAM 是满足上述条件中**状态数最少**的 DAG；
+
+****
+
+**一些记号**
+
+- $S$：要被建 SAM 的原串；
+
+- $rt$：SAM 的初始状态（空串对应状态）；
+- $to_{u,ch}$ 从状态 $u$ 出发的，被标记上字符 $ch$ 的转移；
+
+## SAM 的优势
+
+不难发现，从 $rt$ 到SAM 上的每个状态路径上的字符拼接起来都是原串某个后缀的一个前缀，这意味着**原串的每个子串都能表示成从 $rt$ 到某个状态的路径**。
+
+虽然大多数 SAM 能做的操作 SA 也能做，但是线性 SA 的 DC3 算法常数巨大，并且 SA 性质较少，应用时通常需要一些较为复杂的数据结构辅助，这些数据结构相应也会提高时间复杂度。但**建立字符串 $S$ 对应的 SAM 的时空复杂度仅为 $O(|S|)$**，并且 SAM 有着更好的性质。
+
+综上，SAM 不失为一种十分优秀的字符串算法。
+
+## $\operatorname{endpos}$ 和 $\operatorname{endpos}$ 等价类
+
+使用 $\operatorname{endpos}$ 等价类压缩时空就是 SAM 保持优秀时间复杂度的原因。
+
+记 $\operatorname{endpos}(s)$ 表示 $s$ 在 $S$ 中每次出现的结尾位置的集合（下标从 $1$ 开始），例如：
+
+```
+S: abab
+s:           a    b,ab   ba,aba  bab,abab
+endpos(s): {1,3}  {2,4}   {3}       {4}
+```
+
+不难发现，某些字符串的 $\operatorname{endpos}$ 是相同的，例如例子中的 `b` 和 `ab`。那么不妨**将所有 $\operatorname{endpos}(s)=A$ 的归到同一个等价类中，记 $\operatorname{endpos'}(A)=\{s|\operatorname{endpos(s)=A}\}$**。
+
+在 SAM 中，**一个状态表示的并不是具体的某个字符串，而是一个等价类**。
+
+****
+
+**一些记号**：
+
+- $\operatorname{endpos}(s)$：$s$ 在 $S$ 中每次出现的结尾位置的集合（下标从 $1$ 开始）；
+- $\operatorname{endpos'}(A)$：$\{s|\operatorname{endpos(s)=A}\}$ 即 $\operatorname{endpos}(s)=A$ 的 $s$ 构成的集合；
+- $E(u)$：状态 $u$ 代表的等价类；
+- $\operatorname{sta}(s)$：字符串 $s$ 所属的等价类对应的状态；
+
+## $\operatorname{endpos}$ 等价类的一些性质
+
+> **引理  1**
+>
+> 考虑两个非空字符串 $s1,s2$，满足 $|s1|\ge|s2|$。
+>
+> 1. 若 $\operatorname{endpos}(s1)=\operatorname{endpos}(s2)$，则 $s2$ 是 $s1$ 的后缀，且 $s2$ 在且仅在 $s1$ 在 $S$ 中出现时作为它的后缀出现；
+>
+> 2. 若 $s2$ 是 $s1$ 的后缀，且 $s2$ 在且仅在 $s1$ 在 $S$ 中出现时作为它的后缀出现，那么 $\operatorname{endpos}(s1)=\operatorname{endpos}(s2)$；
+
+证明是显然的。
+
+>**引理  2**
+>
+>考虑两个非空字符串 $s1,s2$，满足 $|s1|\ge|s2|$。
+>
+>1. 若 $s2$ 是 $s1$ 的后缀，那么 $\operatorname{endpos}(s1)\subseteq\operatorname{endpos}(s2)$；
+>
+>2. 若 $s2$ 不是 $s1$ 的后缀，那么 $\operatorname{endpos}(s2)\cap\operatorname{endpos}(s1)=\varnothing$；
+
+第一条是因为 $s1$ 每次出现 $s2$ 都必然会出现。
+
+第二条是因为若 $s2$ 是 $s1$ 的子串且存在 $p$ 满足 $p\in \operatorname{endpos}(s1)$ 且 $p\in \operatorname{endpos}(s2)$ 则 $s1$ 和 $s2$ 都一定会在 $p$ 处结束，$s2$ 必定是 $s1$ 的子串，和假设矛盾，得证。
+
+> **引理 3**
+>
+> 考虑一个 $\operatorname{endpos}$ 等价类 $A=\operatorname{endpos}'(E)$。
+>
+> 1. $A$ 中不包含两个长度相同但本质不同的字符串；
+> 2. 对于 $A$ 中任意两个字符串，短的那个一定是长的那个的真后缀，也就是说 $A$ 中所有字符串都是最长的那个的后缀；
+> 3. 设 $l,r$ 分别为 $A$ 中最短和最长的字符串的长度，则 $\{|s|,s\in A\}=[l,r]\cap \mathbb{N}^+$，即 $l,r$ 之间的每种长度的串都会出现恰好一次；
+
+第一条可以由引理 1 推出，第二条可以由引理 2 推出，考虑第三条的证明。
+
+不难发现只有可能是等号右边的集合的某个元素没在等号左边的集合中出现。那么设 $d\in ([l,r]\cap \mathbb{N}^+)$ 且 $d\notin\{|s|,s\in A\}$。由于第二条，所以可以设长度为 $d$ 的字符串为 $s^d$，则由于引理 2，有 $A\subseteq\operatorname{endpos}(s^d)$。
+
+此时若 $A\subset \operatorname{endpos}(s^d)$，则 $s^d$ 的所有子串的 $\operatorname{endpos}$ 都会不等于 $A$。由于第二条，$t\in ([l,d]\cap\mathbb{N^+})$ 的所有 $t$ 均满足 $A\subset \operatorname{endpos(s^t)}$，那么 $l$ 将会等于 $d+1$，和 $d\in ([l,r]\cap \mathbb{N}^+)$ 矛盾，得证。
+
+****
+
+**一些记号**：
+
+- $\operatorname{long}(u)$：$\operatorname{endpos}'(\operatorname{E}(u))$ 中最长的字符串；
+- $\operatorname{len(u)}$：$|\operatorname{long}(\operatorname{E}(u))|$ 即 $\operatorname{endpos}'(\operatorname{E}(u))$ 中最长的字符串的长度；
+- $\operatorname{short}(u)$：$\operatorname{endpos}'(\operatorname{E}(u))$ 中最短的字符串；
+- $\operatorname{slen(u)}$：$|\operatorname{short}(\operatorname{E}(u))|$ 即 $\operatorname{endpos}'(\operatorname{E}(u))$ 中最短的字符串的长度；
+
+## 后缀指针 $\operatorname{link}$ 和后缀树
+
+设 $A=E(u)$ 即状态 $u$ 代表的等价类，$w$ 为 $\operatorname{long}(u)$ 最长的满足 $w\notin A$ 的一个后缀，$v$ 为 $\operatorname{sta}(w)$ 即 $w$ 所属等价类对应的状态（由 SAM 的定义可知这个状态一定存在），$\operatorname{link}(u)$ 即为 $v$。特别的，$rt$ 没有 $\operatorname{link}$ 指针。
+
+根据引理 3，**从状态 $u$ 出发不断跳 $\operatorname{link}$ 到 $rt$ 路径上所有状态的等价类并起来就是 $\operatorname{long}(u)$ 的所有后缀**，所以 $\operatorname{link}$ 也叫后缀指针。
+
+> **引理 5**
+>
+> 对于一个状态 $u$，设 $\operatorname{link}(u)=v$。
+>
+> 1. $\operatorname{long}(v)$ 是 $\operatorname{short}(u)$ 的长度为 $\operatorname{slen}(u)-1$ 的后缀；
+> 2. $\operatorname{E}(u)\subsetneq \operatorname{E}(v)$；
+
+第一条可以由引理 3 得出，第二条可以由引理 2 和 $\operatorname{link}$ 指针的定义得出。
+
+需要注意的是，利用这个引理，SAM 中的**每个状态便只需要记录等价类中的最长串**。
+
+> **引理 6**
+>
+> 把状态看作节点，则所有有向边 $u\to\operatorname{link(u)}$ 构成一棵以 $rt$ 为根的内向树（后缀树）。
+
+首先由于所有状态不断跳 $\operatorname{link}$ 总能跳回 $rt$（空串是所有字符串的后缀），所以“后缀图”一定连通。
+
+然后由于只有 $rt$ 没有 $\operatorname{link}$ 指针，所以“后缀图”的边数恰好等于点数减 $1$，所以“后缀图”是一棵树。
+
+****
+
+**一些记号**：
+
+- $\operatorname{link}(u)$：设 $A=E(u)$ 即状态 $u$ 代表的等价类，$w$ 为 $\operatorname{long}(A)$ 最长的满足 $w\notin A$ 的一个后缀，$v$ 为 $\operatorname{sta}(w)$ 即 $w$ 所属等价类对应的状态（由 SAM 的定义可知这个状态一定存在），$\operatorname{link}(u)$ 即为 $v$。特别的，$rt$ 没有 $\operatorname{link}$ 指针；
+
+## 小结
+
+在开始介绍如何构造 SAM 前，我们先小结一下：
+
+- 原串 $S$ 的每一个子串可以根据 $\operatorname{endpos}$ 来划分为若干个等价类，每个等价类对应一个状态；
+- 对于每个状态 $u$，$\operatorname{E}(u)$ 中包含了 $\operatorname{long(u)}$ 长度从 $\operatorname{slen}(u)$ 到 $\operatorname{len}(u)$ 的所有后缀（引理 3）；
+- 从状态 $u$ 出发不断跳 $\operatorname{link}$ 到 $rt$ 路径上所有状态的等价类并起来就是 $\operatorname{long}(u)$ 的所有后缀（引理 3 推出）；
+- 设 $A=E(u)$ 即状态 $u$ 代表的等价类，$w$ 为 $\operatorname{long}(A)$ 最长的满足 $w\notin A$ 的一个后缀，$v$ 为 $\operatorname{sta}(w)$ 即 $w$ 所属等价类对应的状态（由 SAM 的定义可知这个状态一定存在），则 $\operatorname{link}(u)$ 即为 $v$。特别的，$rt$ 没有 $\operatorname{link}$ 指针。所有 $\operatorname{link}$ 指针构成一棵以 $rt$ 为根的内向树，称之为后缀树（引理 6）；
+
+## SAM 的构造
+
+构造 SAM 的算法是一个动态的算法。一开始 SAM 中只存在一个代表空串的状态 $rt$，没有任何转移。通过**依次插入原串 $S$ 中的每一个字符来动态维护 SAM**。
+
+这里将给出算法流程、解释、时空复杂度分析和 C++ 代码。
+
+**算法流程**
+
+一开始 SAM 中只存在一个编号为 $0$ 的状态 $rt$。为了方便，我们钦定 $\operatorname{long}(rt)=0$，$\operatorname{link}(rt)=-1$。
+
+现在任务是给 SAM 维护的字符串的末尾新加入一个字符 $c$，流程如下：
+
+1. 设上一次加入字符后整个整个字符串 $S$ 对应的状态为 $lst$，即 $\operatorname{long}(lst)=S$；
+2. 创建一个新的状态 $pre$，并且令 $\operatorname{len}(pre)=\operatorname{len}(lst)+1$；
+3. 从 $lst$ 开始不断跳 $\operatorname{link}$，如果当前状态 $u$ 没有标记 $c$ 的转移，那么令 $to_{u,c}=pre$；
+4. 如果跳到了 $rt$ 并且 $rt$ 也没有标记 $c$ 的转移，那么令 $to_{rt,c}=pre$，$\operatorname{link}(pre)=0$（指向状态 $rt$），转到 8；
+5. 否则停止跳 $\operatorname{link}$，并设当前跳到的状态为 $p$，$to_{p,c}$ 为 $q$；
+6. 若 $\operatorname{len(q)}=\operatorname{len}(p)+1$，令 $\operatorname{link}(pre)=q$；
+7. 否则：
+   1. 复制 $q$ 到一个新的状态 $cpy$（只复制 $\operatorname{link}$ 以及 $to_{q,*}$）；
+   2. 令 $\operatorname{len}(cpy)=\operatorname{len}(p)+1,\operatorname{link}(pre)=cpy$；
+   3. 从 $p$ 开始不断跳 $\operatorname{link}$，设当前跳到的状态为 $u$，则：
+      - 若 $u=-1$ 或 $to_{u,c}\not=q$，停止跳 $\operatorname{link}$；
+      - 否则令 $to_{u,c}=cpy$；
+   4. 令 $\operatorname{link}(q)=cpy$，转到 8；
+8. 令 $lst=pre$，插入操作完成；
+
+**算法解释**
+
+为了表述方便，设 $S1$ 为插入 $c$ 之前的 $S$，$S2$ 为插入 $c$ 之后的 $S$ 即 $S1+c$。
+
+1. 为之后的操作做准备；
+
+2. 插入字符 $c$ 后，$\operatorname{endpos}(S2)=\{|S1|+1\}$ 一定会成为一个新的等价类，所以需要分配新的状态 $pre$ 来代表它。而 $\operatorname{len}(pre)$ 一定是 $|S1|+1$，$lst$ 中最长的字符串显然就是 $S1$，所以令 $\operatorname{len}(pre)=\operatorname{len}(lst)+1$；
+
+3. 考虑新建转移到 $pre$，不断枚举 $S1$ 的后缀，如果还没有标记为 $c$ 的转移就可以新建标记为 $c$ 的转移到 $pre$；
+
+4. 跳到 $rt$ 还没结束代表字符 $c$ 是第一次出现，因为 $rt$ 没有到 $c$ 的转移表明 $S1$ 不存在 $c$ 这个子串，那么 $\operatorname{link}(pre)$ 自然要指向状态 $rt$，因为 $S2$ **不存在非空真后缀**；
+
+5. 为之后的操作做准备，注意此时所有到 $pre$ 的转移已处理完成，接下来的所有步骤都是在处理 $\operatorname{link}(pre)$；
+
+6. 若 $E(q)$ 中最长的那个就是 $\operatorname{long}(p)+c$ 即 $S1$ 的某个后缀加上字符 $c$，那么 $\operatorname{long}(q)$ 就**一定是 $S2$ 最长的真后缀**，所以可以让 $\operatorname{link}(pre)$ 指向 $q$；
+
+7. 否则一定有 $\operatorname{len}(q)>\operatorname{len}(p)$。发现所有 $A=\{s|s\in E(q),|s|\le \operatorname{len}(p)+1\}$  中的字符串一定**是 $S1$ 的某个后缀加上字符 $c$**，而 $B=E(q)-A$ 中的一定不是。那么 **$A$ 中的字符串的 $\operatorname{endpos}$ 集合一定会加入元素 $|S2|$，$B$ 中的则一定不会，所以 $A$ 和 $B$ 不再属于同一个等价类**。
+
+   此时就需要分裂 $q$ 代表的等价类。具体的，创建一个新的状态 $cpy$，把 $q$ 的所有“出边”都复制过去。
+
+   接下来的工作就是让 $cpy$ 表示 $A$，原来的 $q$ 表示 $B$。
+
+   首先 $A$ 中最长的字符串的长度显然是 $\operatorname{len}(p)+1$，那么令 $\operatorname{len}(cpy)=\operatorname{len}(p)+1$，而 $B$ 中最长的字符串没有改变，所以无需对 $\operatorname{len}(q)$ 进行任何操作。
+
+   接下来不难发现 $\operatorname{long}(cpy)$ 一定是 $S2$ 的最长的真后缀，所以令 $\operatorname{link}(pre)$ 指向 $cpy$。
+
+   然后遍历 $p$ 所有的后缀的状态 $u$。因为 $\operatorname{len}(u)\le \operatorname{len}(p)$，所以若 $u$ 有标记 $c$ 的转移到 $q$，那么转移得到的字符串一定属于 $A$，所以让 $to_{u,c}=cpy$；否则 $U=\operatorname{endpos}(s+c|s\in \operatorname{E}(u))$ 一定包含且不等于 $Q=\operatorname{endpos}(s\in E(q))$，那么 $\operatorname{long}(u)$ 的后缀的 $\operatorname{endpos}$ 集合更不可能满足要求，所以可以停止跳 $\operatorname{link}$。
+
+   最后由于 $\operatorname{long}(cpy)$ 一定是 $\operatorname{long}(q)$ 的最长真后缀，所以令 $\operatorname{link}(q)$ 指向 $cpy$；
+
+8. 更新 $lst$，为之后的插入做准备；
+
+**复杂度分析**
+
+记 $n=|S|$。
+
+- 状态数和转移数
+
+  不难发现，除第一次之外每次插入最多会新建两个状态，所以状态数**上限为 $2n-1$**。
+
+  而转移会分为两种：
+
+  - $\operatorname{link}$：由于构成内向树，所以上限为 $2n-2$；
+
+  - $to$：
+
+    考虑先随便拎出一棵以 $rt$ 为根的外向生成树，下面来证明非树边数量 $\le n$。
+
+    对于一条非树边 $u\to v$（设 $v=to_{u,c}$），设 $s1$ 为生成树上 $rt$ 到 $u$ 的链构成的字符串，$s2$ 为 $v$ 往后不停走字典序最小的边直到不能走的路径构成的字符串。
+
+    考察字符串 $s1+c+s2$，很显然它是 $S$ 的一个后缀，否则就还能继续走下去。那么这是一个非树边到 $S$ 的后缀的映射。
+
+    而不难发现 $c$ 是 $s1+c+s2$ 对应的路径上第一条非树边，所以这个映射是双向的，即一一对应。
+
+    故非树边条数 $\le |S|=n$；
+
+  那么转移数的上限为 $5n-3$，实际上很难卡满。
+
+-  空间复杂度
+
+  由于状态数上限为 $2n-1$，转移数上限为 $3n-2$，所以空间复杂度为 $O(n)$。
+
+  特别的，若字符集较小，那么往往**采用数组存储 $to$，此时空间复杂度为 $O(nV)$**。
+
+  若字符集较大，往往**采用可持久化线段树来存储 $to$，此时空间复杂度为 $O(n\log V)$**。
+
+- 时间复杂度
+
+  较难证明的部分是两个跳 $\operatorname{link}$ 的步骤。不难发现，步骤 3 跳的总次数和转移数相当，所以是 $O(n)$ 的。
+
+  而步骤 7.3 就有点复杂了，注意到有一个引理：
+
+  > **引理**
+  >
+  > 对于一个状态 $u$，设 $A=\{(v,c)|to_{v,c}=u\}$ 即其所有入边。
+  >
+  > 那么 $\forall (v_i,c_i)\in A$，$c_i$ 相同，$v_i$ 在后缀树上形成一条链（$v_i$ 中的字符串互为后缀）。
+  >
+  > 且 $\text{len}(u)=\max\limits_{(v,c)\in A}\{\text{len}(v)+1\},\text{slen}(u)=\min\limits_{(v,c)\in A}\{\text{slen}(v)+1\}$。
+  
+  这是显然的，因为一个状态中的字符串一定互为后缀，并且 SAM 包含了原串的所有子串。
+  
+  注意到 $cpy$ 的所有入边只会在 7.3 中产生，并且每跳一次 $\text{link}$ 都会使得：
+  
+  - $\text{slen}(u)$ 减少；
+  - $\text{slen}(cpy)$ 减少；
+  - $\text{len}(\text{link}(cpy))$ 减少；
+  
+  并且由于 $cpy=\text{link}(pre)$，并且 $pre$ 会成为新的 $lst$，所以 7.3 中每跳一次 $\text{link}$ 都会使得 $\text{len}(\text{link}(\text{link}(lst)))$ 减少。
+  
+  考虑一次插入操作最多使 $\text{len}(\text{link}(\text{link}(pre)))$ 增加多少：
+  
+  - 若执行了步骤 6，即 $\text{link}(pre)$ 变为 $q$，则 $p$ 最深也是 $\text{link}(lst)$。
+  
+    根据引理，$\text{link}(q)$ 的入边 $(v_i,c_i)$ 一定满足 $v_i$ 在 $\text{link}(lst)$ 的 $\text{link}$ 链上，并且 $v_i$ 为 $\text{link}(lst)$ 的祖先，则 $\text{len}(v_i)\le \text{len}(\text{link}(\text{link}(lst)))$，那么 $\text{len}(\text{link}(\text{link}(pre)))\le \text{len}(\text{link}(\text{link}(lst)))+1$；
+  
+    ![](../post-images/1709124294150.png)
+  
+  - 若执行了步骤 7，由于 $\text{link}(pre)=cpy$，$\text{link}(cpy)=\text{link(q)}$，所以重复步骤 6 的证明，$\text{len}(\text{link}(\text{link}(pre)))\le \text{len}(\text{link}(\text{link}(lst)))+1$；
+  
+  综上，每次插入操作 $\text{len}(\text{link}(\text{link}(lst)))$ 最多加 $1$，而每次执行 7.3 都会让其减少至少 $1$，那么 7.3 的总执行次数是 $O(n)$ 的。
+  
+  所以**构建 SAM 的时间复杂度为 $O(nk)$（其中 $k$ 是访问和修改 $to$ 的时间复杂度，若使用数则为 $O(1)$，使用可持久化线段树为 $O(\log V)$）**。
+
+<details><summary>代码</summary><p>
+
+
+```cpp
+const int S=1000005,V=26; // 字符串最大长度，字符集大小
+
+struct SAM
+{
+	int tot,lst;
+	int len[S*2],to[S*2][V],link[S*2]; // 记得开两倍
+	inline void init() // 初始化
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=0;
+			memset(to[i],0,sizeof(to[i]));
+		}
+		tot=lst=0;
+		link[0]=-1; // 记得让 link(rt)=-1
+	}
+	inline void ins(int c) // 在末尾插入一个字符
+	{
+        // 新建状态（第 1、2 步）
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+        // 处理到 pre 的转移（第 3 步）
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0; // 第 4 步
+		else
+		{
+			int q=to[p][c]; // 第 5 步
+			if(len[q]==len[p]+1) link[pre]=q; // 无需分裂（第 6 步）
+			else // 分裂状态 q（第 7 步）
+            {
+                // 复制 q 到新状态 cpy，令 link(pre)=cpy（7.1、7.2）
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				memcpy(to[cpy],to[q],sizeof(to[q]));
+				link[cpy]=link[q];
+				link[pre]=cpy;
+                // 处理到 cpy 的转移（7.3）
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy; // 令 link(q)=cpy（7.4）
+			}
+		}
+		lst=pre; // 第 8 步
+	}
+};
+```
+</p></details>
+
+## 一些额外信息的求解
+
+值得注意的是，这些信息的求解的时间复杂度均为 $O(n)$。
+
+- 结束标记
+
+  只需要在构建完 SAM 后，从 $lst$ 出发不断跳 $\operatorname{link}$，把经过的状态全都打上标记即可。
+
+- 建立后缀树
+
+  只需要在构建完 SAM 后，对于所有 $1\le u$ 的 $u$，在 $\operatorname{link}(u)$ 的儿子列表中加入 $u$ 即可。
+
+- 两个子串的最长公共后缀
+
+  找到这两个子串所属的状态 $x,y$，它们的最长公共后缀所属的状态 $z$ 即为 $x,y$ 在后缀树上的 $\operatorname{LCA}$。
+
+- $|\operatorname{E}(u)|$（每个节点对应的等价类中的字符串个数）
+
+  由于引理 3，$|\operatorname{E}(u)|$ 即为 $\operatorname{len}(u)-\operatorname{len}(\operatorname{link}(u))$。
+
+- $siz_u=|\operatorname{endpos}(s)|,s\in\operatorname{E}(u)$（每个节点对应的等价类中的字符串出现的次数）
+
+  构建 SAM 时让 $siz_{pre}=1$，注意到这样标记的实际上是 $S$ 的每个前缀，一个子串的出现次数等于它是多少个前缀的后缀，所以构建完成后只需要在后缀树上求一次子树 $siz$ 和即可。
+  
+  注意复制节点的时候无需复制 $siz$，因为一个等价类中最长的那个字符串才有可能是 $S$ 的前缀，而这个最长的字符串一定在分裂之后的 $E(q)$ 中。
+
+  <details><summary>代码</summary><p>
+  
+  ```cpp
+  const int S=1000005,V=26;
+  
+  struct SAM
+  {
+  	int tot,lst;
+  	int len[S*2],to[S*2][V],link[S*2];
+  	vector<int> son[S*2]; // 后缀树中每个状态的儿子
+  	int siz[S*2]; // 每个状态代表的等价类中每个字符串出现了几次
+  	inline void init() // 初始化
+  	{
+  		for(int i=0;i<=tot;i++)
+  		{
+  			len[i]=link[i]=siz[i]=0;
+  			memset(to[i],0,sizeof(to[i]));
+  			son[i].clear();
+  		}
+  		tot=lst=0;
+  		link[0]=-1;
+  	}
+  	inline void ins(int c) // 在末尾插入一个字符
+  	{
+  		int pre=++tot;
+  		len[pre]=len[lst]+1;
+  		siz[pre]=1; // 标记
+  		int p=lst;
+  		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+  		if(p==-1) link[pre]=0;
+  		else
+  		{
+  			int q=to[p][c];
+  			if(len[q]==len[p]+1) link[pre]=q;
+  			else
+  			{
+  				int cpy=++tot;
+  				len[cpy]=len[p]+1;
+  				memcpy(to[cpy],to[q],sizeof(to[q]));
+  				link[cpy]=link[q];
+  				link[pre]=cpy;
+  				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+  				link[q]=cpy;
+  			}
+  		}
+  		lst=pre;
+  	}
+  	inline void build() // 建后缀树
+  	{
+  		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+  	}
+  	void getsiz(int u=0) // dfs 求子树和
+  	{
+  		for(int v:son[u])
+  		{
+  			getsiz(v);
+  			siz[u]+=siz[v];
+  		}
+  	}
+  };
+  ```
+  </p></details>
+  
+- $mnr_u=\min\limits_{v\in \operatorname{endpos}(s),s\in\operatorname{E}(u)} v$（每个节点对应的等价类中的字符串的最早出现的右端点）
+
+  和 $siz_u$ 一样，构建时每个前缀的 $mnr$ 就是这个前缀的长度，构建完后在后缀树上求子树 $\min$ 即可。
+
+## 经典例题
+
+### [P3804 【模板】后缀自动机 (SAM)](https://www.luogu.com.cn/problem/P3804)
+
+注意到状态 $u$ 下的所有字符串出现次数均为 $siz_u$，显然选最长的最优，那么求出 $siz$ 后对所有 $siz_u>1$ 的 $u$ 的 $len_u\times siz_u$ 取 $\max$ 即可。
+
+<details><summary>代码</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+
+using namespace std;
+
+const int S=1000005,V=26;
+
+struct SAM
+{
+	int tot,lst;
+	int len[S*2],to[S*2][V],link[S*2];
+	vector<int> son[S*2];
+	int siz[S*2];
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=siz[i]=0;
+			memset(to[i],0,sizeof(to[i]));
+			son[i].clear();
+		}
+		tot=lst=0;
+		link[0]=-1;
+	}
+	inline void ins(int c)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		siz[pre]=1;
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				memcpy(to[cpy],to[q],sizeof(to[q]));
+				link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+	inline void build()
+	{
+		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+	}
+	void getsiz(int u=0)
+	{
+		for(int v:son[u])
+		{
+			getsiz(v);
+			siz[u]+=siz[v];
+		}
+	}
+};
+
+int n;
+char a[S];
+SAM sam;
+
+int main()
+{
+	scanf(&quot;%s&quot;,a+1);
+	n=strlen(a+1);
+	sam.init();
+	for(int i=1;i<=n;i++) sam.ins(a[i]-'a');
+	sam.build();
+	sam.getsiz();
+	long long ans=0;
+	for(int i=0;i<=sam.tot;i++) if(sam.siz[i]>1) ans=max(ans,1ll*sam.len[i]*sam.siz[i]);
+	printf(&quot;%lld\n&quot;,ans);
+	return 0;
+}
+```
+</p></details>
+
+### [P4070 [SDOI2016]生成魔咒](https://www.luogu.com.cn/problem/P4070)
+
+考虑新加入的字符会产生多少个新的非空子串，设加入新字符之前的长度为 $lstlen$，那么只有 $\operatorname{endpos}'(\{lstlen+1\})$ 中的字符串是新的非空子串。
+
+考虑哪个状态代表的等价类是 $\operatorname{endpos}'(\{lstlen+1\})$，显然只有新加入的状态 $pre$ 是。$pre$ 中的字符串个数很好求，即为 $\operatorname{len}(pre)-\operatorname{len}(\operatorname{link}(pre))$。
+
+那么每次让答案累加上 $\operatorname{len}(pre)-\operatorname{len}(\operatorname{link}(pre))$ 即可。
+
+<details><summary>代码</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <map>
+
+using namespace std;
+
+const int S=100005;
+
+struct SAM
+{
+	int tot,len[S*2],link[S*2];
+	map<int,int> to[S*2];
+	int lst;
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++) len[i]=link[i]=0,to[i].clear();
+		link[0]=-1;
+	}
+	inline void ins(int c)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		int p=lst;
+		while(p!=-1&&to[p].find(c)==to[p].end()) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				to[cpy]=to[q],link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+};
+
+SAM sam;
+
+int main()
+{
+	int n;
+	scanf(&quot;%d&quot;,&n);
+	sam.init();
+	long long ans=0;
+	for(int i=1;i<=n;i++)
+	{
+		int x;
+		scanf(&quot;%d&quot;,&x);
+		sam.ins(x);
+		ans+=sam.len[sam.lst]-sam.len[sam.link[sam.lst]];
+		printf(&quot;%lld\n&quot;,ans);
+	}
+}
+```
+</p></details>
+
+### [P3975 [TJOI2015]弦论](https://www.luogu.com.cn/problem/P3975)
+
+双倍经验：[SP7258 SUBLEX - Lexicographical Substring Search](https://www.luogu.com.cn/problem/SP7258)
+
+原串 $S$ 的每个子串都能表示为从 $rt$ 到某个状态的路径，那么在 SAM 的反 DAG 上跑一边 bfs，求出每个状态出发有多少个子串，然后逐位确定即可。
+
+如果 $k=1$ 每个状态的权值就是 $siz_u$，否则就是 $1$。
+
+<details><summary>代码</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <queue>
+
+using namespace std;
+
+const int S=500005,V=26;
+
+struct SAM
+{
+	int tot;
+	int len[S*2],to[S*2][V],link[S*2];
+	vector<int> son[S*2];
+	int siz[S*2];
+	int lst;
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=siz[i]=0;
+			memset(to[i],0,sizeof(to[i]));
+			son[i].clear();
+		}
+		tot=lst=0;
+		link[0]=-1;
+	}
+	inline void ins(int c)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		siz[pre]=1;
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				memcpy(to[cpy],to[q],sizeof(to[q]));
+				link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+	inline void build()
+	{
+		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+	}
+	void getsiz(int u=0)
+	{
+		for(int v:son[u])
+		{
+			getsiz(v);
+			siz[u]+=siz[v];
+		}
+	}
+};
+
+int n,t;
+long long k;
+char a[S];
+SAM sam;
+vector<int> to[S*2];
+int ind[S*2];
+long long cnt[S*2];
+
+int main()
+{
+	scanf(&quot;%s&quot;,a+1);
+	n=strlen(a+1);
+	scanf(&quot;%d%lld&quot;,&t,&k);
+	sam.init();
+	for(int i=1;i<=n;i++) sam.ins(a[i]-'a');
+	sam.build();
+	sam.getsiz();
+	for(int i=0;i<=sam.tot;i++)
+	{
+		for(int j=0;j<V;j++)
+		{
+			int v=sam.to[i][j];
+			if(v!=0) to[v].push_back(i),ind[i]++;
+		}
+	}
+	queue<int> q;
+	for(int i=0;i<=sam.tot;i++)
+	{
+		cnt[i]=t?sam.siz[i]:1;
+		if(ind[i]==0) q.push(i);
+	}
+	cnt[0]=0;
+	while(!q.empty())
+	{
+		int u=q.front();
+		q.pop();
+		for(int v:to[u])
+		{
+			cnt[v]+=cnt[u];
+			if(--ind[v]==0) q.push(v);
+		}
+	}
+	if(k>cnt[0]) return puts(&quot;-1&quot;),0;
+	int u=0;
+	while(k>0)
+	{
+		for(int i=0;i<V;i++)
+		{
+			int v=sam.to[u][i];
+			if(v==0) continue;
+			if(cnt[v]<k) k-=cnt[v];
+			else
+			{
+				k-=t?sam.siz[v]:1;
+				printf(&quot;%c&quot;,'a'+i);
+				u=v;
+				break;
+			}
+		}
+	}
+	printf(&quot;\n&quot;);
+	return 0;
+}
+```
+</p></details>
+
+### [P4248 [AHOI2013]差异](https://www.luogu.com.cn/problem/P4248)
+
+建反串的 SAM，在后缀树上 dp 即可。
+
+### [SP1811 LCS - Longest Common Substring](https://www.luogu.com.cn/problem/SP1811)
+
+对于这种多个字符串的问题，通常是要用广义 SAM 来做，但是这里介绍一种“伪广义 SAM”。
+
+考虑把输入的两个字符串 $A$ 和 $B$ 在中间加入一个分隔符 `#` 后拼接起来加入 SAM，即 $A+\#+B$ 这样。加入的过程中若当前字符属于 $A$ 则给加入后 $S$ 对应的状态打上 $A$ 标记，否则打上 $B$ 标记，最后在后缀树上让每个点的标记都贡献到它的祖先上。
+
+这样一来所有同时被打上 $A$ 和 $B$ 标记的状态中的字符串都是 $A$ 和 $B$ 的公共子串，那么统计这些状态的 $\operatorname{len}$ 的最大值即可。
+
+[SP1812 LCS2 - Longest Common Substring II](https://www.luogu.com.cn/problem/SP1812) 这题也类似，不过要注意分隔符要两两不同，要不然带分隔符的子串可能也会被打上标记。
+
+<details><summary>代码</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+
+using namespace std;
+
+const int S=500005,V=27;
+
+struct SAM
+{
+	int tot;
+	int len[S*2],to[S*2][V],link[S*2];
+	vector<int> son[S*2];
+	bool app[2][S*2];
+	int lst;
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=0;
+			memset(to[i],0,sizeof(to[i]));
+			app[0][i]=app[1][i]=false;
+			son[i].clear();
+		}
+		tot=lst=0;
+		link[0]=-1;
+	}
+	inline void ins(int c,int tpe)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		app[tpe][pre]=true;
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				memcpy(to[cpy],to[q],sizeof(to[q]));
+				link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+	inline void build()
+	{
+		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+	}
+	inline void calctag(int u=0)
+	{
+		for(int v:son[u])
+		{
+			calctag(v);
+			for(int i=0;i<=1;i++) app[i][u]|=app[i][v];
+		}
+	}
+};
+
+int n,m;
+char a[S],b[S];
+SAM sam;
+
+int main()
+{
+	scanf(&quot;%s%s&quot;,a+1,b+1);
+	n=strlen(a+1),m=strlen(b+1);
+	sam.init();
+	for(int i=1;i<=n;i++) sam.ins(a[i]-'a',0);
+	sam.ins(26,1);
+	for(int i=1;i<=m;i++) sam.ins(b[i]-'a',1);
+	sam.build();
+	sam.calctag();
+	int ans=0;
+	for(int i=0;i<=sam.tot;i++) if(sam.app[0][i]&&sam.app[1][i]) ans=max(ans,sam.len[i]);
+	printf(&quot;%d\n&quot;,ans);
+	return 0;
+}
+```
+</p></details>
+
+### [P3649 [APIO2014] 回文串](https://www.luogu.com.cn/problem/P3649)
+
+有两种做法。
+
+- Manacher + SAM
+
+  前置知识：[Manacher](https://www.luogu.com.cn/blog/251130/manacher-suan-fa-xue-xi-bi-ji)。
+
+  由于 $S$ 的本质不同回文子串个数上限是 $|S|$，所以可以建出 SAM 之后跑 Manacher 找到每个本质不同回文子串 $S_{[l_i,r_i]}$，再从 $S_{[1,r_i]}$ 这个前缀对应的状态开始倍增跳 $\operatorname{link}$ 找到 $S_{[l_i,r_i]}$ 对应的等价类并统计答案。
+  
+  时间复杂度 $O(n\log n)$。
+  
+- SAM
+
+  建 SAM 时维护每个状态中的字符串的最后出现位置 $mx_u$，建完 SAM 后在 SAM 上跑反串 $S'$ 和 $S$ 的所有子串的匹配。假设跑到 $S'_{[1,n-l+1]}$ 时匹配到了状态 $u$，匹配长度为 $len$。那么若 $mx_u\in[l,l+len-1]$：
+
+  ![](../post-images/1681531539397.png)
+
+  此时绿色部分 $S_{[l,mx_u]}$ 一定是回文串，并且它的出现次数一定是 $siz_u$ 即状态 $u$ 中的每个字符串出现的次数。
+
+  只统计 $S_{[l,mx_u]}$ 是不够全面的，还需要不断跳 $u$ 的 $\operatorname{link}$ 直到 $mx_u\notin [l,l+len-1]$ 或 $\operatorname{len}(u)< mx_u-l+1$，因为这些状态中的字符串 $S_{[l,mx_u]}$ 也是回文串。
+
+  注意到 $mx$ 一样的 $u$ 只有 $\operatorname{len}(u)$ 最小的才会有贡献，所以可以用倍增跳 $\operatorname{link}$。
+  
+  不难发现一个子串只会被统计一次，所以时间复杂度即为 $O(n\log n)$。
+  
+  另外似乎还有一种做法即跳 $\operatorname{link}$ 时给跳过的状态打上标记，下一次不跳。这种做法时间复杂度是 $O(n)$ 的，但是正确性不是很显然。
+
+虽然第二种做法很难写，但是可以增加对 SAM 的理解。所以我写了第二种做法，然后 BZOJ 过了洛谷一直 MLE……
+
+<details><summary>代码（第二种做法）</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <map>
+
+using namespace std;
+
+const int S=300001,V=26,BS=20;
+
+struct SAM
+{
+	int tot;
+	int len[S*2],link[S*2];
+	map<char,int> to[S*2];
+	vector<int> son[S*2];
+	int siz[S*2],mx[S*2];
+	vector<int> fa[S*2];
+	int lst;
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=siz[i]=mx[i]=0;
+			to[i].clear();
+			son[i].clear();
+			fa[i].clear();
+		}
+		link[0]=-1;
+		tot=lst=0;
+	}
+	inline void ins(int c,int pp)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		siz[pre]=1,mx[pre]=pp;
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				to[cpy]=to[q];
+				link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+	inline void build()
+	{
+		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+	}
+	void dfs(int u=0)
+	{
+		if(u!=0)
+		{
+			fa[u].push_back(link[u]);
+			for(int i=1;i<=BS;i++)
+			{
+				if(fa[u][i-1]==-1) break;
+				else
+				{
+					int fat=fa[u][i-1];
+					if(fa[fat].size()<=i-1) break;
+					else fa[u][i]=fa[fat][i-1];
+				}
+			}
+		}
+		for(int v:son[u])
+		{
+			dfs(v);
+			siz[u]+=siz[v],mx[u]=max(mx[u],mx[v]);
+		}
+		vector<int>().swap(son[u]); // 释放 vector 空间
+	}
+};
+
+int n;
+char a[S];
+SAM sam;
+
+int main()
+{
+	scanf(&quot;%s&quot;,a);
+	n=strlen(a);
+	sam.init();
+	for(int i=0;i<n;i++) sam.ins(a[i]-'a',i);
+	sam.build();
+	sam.dfs();
+	int u=0,len=0;
+	long long ans=0;
+	for(int i=n-1;i>=0;i--)
+	{
+		while(u!=-1&&sam.to[u][a[i]-'a']==0)
+		{
+			u=sam.link[u];
+			if(u!=-1) len=sam.len[u];
+		}
+		if(u==-1) u=0,len=0;
+		else u=sam.to[u][a[i]-'a'],len++;
+		int r=i+len-1,v=u;
+		while(sam.mx[v]<=r&&sam.len[v]>=sam.mx[v]-i+1)
+		{
+			for(int j=BS;j>=0;j--)
+			{
+				if(sam.fa[v].size()>j&&sam.mx[sam.fa[v][j]]==sam.mx[v]&&sam.len[sam.fa[v][j]]>=sam.mx[v]-i+1) v=sam.fa[v][j];
+			}
+			if(sam.mx[v]>=i) ans=max(ans,1ll*(sam.mx[v]-i+1)*sam.siz[v]);
+			if(sam.fa[v].size()>0) v=sam.fa[v][0];
+			else break;
+		}
+	}
+	printf(&quot;%lld\n&quot;,ans);
+	return 0;
+}
+```
+</p></details>
+
+### [P5685 [JSOI2013]快乐的 JYY](https://www.luogu.com.cn/problem/P5685)
+
+双倍经验：[P5555 秩序魔咒](https://www.luogu.com.cn/problem/P5685)
+
+和上一题差不多，建完“伪广义” SAM 之后跑 manacher+哈希求出 $A$ 的所有本质不同的回文子串 $[l,r]$，然后找到 $A_{[1,r]}$ 即前缀 $r$ 对应的 SAM 上的状态，倍增找到 $A_{[l,r]}$ 所在的状态，然后统计答案即可。
+
+<details><summary>代码</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <set>
+
+using namespace std;
+
+const int S=100005,V=27,BS=25,bse=31,p1=998244353,p2=1000000007;
+
+struct SAM
+{
+	int tot;
+	int len[S*4],to[S*4][V],link[S*4];
+	vector<int> suf,son[S*4];
+	int siz[2][S*4];
+	int fa[S*4][BS+1];
+	int lst;
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=siz[0][i]=siz[1][i]=0;
+			memset(to[i],0,sizeof(to[i]));
+			vector<int>().swap(son[i]);
+		}
+		vector<int>().swap(suf);
+		tot=lst=0;
+		link[0]=-1;
+		suf.push_back(0);
+	}
+	inline void ins(int c,int tpe)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		suf.push_back(pre);
+		siz[tpe][pre]=1;
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				memcpy(to[cpy],to[q],sizeof(to[q]));
+				link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+	inline void build()
+	{
+		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+	}
+	void calctag(int u=0)
+	{
+		fa[u][0]=link[u];
+		for(int i=1;i<=BS;i++)
+		{
+			int tp=fa[u][i-1];
+			if(tp==-1) fa[u][i]=-1;
+			else fa[u][i]=fa[tp][i-1];
+		}
+		for(int v:son[u])
+		{
+			calctag(v);
+			for(int j=0;j<=1;j++) siz[j][u]+=siz[j][v];
+		}
+	}
+};
+
+int n,m;
+char a[S],b[S];
+SAM sam;
+char str[S*2];
+int ext[S*2];
+int pw1[S],pw2[S];
+int s1[S],s2[S];
+set<pair<int,int>> st;
+
+inline pair<int,int> calchash(int l,int r)
+{
+	return make_pair(
+	(s1[r]-1ll*s1[l-1]*pw1[r-l+1]%p1+p1)%p1,
+	(s2[r]-1ll*s2[l-1]*pw2[r-l+1]%p2+p2)%p2);
+}
+
+int main()
+{
+	scanf(&quot;%s%s&quot;,a+1,b+1);
+	sam.init();
+	n=strlen(a+1),m=strlen(b+1);
+	for(int i=1;i<=n;i++) sam.ins(a[i]-'A',0);
+	sam.ins(26,1);
+	for(int i=1;i<=m;i++) sam.ins(b[i]-'A',1);
+	sam.build();
+	sam.calctag();
+	pw1[0]=1,pw2[0]=1;
+	for(int i=1;i<=n;i++)
+	{
+		pw1[i]=1ll*pw1[i-1]*bse%p1;
+		pw2[i]=1ll*pw2[i-1]*bse%p2;
+		s1[i]=(1ll*s1[i-1]*bse%p1+a[i]-'A'+1)%p1;
+		s2[i]=(1ll*s2[i-1]*bse%p2+a[i]-'A'+1)%p2;
+	}
+	for(int i=1;i<=n;i++) str[i*2]=a[i];
+	n=n*2+1;
+	for(int i=1;i<=n;i+=2) str[i]='#';
+	str[0]='@',str[n+1]='$';
+	long long ans=0;
+	for(int i=1,pos=0;i<=n;i++)
+	{
+		if(pos+ext[pos]>i) ext[i]=min(pos+ext[pos]-i,ext[pos-(i-pos)]);
+		while(str[i-ext[i]]==str[i+ext[i]])
+		{
+			ext[i]++;
+			if(str[i-ext[i]+1]=='#'&&ext[i]>1)
+			{
+				int len=ext[i]-1;
+				int rb=i/2+len/2;
+				pair<int,int> pir=calchash(rb-len+1,rb);
+				if(st.count(pir)==0)
+				{
+					st.insert(pir);
+					int u=sam.suf[rb];
+					if(sam.len[sam.link[u]]+1>len)
+					{
+						for(int j=BS;j>=0;j--)
+						{
+							int to=sam.fa[u][j];
+							if(to!=-1&&sam.link[to]!=-1&&sam.len[sam.link[to]]+1>len) u=to;
+						}
+						u=sam.fa[u][0];
+					}
+					ans+=1ll*sam.siz[0][u]*sam.siz[1][u];
+//					for(int j=rb-len+1;j<=rb;j++) printf(&quot;%c&quot;,a[j]);
+//					printf(&quot; : %d * %d\n&quot;,sam.siz[0][u],sam.siz[1][u]);
+				}
+			}
+		}
+		if(i+ext[i]>pos+ext[pos]) pos=i;
+		
+	}
+	printf(&quot;%lld\n&quot;,ans);
+	return 0;
+}
+```
+</p></details>
+" onclick="copyMarkdown(this)">复制 Markdown</a>
+		</span>
+		
+	</div>
+</section>
+
+<script>
+	function copyMarkdown(e) {
+		let text = e.getAttribute('data-src-markdown');
+		if (e.innerHTML == '复制成功') {
+			return;
+		}
+		e.innerHTML = '复制成功';
+		(function (elem) {
+			setTimeout(() => {
+				if (elem.innerHTML == '复制成功') {
+					elem.innerHTML = '复制 Markdown'
+				}
+			}, 1000);
+		})(e)
+		Clipboard.copy(text);
+	}
+</script>
+
+					<div class="post-body next-md-body" id="post_body" data-post-markdown="**后缀树（数据结构）和本文中的后缀树其实不是一个东西，更规范的叫法应该是 parent 树，但是由于 $S$ 的后缀树就是其反串的 parent 树，所以并没有加以区分**。
+
+## 前言
+
+SAM（后缀自动机） 是一种强大的数据结构，在应用上可以完全包含 SA（后缀数组），往往比 SA 好写好调且时间复杂度更优。
+
+本文借鉴了 [后缀自动机(SAM)奶妈式教程 - 一铭君一 - 博客园 (cnblogs.com)](https://www.cnblogs.com/zaza-zt/p/15419181.html)（算法思想、实现、技巧）和 [后缀自动机 - star_road_xyz - 博客园 (cnblogs.com)](https://www.cnblogs.com/starroadxyz/p/17077259.html)（状态个数、转移个数证明）。
+
+为了表述方便，这里为本文规定一些记号：
+
+- $|S|$：字符串 $S$ 的长度；
+- $V$：字符集大小；
+
+## 基本定义
+
+1. SAM 是一个 DAG，它的**节点被称作“状态”，边被称作“转移”**；
+2. SAM 有一个初始状态 $rt$（代表空串），所有其它状态都能通过转移从 $rt$ 到达；
+3. 每个转移会被标记上字符集中的一个字符（类似边权），从**一个状态出发的所有转移的字符互不相同**；
+4. 存在**至少一个**终止状态，从 $rt$ 出发到终止状态的每一条路径上的所有转移依次拼接得到的字符串都是原串的后缀，也就是说**原串的每个后缀都能表示成从 $rt$ 到终止状态的路径**；
+5. SAM 是满足上述条件中**状态数最少**的 DAG；
+
+****
+
+**一些记号**
+
+- $S$：要被建 SAM 的原串；
+
+- $rt$：SAM 的初始状态（空串对应状态）；
+- $to_{u,ch}$ 从状态 $u$ 出发的，被标记上字符 $ch$ 的转移；
+
+## SAM 的优势
+
+不难发现，从 $rt$ 到SAM 上的每个状态路径上的字符拼接起来都是原串某个后缀的一个前缀，这意味着**原串的每个子串都能表示成从 $rt$ 到某个状态的路径**。
+
+虽然大多数 SAM 能做的操作 SA 也能做，但是线性 SA 的 DC3 算法常数巨大，并且 SA 性质较少，应用时通常需要一些较为复杂的数据结构辅助，这些数据结构相应也会提高时间复杂度。但**建立字符串 $S$ 对应的 SAM 的时空复杂度仅为 $O(|S|)$**，并且 SAM 有着更好的性质。
+
+综上，SAM 不失为一种十分优秀的字符串算法。
+
+## $\operatorname{endpos}$ 和 $\operatorname{endpos}$ 等价类
+
+使用 $\operatorname{endpos}$ 等价类压缩时空就是 SAM 保持优秀时间复杂度的原因。
+
+记 $\operatorname{endpos}(s)$ 表示 $s$ 在 $S$ 中每次出现的结尾位置的集合（下标从 $1$ 开始），例如：
+
+```
+S: abab
+s:           a    b,ab   ba,aba  bab,abab
+endpos(s): {1,3}  {2,4}   {3}       {4}
+```
+
+不难发现，某些字符串的 $\operatorname{endpos}$ 是相同的，例如例子中的 `b` 和 `ab`。那么不妨**将所有 $\operatorname{endpos}(s)=A$ 的归到同一个等价类中，记 $\operatorname{endpos'}(A)=\{s|\operatorname{endpos(s)=A}\}$**。
+
+在 SAM 中，**一个状态表示的并不是具体的某个字符串，而是一个等价类**。
+
+****
+
+**一些记号**：
+
+- $\operatorname{endpos}(s)$：$s$ 在 $S$ 中每次出现的结尾位置的集合（下标从 $1$ 开始）；
+- $\operatorname{endpos'}(A)$：$\{s|\operatorname{endpos(s)=A}\}$ 即 $\operatorname{endpos}(s)=A$ 的 $s$ 构成的集合；
+- $E(u)$：状态 $u$ 代表的等价类；
+- $\operatorname{sta}(s)$：字符串 $s$ 所属的等价类对应的状态；
+
+## $\operatorname{endpos}$ 等价类的一些性质
+
+> **引理  1**
+>
+> 考虑两个非空字符串 $s1,s2$，满足 $|s1|\ge|s2|$。
+>
+> 1. 若 $\operatorname{endpos}(s1)=\operatorname{endpos}(s2)$，则 $s2$ 是 $s1$ 的后缀，且 $s2$ 在且仅在 $s1$ 在 $S$ 中出现时作为它的后缀出现；
+>
+> 2. 若 $s2$ 是 $s1$ 的后缀，且 $s2$ 在且仅在 $s1$ 在 $S$ 中出现时作为它的后缀出现，那么 $\operatorname{endpos}(s1)=\operatorname{endpos}(s2)$；
+
+证明是显然的。
+
+>**引理  2**
+>
+>考虑两个非空字符串 $s1,s2$，满足 $|s1|\ge|s2|$。
+>
+>1. 若 $s2$ 是 $s1$ 的后缀，那么 $\operatorname{endpos}(s1)\subseteq\operatorname{endpos}(s2)$；
+>
+>2. 若 $s2$ 不是 $s1$ 的后缀，那么 $\operatorname{endpos}(s2)\cap\operatorname{endpos}(s1)=\varnothing$；
+
+第一条是因为 $s1$ 每次出现 $s2$ 都必然会出现。
+
+第二条是因为若 $s2$ 是 $s1$ 的子串且存在 $p$ 满足 $p\in \operatorname{endpos}(s1)$ 且 $p\in \operatorname{endpos}(s2)$ 则 $s1$ 和 $s2$ 都一定会在 $p$ 处结束，$s2$ 必定是 $s1$ 的子串，和假设矛盾，得证。
+
+> **引理 3**
+>
+> 考虑一个 $\operatorname{endpos}$ 等价类 $A=\operatorname{endpos}'(E)$。
+>
+> 1. $A$ 中不包含两个长度相同但本质不同的字符串；
+> 2. 对于 $A$ 中任意两个字符串，短的那个一定是长的那个的真后缀，也就是说 $A$ 中所有字符串都是最长的那个的后缀；
+> 3. 设 $l,r$ 分别为 $A$ 中最短和最长的字符串的长度，则 $\{|s|,s\in A\}=[l,r]\cap \mathbb{N}^+$，即 $l,r$ 之间的每种长度的串都会出现恰好一次；
+
+第一条可以由引理 1 推出，第二条可以由引理 2 推出，考虑第三条的证明。
+
+不难发现只有可能是等号右边的集合的某个元素没在等号左边的集合中出现。那么设 $d\in ([l,r]\cap \mathbb{N}^+)$ 且 $d\notin\{|s|,s\in A\}$。由于第二条，所以可以设长度为 $d$ 的字符串为 $s^d$，则由于引理 2，有 $A\subseteq\operatorname{endpos}(s^d)$。
+
+此时若 $A\subset \operatorname{endpos}(s^d)$，则 $s^d$ 的所有子串的 $\operatorname{endpos}$ 都会不等于 $A$。由于第二条，$t\in ([l,d]\cap\mathbb{N^+})$ 的所有 $t$ 均满足 $A\subset \operatorname{endpos(s^t)}$，那么 $l$ 将会等于 $d+1$，和 $d\in ([l,r]\cap \mathbb{N}^+)$ 矛盾，得证。
+
+****
+
+**一些记号**：
+
+- $\operatorname{long}(u)$：$\operatorname{endpos}'(\operatorname{E}(u))$ 中最长的字符串；
+- $\operatorname{len(u)}$：$|\operatorname{long}(\operatorname{E}(u))|$ 即 $\operatorname{endpos}'(\operatorname{E}(u))$ 中最长的字符串的长度；
+- $\operatorname{short}(u)$：$\operatorname{endpos}'(\operatorname{E}(u))$ 中最短的字符串；
+- $\operatorname{slen(u)}$：$|\operatorname{short}(\operatorname{E}(u))|$ 即 $\operatorname{endpos}'(\operatorname{E}(u))$ 中最短的字符串的长度；
+
+## 后缀指针 $\operatorname{link}$ 和后缀树
+
+设 $A=E(u)$ 即状态 $u$ 代表的等价类，$w$ 为 $\operatorname{long}(u)$ 最长的满足 $w\notin A$ 的一个后缀，$v$ 为 $\operatorname{sta}(w)$ 即 $w$ 所属等价类对应的状态（由 SAM 的定义可知这个状态一定存在），$\operatorname{link}(u)$ 即为 $v$。特别的，$rt$ 没有 $\operatorname{link}$ 指针。
+
+根据引理 3，**从状态 $u$ 出发不断跳 $\operatorname{link}$ 到 $rt$ 路径上所有状态的等价类并起来就是 $\operatorname{long}(u)$ 的所有后缀**，所以 $\operatorname{link}$ 也叫后缀指针。
+
+> **引理 5**
+>
+> 对于一个状态 $u$，设 $\operatorname{link}(u)=v$。
+>
+> 1. $\operatorname{long}(v)$ 是 $\operatorname{short}(u)$ 的长度为 $\operatorname{slen}(u)-1$ 的后缀；
+> 2. $\operatorname{E}(u)\subsetneq \operatorname{E}(v)$；
+
+第一条可以由引理 3 得出，第二条可以由引理 2 和 $\operatorname{link}$ 指针的定义得出。
+
+需要注意的是，利用这个引理，SAM 中的**每个状态便只需要记录等价类中的最长串**。
+
+> **引理 6**
+>
+> 把状态看作节点，则所有有向边 $u\to\operatorname{link(u)}$ 构成一棵以 $rt$ 为根的内向树（后缀树）。
+
+首先由于所有状态不断跳 $\operatorname{link}$ 总能跳回 $rt$（空串是所有字符串的后缀），所以“后缀图”一定连通。
+
+然后由于只有 $rt$ 没有 $\operatorname{link}$ 指针，所以“后缀图”的边数恰好等于点数减 $1$，所以“后缀图”是一棵树。
+
+****
+
+**一些记号**：
+
+- $\operatorname{link}(u)$：设 $A=E(u)$ 即状态 $u$ 代表的等价类，$w$ 为 $\operatorname{long}(A)$ 最长的满足 $w\notin A$ 的一个后缀，$v$ 为 $\operatorname{sta}(w)$ 即 $w$ 所属等价类对应的状态（由 SAM 的定义可知这个状态一定存在），$\operatorname{link}(u)$ 即为 $v$。特别的，$rt$ 没有 $\operatorname{link}$ 指针；
+
+## 小结
+
+在开始介绍如何构造 SAM 前，我们先小结一下：
+
+- 原串 $S$ 的每一个子串可以根据 $\operatorname{endpos}$ 来划分为若干个等价类，每个等价类对应一个状态；
+- 对于每个状态 $u$，$\operatorname{E}(u)$ 中包含了 $\operatorname{long(u)}$ 长度从 $\operatorname{slen}(u)$ 到 $\operatorname{len}(u)$ 的所有后缀（引理 3）；
+- 从状态 $u$ 出发不断跳 $\operatorname{link}$ 到 $rt$ 路径上所有状态的等价类并起来就是 $\operatorname{long}(u)$ 的所有后缀（引理 3 推出）；
+- 设 $A=E(u)$ 即状态 $u$ 代表的等价类，$w$ 为 $\operatorname{long}(A)$ 最长的满足 $w\notin A$ 的一个后缀，$v$ 为 $\operatorname{sta}(w)$ 即 $w$ 所属等价类对应的状态（由 SAM 的定义可知这个状态一定存在），则 $\operatorname{link}(u)$ 即为 $v$。特别的，$rt$ 没有 $\operatorname{link}$ 指针。所有 $\operatorname{link}$ 指针构成一棵以 $rt$ 为根的内向树，称之为后缀树（引理 6）；
+
+## SAM 的构造
+
+构造 SAM 的算法是一个动态的算法。一开始 SAM 中只存在一个代表空串的状态 $rt$，没有任何转移。通过**依次插入原串 $S$ 中的每一个字符来动态维护 SAM**。
+
+这里将给出算法流程、解释、时空复杂度分析和 C++ 代码。
+
+**算法流程**
+
+一开始 SAM 中只存在一个编号为 $0$ 的状态 $rt$。为了方便，我们钦定 $\operatorname{long}(rt)=0$，$\operatorname{link}(rt)=-1$。
+
+现在任务是给 SAM 维护的字符串的末尾新加入一个字符 $c$，流程如下：
+
+1. 设上一次加入字符后整个整个字符串 $S$ 对应的状态为 $lst$，即 $\operatorname{long}(lst)=S$；
+2. 创建一个新的状态 $pre$，并且令 $\operatorname{len}(pre)=\operatorname{len}(lst)+1$；
+3. 从 $lst$ 开始不断跳 $\operatorname{link}$，如果当前状态 $u$ 没有标记 $c$ 的转移，那么令 $to_{u,c}=pre$；
+4. 如果跳到了 $rt$ 并且 $rt$ 也没有标记 $c$ 的转移，那么令 $to_{rt,c}=pre$，$\operatorname{link}(pre)=0$（指向状态 $rt$），转到 8；
+5. 否则停止跳 $\operatorname{link}$，并设当前跳到的状态为 $p$，$to_{p,c}$ 为 $q$；
+6. 若 $\operatorname{len(q)}=\operatorname{len}(p)+1$，令 $\operatorname{link}(pre)=q$；
+7. 否则：
+   1. 复制 $q$ 到一个新的状态 $cpy$（只复制 $\operatorname{link}$ 以及 $to_{q,*}$）；
+   2. 令 $\operatorname{len}(cpy)=\operatorname{len}(p)+1,\operatorname{link}(pre)=cpy$；
+   3. 从 $p$ 开始不断跳 $\operatorname{link}$，设当前跳到的状态为 $u$，则：
+      - 若 $u=-1$ 或 $to_{u,c}\not=q$，停止跳 $\operatorname{link}$；
+      - 否则令 $to_{u,c}=cpy$；
+   4. 令 $\operatorname{link}(q)=cpy$，转到 8；
+8. 令 $lst=pre$，插入操作完成；
+
+**算法解释**
+
+为了表述方便，设 $S1$ 为插入 $c$ 之前的 $S$，$S2$ 为插入 $c$ 之后的 $S$ 即 $S1+c$。
+
+1. 为之后的操作做准备；
+
+2. 插入字符 $c$ 后，$\operatorname{endpos}(S2)=\{|S1|+1\}$ 一定会成为一个新的等价类，所以需要分配新的状态 $pre$ 来代表它。而 $\operatorname{len}(pre)$ 一定是 $|S1|+1$，$lst$ 中最长的字符串显然就是 $S1$，所以令 $\operatorname{len}(pre)=\operatorname{len}(lst)+1$；
+
+3. 考虑新建转移到 $pre$，不断枚举 $S1$ 的后缀，如果还没有标记为 $c$ 的转移就可以新建标记为 $c$ 的转移到 $pre$；
+
+4. 跳到 $rt$ 还没结束代表字符 $c$ 是第一次出现，因为 $rt$ 没有到 $c$ 的转移表明 $S1$ 不存在 $c$ 这个子串，那么 $\operatorname{link}(pre)$ 自然要指向状态 $rt$，因为 $S2$ **不存在非空真后缀**；
+
+5. 为之后的操作做准备，注意此时所有到 $pre$ 的转移已处理完成，接下来的所有步骤都是在处理 $\operatorname{link}(pre)$；
+
+6. 若 $E(q)$ 中最长的那个就是 $\operatorname{long}(p)+c$ 即 $S1$ 的某个后缀加上字符 $c$，那么 $\operatorname{long}(q)$ 就**一定是 $S2$ 最长的真后缀**，所以可以让 $\operatorname{link}(pre)$ 指向 $q$；
+
+7. 否则一定有 $\operatorname{len}(q)>\operatorname{len}(p)$。发现所有 $A=\{s|s\in E(q),|s|\le \operatorname{len}(p)+1\}$  中的字符串一定**是 $S1$ 的某个后缀加上字符 $c$**，而 $B=E(q)-A$ 中的一定不是。那么 **$A$ 中的字符串的 $\operatorname{endpos}$ 集合一定会加入元素 $|S2|$，$B$ 中的则一定不会，所以 $A$ 和 $B$ 不再属于同一个等价类**。
+
+   此时就需要分裂 $q$ 代表的等价类。具体的，创建一个新的状态 $cpy$，把 $q$ 的所有“出边”都复制过去。
+
+   接下来的工作就是让 $cpy$ 表示 $A$，原来的 $q$ 表示 $B$。
+
+   首先 $A$ 中最长的字符串的长度显然是 $\operatorname{len}(p)+1$，那么令 $\operatorname{len}(cpy)=\operatorname{len}(p)+1$，而 $B$ 中最长的字符串没有改变，所以无需对 $\operatorname{len}(q)$ 进行任何操作。
+
+   接下来不难发现 $\operatorname{long}(cpy)$ 一定是 $S2$ 的最长的真后缀，所以令 $\operatorname{link}(pre)$ 指向 $cpy$。
+
+   然后遍历 $p$ 所有的后缀的状态 $u$。因为 $\operatorname{len}(u)\le \operatorname{len}(p)$，所以若 $u$ 有标记 $c$ 的转移到 $q$，那么转移得到的字符串一定属于 $A$，所以让 $to_{u,c}=cpy$；否则 $U=\operatorname{endpos}(s+c|s\in \operatorname{E}(u))$ 一定包含且不等于 $Q=\operatorname{endpos}(s\in E(q))$，那么 $\operatorname{long}(u)$ 的后缀的 $\operatorname{endpos}$ 集合更不可能满足要求，所以可以停止跳 $\operatorname{link}$。
+
+   最后由于 $\operatorname{long}(cpy)$ 一定是 $\operatorname{long}(q)$ 的最长真后缀，所以令 $\operatorname{link}(q)$ 指向 $cpy$；
+
+8. 更新 $lst$，为之后的插入做准备；
+
+**复杂度分析**
+
+记 $n=|S|$。
+
+- 状态数和转移数
+
+  不难发现，除第一次之外每次插入最多会新建两个状态，所以状态数**上限为 $2n-1$**。
+
+  而转移会分为两种：
+
+  - $\operatorname{link}$：由于构成内向树，所以上限为 $2n-2$；
+
+  - $to$：
+
+    考虑先随便拎出一棵以 $rt$ 为根的外向生成树，下面来证明非树边数量 $\le n$。
+
+    对于一条非树边 $u\to v$（设 $v=to_{u,c}$），设 $s1$ 为生成树上 $rt$ 到 $u$ 的链构成的字符串，$s2$ 为 $v$ 往后不停走字典序最小的边直到不能走的路径构成的字符串。
+
+    考察字符串 $s1+c+s2$，很显然它是 $S$ 的一个后缀，否则就还能继续走下去。那么这是一个非树边到 $S$ 的后缀的映射。
+
+    而不难发现 $c$ 是 $s1+c+s2$ 对应的路径上第一条非树边，所以这个映射是双向的，即一一对应。
+
+    故非树边条数 $\le |S|=n$；
+
+  那么转移数的上限为 $5n-3$，实际上很难卡满。
+
+-  空间复杂度
+
+  由于状态数上限为 $2n-1$，转移数上限为 $3n-2$，所以空间复杂度为 $O(n)$。
+
+  特别的，若字符集较小，那么往往**采用数组存储 $to$，此时空间复杂度为 $O(nV)$**。
+
+  若字符集较大，往往**采用可持久化线段树来存储 $to$，此时空间复杂度为 $O(n\log V)$**。
+
+- 时间复杂度
+
+  较难证明的部分是两个跳 $\operatorname{link}$ 的步骤。不难发现，步骤 3 跳的总次数和转移数相当，所以是 $O(n)$ 的。
+
+  而步骤 7.3 就有点复杂了，注意到有一个引理：
+
+  > **引理**
+  >
+  > 对于一个状态 $u$，设 $A=\{(v,c)|to_{v,c}=u\}$ 即其所有入边。
+  >
+  > 那么 $\forall (v_i,c_i)\in A$，$c_i$ 相同，$v_i$ 在后缀树上形成一条链（$v_i$ 中的字符串互为后缀）。
+  >
+  > 且 $\text{len}(u)=\max\limits_{(v,c)\in A}\{\text{len}(v)+1\},\text{slen}(u)=\min\limits_{(v,c)\in A}\{\text{slen}(v)+1\}$。
+  
+  这是显然的，因为一个状态中的字符串一定互为后缀，并且 SAM 包含了原串的所有子串。
+  
+  注意到 $cpy$ 的所有入边只会在 7.3 中产生，并且每跳一次 $\text{link}$ 都会使得：
+  
+  - $\text{slen}(u)$ 减少；
+  - $\text{slen}(cpy)$ 减少；
+  - $\text{len}(\text{link}(cpy))$ 减少；
+  
+  并且由于 $cpy=\text{link}(pre)$，并且 $pre$ 会成为新的 $lst$，所以 7.3 中每跳一次 $\text{link}$ 都会使得 $\text{len}(\text{link}(\text{link}(lst)))$ 减少。
+  
+  考虑一次插入操作最多使 $\text{len}(\text{link}(\text{link}(pre)))$ 增加多少：
+  
+  - 若执行了步骤 6，即 $\text{link}(pre)$ 变为 $q$，则 $p$ 最深也是 $\text{link}(lst)$。
+  
+    根据引理，$\text{link}(q)$ 的入边 $(v_i,c_i)$ 一定满足 $v_i$ 在 $\text{link}(lst)$ 的 $\text{link}$ 链上，并且 $v_i$ 为 $\text{link}(lst)$ 的祖先，则 $\text{len}(v_i)\le \text{len}(\text{link}(\text{link}(lst)))$，那么 $\text{len}(\text{link}(\text{link}(pre)))\le \text{len}(\text{link}(\text{link}(lst)))+1$；
+  
+    ![](../post-images/1709124294150.png)
+  
+  - 若执行了步骤 7，由于 $\text{link}(pre)=cpy$，$\text{link}(cpy)=\text{link(q)}$，所以重复步骤 6 的证明，$\text{len}(\text{link}(\text{link}(pre)))\le \text{len}(\text{link}(\text{link}(lst)))+1$；
+  
+  综上，每次插入操作 $\text{len}(\text{link}(\text{link}(lst)))$ 最多加 $1$，而每次执行 7.3 都会让其减少至少 $1$，那么 7.3 的总执行次数是 $O(n)$ 的。
+  
+  所以**构建 SAM 的时间复杂度为 $O(nk)$（其中 $k$ 是访问和修改 $to$ 的时间复杂度，若使用数则为 $O(1)$，使用可持久化线段树为 $O(\log V)$）**。
+
+<details><summary>代码</summary><p>
+
+
+```cpp
+const int S=1000005,V=26; // 字符串最大长度，字符集大小
+
+struct SAM
+{
+	int tot,lst;
+	int len[S*2],to[S*2][V],link[S*2]; // 记得开两倍
+	inline void init() // 初始化
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=0;
+			memset(to[i],0,sizeof(to[i]));
+		}
+		tot=lst=0;
+		link[0]=-1; // 记得让 link(rt)=-1
+	}
+	inline void ins(int c) // 在末尾插入一个字符
+	{
+        // 新建状态（第 1、2 步）
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+        // 处理到 pre 的转移（第 3 步）
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0; // 第 4 步
+		else
+		{
+			int q=to[p][c]; // 第 5 步
+			if(len[q]==len[p]+1) link[pre]=q; // 无需分裂（第 6 步）
+			else // 分裂状态 q（第 7 步）
+            {
+                // 复制 q 到新状态 cpy，令 link(pre)=cpy（7.1、7.2）
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				memcpy(to[cpy],to[q],sizeof(to[q]));
+				link[cpy]=link[q];
+				link[pre]=cpy;
+                // 处理到 cpy 的转移（7.3）
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy; // 令 link(q)=cpy（7.4）
+			}
+		}
+		lst=pre; // 第 8 步
+	}
+};
+```
+</p></details>
+
+## 一些额外信息的求解
+
+值得注意的是，这些信息的求解的时间复杂度均为 $O(n)$。
+
+- 结束标记
+
+  只需要在构建完 SAM 后，从 $lst$ 出发不断跳 $\operatorname{link}$，把经过的状态全都打上标记即可。
+
+- 建立后缀树
+
+  只需要在构建完 SAM 后，对于所有 $1\le u$ 的 $u$，在 $\operatorname{link}(u)$ 的儿子列表中加入 $u$ 即可。
+
+- 两个子串的最长公共后缀
+
+  找到这两个子串所属的状态 $x,y$，它们的最长公共后缀所属的状态 $z$ 即为 $x,y$ 在后缀树上的 $\operatorname{LCA}$。
+
+- $|\operatorname{E}(u)|$（每个节点对应的等价类中的字符串个数）
+
+  由于引理 3，$|\operatorname{E}(u)|$ 即为 $\operatorname{len}(u)-\operatorname{len}(\operatorname{link}(u))$。
+
+- $siz_u=|\operatorname{endpos}(s)|,s\in\operatorname{E}(u)$（每个节点对应的等价类中的字符串出现的次数）
+
+  构建 SAM 时让 $siz_{pre}=1$，注意到这样标记的实际上是 $S$ 的每个前缀，一个子串的出现次数等于它是多少个前缀的后缀，所以构建完成后只需要在后缀树上求一次子树 $siz$ 和即可。
+  
+  注意复制节点的时候无需复制 $siz$，因为一个等价类中最长的那个字符串才有可能是 $S$ 的前缀，而这个最长的字符串一定在分裂之后的 $E(q)$ 中。
+
+  <details><summary>代码</summary><p>
+  
+  ```cpp
+  const int S=1000005,V=26;
+  
+  struct SAM
+  {
+  	int tot,lst;
+  	int len[S*2],to[S*2][V],link[S*2];
+  	vector<int> son[S*2]; // 后缀树中每个状态的儿子
+  	int siz[S*2]; // 每个状态代表的等价类中每个字符串出现了几次
+  	inline void init() // 初始化
+  	{
+  		for(int i=0;i<=tot;i++)
+  		{
+  			len[i]=link[i]=siz[i]=0;
+  			memset(to[i],0,sizeof(to[i]));
+  			son[i].clear();
+  		}
+  		tot=lst=0;
+  		link[0]=-1;
+  	}
+  	inline void ins(int c) // 在末尾插入一个字符
+  	{
+  		int pre=++tot;
+  		len[pre]=len[lst]+1;
+  		siz[pre]=1; // 标记
+  		int p=lst;
+  		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+  		if(p==-1) link[pre]=0;
+  		else
+  		{
+  			int q=to[p][c];
+  			if(len[q]==len[p]+1) link[pre]=q;
+  			else
+  			{
+  				int cpy=++tot;
+  				len[cpy]=len[p]+1;
+  				memcpy(to[cpy],to[q],sizeof(to[q]));
+  				link[cpy]=link[q];
+  				link[pre]=cpy;
+  				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+  				link[q]=cpy;
+  			}
+  		}
+  		lst=pre;
+  	}
+  	inline void build() // 建后缀树
+  	{
+  		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+  	}
+  	void getsiz(int u=0) // dfs 求子树和
+  	{
+  		for(int v:son[u])
+  		{
+  			getsiz(v);
+  			siz[u]+=siz[v];
+  		}
+  	}
+  };
+  ```
+  </p></details>
+  
+- $mnr_u=\min\limits_{v\in \operatorname{endpos}(s),s\in\operatorname{E}(u)} v$（每个节点对应的等价类中的字符串的最早出现的右端点）
+
+  和 $siz_u$ 一样，构建时每个前缀的 $mnr$ 就是这个前缀的长度，构建完后在后缀树上求子树 $\min$ 即可。
+
+## 经典例题
+
+### [P3804 【模板】后缀自动机 (SAM)](https://www.luogu.com.cn/problem/P3804)
+
+注意到状态 $u$ 下的所有字符串出现次数均为 $siz_u$，显然选最长的最优，那么求出 $siz$ 后对所有 $siz_u>1$ 的 $u$ 的 $len_u\times siz_u$ 取 $\max$ 即可。
+
+<details><summary>代码</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+
+using namespace std;
+
+const int S=1000005,V=26;
+
+struct SAM
+{
+	int tot,lst;
+	int len[S*2],to[S*2][V],link[S*2];
+	vector<int> son[S*2];
+	int siz[S*2];
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=siz[i]=0;
+			memset(to[i],0,sizeof(to[i]));
+			son[i].clear();
+		}
+		tot=lst=0;
+		link[0]=-1;
+	}
+	inline void ins(int c)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		siz[pre]=1;
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				memcpy(to[cpy],to[q],sizeof(to[q]));
+				link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+	inline void build()
+	{
+		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+	}
+	void getsiz(int u=0)
+	{
+		for(int v:son[u])
+		{
+			getsiz(v);
+			siz[u]+=siz[v];
+		}
+	}
+};
+
+int n;
+char a[S];
+SAM sam;
+
+int main()
+{
+	scanf(&quot;%s&quot;,a+1);
+	n=strlen(a+1);
+	sam.init();
+	for(int i=1;i<=n;i++) sam.ins(a[i]-'a');
+	sam.build();
+	sam.getsiz();
+	long long ans=0;
+	for(int i=0;i<=sam.tot;i++) if(sam.siz[i]>1) ans=max(ans,1ll*sam.len[i]*sam.siz[i]);
+	printf(&quot;%lld\n&quot;,ans);
+	return 0;
+}
+```
+</p></details>
+
+### [P4070 [SDOI2016]生成魔咒](https://www.luogu.com.cn/problem/P4070)
+
+考虑新加入的字符会产生多少个新的非空子串，设加入新字符之前的长度为 $lstlen$，那么只有 $\operatorname{endpos}'(\{lstlen+1\})$ 中的字符串是新的非空子串。
+
+考虑哪个状态代表的等价类是 $\operatorname{endpos}'(\{lstlen+1\})$，显然只有新加入的状态 $pre$ 是。$pre$ 中的字符串个数很好求，即为 $\operatorname{len}(pre)-\operatorname{len}(\operatorname{link}(pre))$。
+
+那么每次让答案累加上 $\operatorname{len}(pre)-\operatorname{len}(\operatorname{link}(pre))$ 即可。
+
+<details><summary>代码</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <map>
+
+using namespace std;
+
+const int S=100005;
+
+struct SAM
+{
+	int tot,len[S*2],link[S*2];
+	map<int,int> to[S*2];
+	int lst;
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++) len[i]=link[i]=0,to[i].clear();
+		link[0]=-1;
+	}
+	inline void ins(int c)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		int p=lst;
+		while(p!=-1&&to[p].find(c)==to[p].end()) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				to[cpy]=to[q],link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+};
+
+SAM sam;
+
+int main()
+{
+	int n;
+	scanf(&quot;%d&quot;,&n);
+	sam.init();
+	long long ans=0;
+	for(int i=1;i<=n;i++)
+	{
+		int x;
+		scanf(&quot;%d&quot;,&x);
+		sam.ins(x);
+		ans+=sam.len[sam.lst]-sam.len[sam.link[sam.lst]];
+		printf(&quot;%lld\n&quot;,ans);
+	}
+}
+```
+</p></details>
+
+### [P3975 [TJOI2015]弦论](https://www.luogu.com.cn/problem/P3975)
+
+双倍经验：[SP7258 SUBLEX - Lexicographical Substring Search](https://www.luogu.com.cn/problem/SP7258)
+
+原串 $S$ 的每个子串都能表示为从 $rt$ 到某个状态的路径，那么在 SAM 的反 DAG 上跑一边 bfs，求出每个状态出发有多少个子串，然后逐位确定即可。
+
+如果 $k=1$ 每个状态的权值就是 $siz_u$，否则就是 $1$。
+
+<details><summary>代码</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <queue>
+
+using namespace std;
+
+const int S=500005,V=26;
+
+struct SAM
+{
+	int tot;
+	int len[S*2],to[S*2][V],link[S*2];
+	vector<int> son[S*2];
+	int siz[S*2];
+	int lst;
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=siz[i]=0;
+			memset(to[i],0,sizeof(to[i]));
+			son[i].clear();
+		}
+		tot=lst=0;
+		link[0]=-1;
+	}
+	inline void ins(int c)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		siz[pre]=1;
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				memcpy(to[cpy],to[q],sizeof(to[q]));
+				link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+	inline void build()
+	{
+		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+	}
+	void getsiz(int u=0)
+	{
+		for(int v:son[u])
+		{
+			getsiz(v);
+			siz[u]+=siz[v];
+		}
+	}
+};
+
+int n,t;
+long long k;
+char a[S];
+SAM sam;
+vector<int> to[S*2];
+int ind[S*2];
+long long cnt[S*2];
+
+int main()
+{
+	scanf(&quot;%s&quot;,a+1);
+	n=strlen(a+1);
+	scanf(&quot;%d%lld&quot;,&t,&k);
+	sam.init();
+	for(int i=1;i<=n;i++) sam.ins(a[i]-'a');
+	sam.build();
+	sam.getsiz();
+	for(int i=0;i<=sam.tot;i++)
+	{
+		for(int j=0;j<V;j++)
+		{
+			int v=sam.to[i][j];
+			if(v!=0) to[v].push_back(i),ind[i]++;
+		}
+	}
+	queue<int> q;
+	for(int i=0;i<=sam.tot;i++)
+	{
+		cnt[i]=t?sam.siz[i]:1;
+		if(ind[i]==0) q.push(i);
+	}
+	cnt[0]=0;
+	while(!q.empty())
+	{
+		int u=q.front();
+		q.pop();
+		for(int v:to[u])
+		{
+			cnt[v]+=cnt[u];
+			if(--ind[v]==0) q.push(v);
+		}
+	}
+	if(k>cnt[0]) return puts(&quot;-1&quot;),0;
+	int u=0;
+	while(k>0)
+	{
+		for(int i=0;i<V;i++)
+		{
+			int v=sam.to[u][i];
+			if(v==0) continue;
+			if(cnt[v]<k) k-=cnt[v];
+			else
+			{
+				k-=t?sam.siz[v]:1;
+				printf(&quot;%c&quot;,'a'+i);
+				u=v;
+				break;
+			}
+		}
+	}
+	printf(&quot;\n&quot;);
+	return 0;
+}
+```
+</p></details>
+
+### [P4248 [AHOI2013]差异](https://www.luogu.com.cn/problem/P4248)
+
+建反串的 SAM，在后缀树上 dp 即可。
+
+### [SP1811 LCS - Longest Common Substring](https://www.luogu.com.cn/problem/SP1811)
+
+对于这种多个字符串的问题，通常是要用广义 SAM 来做，但是这里介绍一种“伪广义 SAM”。
+
+考虑把输入的两个字符串 $A$ 和 $B$ 在中间加入一个分隔符 `#` 后拼接起来加入 SAM，即 $A+\#+B$ 这样。加入的过程中若当前字符属于 $A$ 则给加入后 $S$ 对应的状态打上 $A$ 标记，否则打上 $B$ 标记，最后在后缀树上让每个点的标记都贡献到它的祖先上。
+
+这样一来所有同时被打上 $A$ 和 $B$ 标记的状态中的字符串都是 $A$ 和 $B$ 的公共子串，那么统计这些状态的 $\operatorname{len}$ 的最大值即可。
+
+[SP1812 LCS2 - Longest Common Substring II](https://www.luogu.com.cn/problem/SP1812) 这题也类似，不过要注意分隔符要两两不同，要不然带分隔符的子串可能也会被打上标记。
+
+<details><summary>代码</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+
+using namespace std;
+
+const int S=500005,V=27;
+
+struct SAM
+{
+	int tot;
+	int len[S*2],to[S*2][V],link[S*2];
+	vector<int> son[S*2];
+	bool app[2][S*2];
+	int lst;
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=0;
+			memset(to[i],0,sizeof(to[i]));
+			app[0][i]=app[1][i]=false;
+			son[i].clear();
+		}
+		tot=lst=0;
+		link[0]=-1;
+	}
+	inline void ins(int c,int tpe)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		app[tpe][pre]=true;
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				memcpy(to[cpy],to[q],sizeof(to[q]));
+				link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+	inline void build()
+	{
+		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+	}
+	inline void calctag(int u=0)
+	{
+		for(int v:son[u])
+		{
+			calctag(v);
+			for(int i=0;i<=1;i++) app[i][u]|=app[i][v];
+		}
+	}
+};
+
+int n,m;
+char a[S],b[S];
+SAM sam;
+
+int main()
+{
+	scanf(&quot;%s%s&quot;,a+1,b+1);
+	n=strlen(a+1),m=strlen(b+1);
+	sam.init();
+	for(int i=1;i<=n;i++) sam.ins(a[i]-'a',0);
+	sam.ins(26,1);
+	for(int i=1;i<=m;i++) sam.ins(b[i]-'a',1);
+	sam.build();
+	sam.calctag();
+	int ans=0;
+	for(int i=0;i<=sam.tot;i++) if(sam.app[0][i]&&sam.app[1][i]) ans=max(ans,sam.len[i]);
+	printf(&quot;%d\n&quot;,ans);
+	return 0;
+}
+```
+</p></details>
+
+### [P3649 [APIO2014] 回文串](https://www.luogu.com.cn/problem/P3649)
+
+有两种做法。
+
+- Manacher + SAM
+
+  前置知识：[Manacher](https://www.luogu.com.cn/blog/251130/manacher-suan-fa-xue-xi-bi-ji)。
+
+  由于 $S$ 的本质不同回文子串个数上限是 $|S|$，所以可以建出 SAM 之后跑 Manacher 找到每个本质不同回文子串 $S_{[l_i,r_i]}$，再从 $S_{[1,r_i]}$ 这个前缀对应的状态开始倍增跳 $\operatorname{link}$ 找到 $S_{[l_i,r_i]}$ 对应的等价类并统计答案。
+  
+  时间复杂度 $O(n\log n)$。
+  
+- SAM
+
+  建 SAM 时维护每个状态中的字符串的最后出现位置 $mx_u$，建完 SAM 后在 SAM 上跑反串 $S'$ 和 $S$ 的所有子串的匹配。假设跑到 $S'_{[1,n-l+1]}$ 时匹配到了状态 $u$，匹配长度为 $len$。那么若 $mx_u\in[l,l+len-1]$：
+
+  ![](../post-images/1681531539397.png)
+
+  此时绿色部分 $S_{[l,mx_u]}$ 一定是回文串，并且它的出现次数一定是 $siz_u$ 即状态 $u$ 中的每个字符串出现的次数。
+
+  只统计 $S_{[l,mx_u]}$ 是不够全面的，还需要不断跳 $u$ 的 $\operatorname{link}$ 直到 $mx_u\notin [l,l+len-1]$ 或 $\operatorname{len}(u)< mx_u-l+1$，因为这些状态中的字符串 $S_{[l,mx_u]}$ 也是回文串。
+
+  注意到 $mx$ 一样的 $u$ 只有 $\operatorname{len}(u)$ 最小的才会有贡献，所以可以用倍增跳 $\operatorname{link}$。
+  
+  不难发现一个子串只会被统计一次，所以时间复杂度即为 $O(n\log n)$。
+  
+  另外似乎还有一种做法即跳 $\operatorname{link}$ 时给跳过的状态打上标记，下一次不跳。这种做法时间复杂度是 $O(n)$ 的，但是正确性不是很显然。
+
+虽然第二种做法很难写，但是可以增加对 SAM 的理解。所以我写了第二种做法，然后 BZOJ 过了洛谷一直 MLE……
+
+<details><summary>代码（第二种做法）</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <map>
+
+using namespace std;
+
+const int S=300001,V=26,BS=20;
+
+struct SAM
+{
+	int tot;
+	int len[S*2],link[S*2];
+	map<char,int> to[S*2];
+	vector<int> son[S*2];
+	int siz[S*2],mx[S*2];
+	vector<int> fa[S*2];
+	int lst;
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=siz[i]=mx[i]=0;
+			to[i].clear();
+			son[i].clear();
+			fa[i].clear();
+		}
+		link[0]=-1;
+		tot=lst=0;
+	}
+	inline void ins(int c,int pp)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		siz[pre]=1,mx[pre]=pp;
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				to[cpy]=to[q];
+				link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+	inline void build()
+	{
+		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+	}
+	void dfs(int u=0)
+	{
+		if(u!=0)
+		{
+			fa[u].push_back(link[u]);
+			for(int i=1;i<=BS;i++)
+			{
+				if(fa[u][i-1]==-1) break;
+				else
+				{
+					int fat=fa[u][i-1];
+					if(fa[fat].size()<=i-1) break;
+					else fa[u][i]=fa[fat][i-1];
+				}
+			}
+		}
+		for(int v:son[u])
+		{
+			dfs(v);
+			siz[u]+=siz[v],mx[u]=max(mx[u],mx[v]);
+		}
+		vector<int>().swap(son[u]); // 释放 vector 空间
+	}
+};
+
+int n;
+char a[S];
+SAM sam;
+
+int main()
+{
+	scanf(&quot;%s&quot;,a);
+	n=strlen(a);
+	sam.init();
+	for(int i=0;i<n;i++) sam.ins(a[i]-'a',i);
+	sam.build();
+	sam.dfs();
+	int u=0,len=0;
+	long long ans=0;
+	for(int i=n-1;i>=0;i--)
+	{
+		while(u!=-1&&sam.to[u][a[i]-'a']==0)
+		{
+			u=sam.link[u];
+			if(u!=-1) len=sam.len[u];
+		}
+		if(u==-1) u=0,len=0;
+		else u=sam.to[u][a[i]-'a'],len++;
+		int r=i+len-1,v=u;
+		while(sam.mx[v]<=r&&sam.len[v]>=sam.mx[v]-i+1)
+		{
+			for(int j=BS;j>=0;j--)
+			{
+				if(sam.fa[v].size()>j&&sam.mx[sam.fa[v][j]]==sam.mx[v]&&sam.len[sam.fa[v][j]]>=sam.mx[v]-i+1) v=sam.fa[v][j];
+			}
+			if(sam.mx[v]>=i) ans=max(ans,1ll*(sam.mx[v]-i+1)*sam.siz[v]);
+			if(sam.fa[v].size()>0) v=sam.fa[v][0];
+			else break;
+		}
+	}
+	printf(&quot;%lld\n&quot;,ans);
+	return 0;
+}
+```
+</p></details>
+
+### [P5685 [JSOI2013]快乐的 JYY](https://www.luogu.com.cn/problem/P5685)
+
+双倍经验：[P5555 秩序魔咒](https://www.luogu.com.cn/problem/P5685)
+
+和上一题差不多，建完“伪广义” SAM 之后跑 manacher+哈希求出 $A$ 的所有本质不同的回文子串 $[l,r]$，然后找到 $A_{[1,r]}$ 即前缀 $r$ 对应的 SAM 上的状态，倍增找到 $A_{[l,r]}$ 所在的状态，然后统计答案即可。
+
+<details><summary>代码</summary><p>
+
+```cpp
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <set>
+
+using namespace std;
+
+const int S=100005,V=27,BS=25,bse=31,p1=998244353,p2=1000000007;
+
+struct SAM
+{
+	int tot;
+	int len[S*4],to[S*4][V],link[S*4];
+	vector<int> suf,son[S*4];
+	int siz[2][S*4];
+	int fa[S*4][BS+1];
+	int lst;
+	inline void init()
+	{
+		for(int i=0;i<=tot;i++)
+		{
+			len[i]=link[i]=siz[0][i]=siz[1][i]=0;
+			memset(to[i],0,sizeof(to[i]));
+			vector<int>().swap(son[i]);
+		}
+		vector<int>().swap(suf);
+		tot=lst=0;
+		link[0]=-1;
+		suf.push_back(0);
+	}
+	inline void ins(int c,int tpe)
+	{
+		int pre=++tot;
+		len[pre]=len[lst]+1;
+		suf.push_back(pre);
+		siz[tpe][pre]=1;
+		int p=lst;
+		while(p!=-1&&to[p][c]==0) to[p][c]=pre,p=link[p];
+		if(p==-1) link[pre]=0;
+		else
+		{
+			int q=to[p][c];
+			if(len[q]==len[p]+1) link[pre]=q;
+			else
+			{
+				int cpy=++tot;
+				len[cpy]=len[p]+1;
+				memcpy(to[cpy],to[q],sizeof(to[q]));
+				link[cpy]=link[q];
+				link[pre]=cpy;
+				while(p!=-1&&to[p][c]==q) to[p][c]=cpy,p=link[p];
+				link[q]=cpy;
+			}
+		}
+		lst=pre;
+	}
+	inline void build()
+	{
+		for(int i=1;i<=tot;i++) son[link[i]].push_back(i);
+	}
+	void calctag(int u=0)
+	{
+		fa[u][0]=link[u];
+		for(int i=1;i<=BS;i++)
+		{
+			int tp=fa[u][i-1];
+			if(tp==-1) fa[u][i]=-1;
+			else fa[u][i]=fa[tp][i-1];
+		}
+		for(int v:son[u])
+		{
+			calctag(v);
+			for(int j=0;j<=1;j++) siz[j][u]+=siz[j][v];
+		}
+	}
+};
+
+int n,m;
+char a[S],b[S];
+SAM sam;
+char str[S*2];
+int ext[S*2];
+int pw1[S],pw2[S];
+int s1[S],s2[S];
+set<pair<int,int>> st;
+
+inline pair<int,int> calchash(int l,int r)
+{
+	return make_pair(
+	(s1[r]-1ll*s1[l-1]*pw1[r-l+1]%p1+p1)%p1,
+	(s2[r]-1ll*s2[l-1]*pw2[r-l+1]%p2+p2)%p2);
+}
+
+int main()
+{
+	scanf(&quot;%s%s&quot;,a+1,b+1);
+	sam.init();
+	n=strlen(a+1),m=strlen(b+1);
+	for(int i=1;i<=n;i++) sam.ins(a[i]-'A',0);
+	sam.ins(26,1);
+	for(int i=1;i<=m;i++) sam.ins(b[i]-'A',1);
+	sam.build();
+	sam.calctag();
+	pw1[0]=1,pw2[0]=1;
+	for(int i=1;i<=n;i++)
+	{
+		pw1[i]=1ll*pw1[i-1]*bse%p1;
+		pw2[i]=1ll*pw2[i-1]*bse%p2;
+		s1[i]=(1ll*s1[i-1]*bse%p1+a[i]-'A'+1)%p1;
+		s2[i]=(1ll*s2[i-1]*bse%p2+a[i]-'A'+1)%p2;
+	}
+	for(int i=1;i<=n;i++) str[i*2]=a[i];
+	n=n*2+1;
+	for(int i=1;i<=n;i+=2) str[i]='#';
+	str[0]='@',str[n+1]='$';
+	long long ans=0;
+	for(int i=1,pos=0;i<=n;i++)
+	{
+		if(pos+ext[pos]>i) ext[i]=min(pos+ext[pos]-i,ext[pos-(i-pos)]);
+		while(str[i-ext[i]]==str[i+ext[i]])
+		{
+			ext[i]++;
+			if(str[i-ext[i]+1]=='#'&&ext[i]>1)
+			{
+				int len=ext[i]-1;
+				int rb=i/2+len/2;
+				pair<int,int> pir=calchash(rb-len+1,rb);
+				if(st.count(pir)==0)
+				{
+					st.insert(pir);
+					int u=sam.suf[rb];
+					if(sam.len[sam.link[u]]+1>len)
+					{
+						for(int j=BS;j>=0;j--)
+						{
+							int to=sam.fa[u][j];
+							if(to!=-1&&sam.link[to]!=-1&&sam.len[sam.link[to]]+1>len) u=to;
+						}
+						u=sam.fa[u][0];
+					}
+					ans+=1ll*sam.siz[0][u]*sam.siz[1][u];
+//					for(int j=rb-len+1;j<=rb;j++) printf(&quot;%c&quot;,a[j]);
+//					printf(&quot; : %d * %d\n&quot;,sam.siz[0][u],sam.siz[1][u]);
+				}
+			}
+		}
+		if(i+ext[i]>pos+ext[pos]) pos=i;
+		
+	}
+	printf(&quot;%lld\n&quot;,ans);
+	return 0;
+}
+```
+</p></details>
+"></div>
+					<div class="post-footer">
+	<ul class="post-copyright">
+		<li class="post-copyright-author">
+			<strong class="language" data-lan="author">本文作者：</strong>Exber
+		</li>
+		<li class="post-copyright-link">
+			<strong class="language" data-lan="link">本文链接：</strong>
+			<a href="https://exber.qzz.io/post/SAM%EF%BC%88%E5%90%8E%E7%BC%80%E8%87%AA%E5%8A%A8%E6%9C%BA%EF%BC%89%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0" title="SAM（后缀自动机）学习笔记">https://exber.qzz.io/post/SAM%EF%BC%88%E5%90%8E%E7%BC%80%E8%87%AA%E5%8A%A8%E6%9C%BA%EF%BC%89%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0</a>
+		</li>
+		<li class="post-copyright-license">
+			<strong class="language" data-lan="copyright">版权声明： </strong>
+			本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+		</li>
+	</ul>
+	<div class="tags">
+		
+			<a href="https://exber.qzz.io/tags"># 学习笔记</a>
+		
+			<a href="https://exber.qzz.io/tags"># 字符串</a>
+		
+			<a href="https://exber.qzz.io/tags"># 数据结构</a>
+		
+	</div>
+</div>
+				</div>
+			</div>
+			<script>
+	// 处理目录
+	function work_with_toc() {
+		let lastTop = 0, lList = [], hList = [], postBody, lastIndex = -1;
+		let active = 'active-show', activeClass = 'active-current';
+		let tocWrapper = document.querySelector('#toc_wrapper');
+		let tocContent = tocWrapper.children[0];
+		let autoNumber = tocWrapper && tocWrapper.classList.contains('auto-number');
+
+		function addTocNumber(elem, deep) {
+			if (!elem) {
+				return;
+			}
+			let prop = elem.__proto__;
+
+			if (prop === HTMLUListElement.prototype) {
+				for (let i = 0; i < elem.children.length; i++) {
+					addTocNumber(elem.children[i], deep + (i + 1) + '.');
+				}
+			} else if (prop === HTMLLIElement.prototype) {
+				// 保存li元素
+				if (elem.children[0] && elem.children[0].__proto__ === HTMLAnchorElement.prototype) {
+					lList.push(elem);
+				}
+				for (let i = 0; i < elem.children.length; i++) {
+					let cur = elem.children[i];
+					if (cur.__proto__ === HTMLAnchorElement.prototype) {
+						if (autoNumber) {
+							cur.text = deep + ' ' + cur.text;
+						}
+					} else if (cur.__proto__ === HTMLUListElement.prototype) {
+						addTocNumber(cur, deep);
+					}
+				}
+			}
+		}
+
+		function removeParentActiveClass() {
+			let parents = tocContent.querySelectorAll('.' + active)
+			parents.forEach(function (elem) {
+				elem.classList.remove(active);
+			});
+		}
+
+		function addActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.add(activeClass);
+			}
+		}
+
+		function removeActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.remove(activeClass);
+			}
+		}
+
+		function addActiveLiElemment(elem, parent) {
+			if (!elem || elem === parent) {
+				return;
+			} else {
+				if (elem.__proto__ === HTMLLIElement.prototype) {
+					elem.classList.add(active);
+				}
+				addActiveLiElemment(elem.parentElement, parent);
+			}
+		}
+
+		function showToc() {
+			if (tocWrapper) {
+				postBody = document.querySelector('#post_body');
+				for (let i = 0; i < postBody.children.length; i++) {
+					if (postBody.children[i].__proto__ === HTMLHeadingElement.prototype) {
+						hList.push(postBody.children[i]);
+					}
+				}
+				if (tocWrapper.classList.contains('compress')) {
+					tocContent.classList.add('closed');
+				} else if (tocWrapper.classList.contains('no_compress')) {
+					tocContent.classList.add('expanded');
+				} else {
+					if (hList.length > 10) {
+						active = 'active-hidden'
+						tocContent.classList.add('closed');
+					} else {
+						tocContent.classList.add('expanded');
+					}
+				}
+			}
+		}
+
+		(function () {
+			// 处理不是从一级标题开始目录
+			while (tocContent.children.length === 1 && tocContent.children[0].__proto__ === HTMLUListElement.prototype) {
+				let con = tocContent.children[0];
+				tocContent.innerHTML = con.innerHTML;
+			}
+			addTocNumber(tocContent, '');
+		})();
+
+		document.addEventListener('scroll', function (e) {
+			if (lList.length <= 0) {
+				return;
+			}
+			let scrollTop = document.scrollingElement.scrollTop + 10;
+			let dir;
+
+			if (lastTop - scrollTop > 0) {
+				dir = 'up';
+			} else {
+				dir = 'down';
+			}
+
+			lastTop = scrollTop;
+			if (scrollTop <= 0) {
+				if (lastIndex >= 0 && lastIndex < hList.length) {
+					lList[lastIndex].classList.remove(activeClass);
+				}
+				return;
+			}
+
+			let current = 0, hasFind = false;
+			for (let i = 0; i < hList.length; i++) {
+				if (hList[i].offsetTop > scrollTop) {
+					current = i;
+					hasFind = true;
+					break;
+				}
+			}
+			if (!hasFind && scrollTop > lList[lList.length - 1].offsetTop) {
+				current = hList.length - 1;
+			} else {
+				current--;
+			}
+			if (dir === 'down') {
+				if (current > lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex)
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			} else {
+				if (current < lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex);
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			}
+		});
+
+
+		window.addEventListener('load', function () {
+			showToc();
+			document.querySelector('#sidebar').style = 'display: block;';
+			tocWrapper.classList.add('toc-active');
+			setTimeout(function () {
+				if ("createEvent" in document) {
+					let evt = document.createEvent("HTMLEvents");
+					evt.initEvent("scroll", false, true);
+					document.dispatchEvent(evt);
+				}
+				else {
+					document.fireEvent("scroll");
+				}
+			}, 500)
+		})
+		
+		const SIDEBAR_TITLE_ACTIVE = 'sidebar-title-active';
+		const SIDEBAR_BODY_ACTIVE = 'sidebar-body-active';
+		const SLIDE_UP_IN = 'slide-up-in';
+
+		let tocSideBar = document.querySelector('#tocSideBar'),
+		metaSideBar = document.querySelector('#metaSideBar'),
+		postToc = document.querySelector('#post_toc'),
+		postSiteMeta = document.querySelector('#post_side_meta'),
+		sidebarTitle = document.querySelector('.sidebar-title'),
+		sidebarBody = document.querySelector('#sidebar_body');
+
+		tocSideBar && tocSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		metaSideBar && metaSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		function toggleSidebar(e) {
+			let currentTitle = document.querySelector("."+SIDEBAR_TITLE_ACTIVE);
+			if (currentTitle == e.srcElement) {
+				return ;
+			}
+			let current, showElement, hideElement;
+			if (e.srcElement == metaSideBar) {
+				showElement = postSiteMeta;
+				hideElement = postToc;
+			} else if (e.srcElement == tocSideBar){
+				showElement = postToc;
+				hideElement = postSiteMeta;
+			}
+			currentTitle.classList.remove(SIDEBAR_TITLE_ACTIVE);
+			e.srcElement.classList.add(SIDEBAR_TITLE_ACTIVE);
+
+			jQuery.Velocity(hideElement, 'stop');
+			jQuery.Velocity(hideElement, 'transition.slideUpOut', {
+				display: 'none',
+				duration: 200,
+				complete: function () {
+					jQuery.Velocity(showElement, 'transition.slideDownIn', {
+						duration: 200
+					});
+				}
+			})
+			hideElement.classList.remove(SIDEBAR_BODY_ACTIVE);
+			showElement.classList.add(SIDEBAR_BODY_ACTIVE);
+		}
+
+		postToc && postToc.addEventListener('transitionend', function() {
+			this.classList.remove(SLIDE_UP_IN);
+		});
+	}
+</script>
+<script>
+	// 没有目录时删除侧边栏目录相关
+	function remove_toc(){
+		document.querySelector('#sidebar-selector').remove();
+		document.querySelector('#post_toc').remove();
+		document.querySelector('#post_side_meta').classList.remove("post-side-meta");
+	}
+</script>
+<script>
+	// 渲染文章 markdown 并生成目录
+	function render_post_markdown(content)
+	{
+		let markdown = window.markdownit({ html: true })
+				.use(markdownItLinkEncodeFixed)
+				.use(window.markdownItAnchor, {
+					permalink: false,
+					permalinkBefore: false
+				})
+				.use(window.texmath, {
+					engine: katex,
+					delimiters: 'dollars'
+				});
+		// 处理图片路径
+		let temp_container = document.createElement('div');
+		temp_container.innerHTML = markdown.render(content);
+		{
+			let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		{
+			let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		return temp_container.innerHTML;
+	}
+	function generateToc() {
+		const contentElement = document.getElementById('post_body');
+		const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+		const tocElement = document.getElementById('toc_wrapper');
+		
+		if (headings.length === 0) {
+			return false;
+		}
+		let toc_ul = "<ul style='list-style: none;'>";
+		let toc_li = "<li style='list-style: none;'>";
+		let tocHtml = toc_ul;
+		let currentLevel = 1;
+		let stack = [0];
+		
+		headings.forEach((heading, index) => {
+			const level = parseInt(heading.tagName.substring(1));
+			const id = heading.id || `heading-${index}`;
+			heading.id = id;
+			
+			// 提取包含公式的 HTML 内容
+			let headingContent = heading.innerHTML;
+			
+			// 调整层级逻辑
+			if (level > currentLevel) {
+				for (let i = currentLevel; i < level; i++) {
+					tocHtml += toc_ul;
+					stack[i] = 0;
+				}
+			} else if (level < currentLevel) {
+				for (let i = currentLevel; i > level; i--) {
+					tocHtml += '</ul></li>';
+					stack.pop();
+				}
+			} else if (index > 0) {
+				tocHtml += '</li>';
+			}
+			
+			stack[level-1] = (stack[level-1] || 0) + 1;
+			for (let i = level; i < stack.length; i++) {
+				stack[i] = 0;
+			}
+			
+			// 使用渲染后的内容（包含已处理的公式）
+			tocHtml += toc_li+`<a href="#${id}">${headingContent}</a>`;
+			currentLevel = level;
+		});
+		
+		for (let i = 1; i < currentLevel; i++) {
+			tocHtml += '</ul></li>';
+		}
+		if (headings.length > 0) {
+			tocHtml += '</li>';
+		}
+		
+		tocHtml += '</ul>';
+		tocElement.innerHTML = tocHtml;
+		
+		return true;
+	}
+</script>
+<script>
+	!function () {
+		const post_body = document.querySelector('div[data-post-markdown]');
+		
+		try {
+			const markdownContent = post_body.getAttribute('data-post-markdown');
+			
+			if (markdownContent) {
+				const renderedHTML = render_post_markdown(markdownContent);
+				post_body.innerHTML = renderedHTML;
+				post_body.removeAttribute('data-post-markdown');
+				if(generateToc()) work_with_toc();
+				else remove_toc();
+			}
+		} catch (error) {
+			post_body.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+		}
+	}();
+</script>
+		</div>
+	</div>
+	
+
+
+
+
+
+
+<div class="footer-box">
+	<footer class="footer">
+		<center id="runTimeBox">
+			已运行: <span id="run_time"></span>
+		</center>
+		<script>
+			BirthDay = new Date('2023-03-01');
+			if (BirthDay.getTime()) {
+				function runTime() {
+					str = "";
+					today = new Date();
+					timeold = today.getTime() - BirthDay.getTime();
+					msPerDay = 24 * 60 * 60 * 1000;
+					e_daysold = timeold / msPerDay;
+					daysold = Math.floor(e_daysold);
+					str += daysold + " 天";
+					return str;
+				}
+				setInterval(function () {
+					$("#run_time").html(runTime());
+				}, 1000);
+			} else {
+				document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+			}
+		</script>
+		<div class="poweredby">
+			Powered by Exber
+		</div>
+	</footer>
+	<div class="pisces back-to-top" id="back_to_top">
+		<i class="fa fa-arrow-up"></i>
+		<span class="scrollpercent">
+			<span id="back_to_top_text">0</span>%
+		</span>
+	</div>
+</div>
+<script>
+	// back2top
+	let back2Top = document.querySelector("#back_to_top"),
+		back2TopText = document.querySelector("#back_to_top_text");
+
+	function scrollAnimation(currentY, targetY) {
+		let needScrollTop = targetY - currentY;
+		let _currentY = currentY;
+		setTimeout(() => {
+			const dist = Math.ceil(needScrollTop / 10);
+			_currentY += dist;
+			window.scrollTo(_currentY, currentY);
+			if (needScrollTop > 10 || needScrollTop < -10) {
+				scrollAnimation(_currentY, targetY);
+			} else {
+				window.scrollTo(_currentY, targetY);
+			}
+		}, 1);
+	}
+
+	back2Top.addEventListener("click", function(e) {
+		scrollAnimation(document.scrollingElement.scrollTop, 0);
+		e.stopPropagation();
+		return false;
+	});
+
+	window.addEventListener("scroll", function(e) {
+		let percent =
+			(document.scrollingElement.scrollTop /
+				(document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight)) *
+			100;
+		if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+			back2Top.classList.add("back-top-active");
+		}
+		if (percent == 0) {
+			back2Top.classList.remove("back-top-active");
+		}
+		if (back2TopText) {
+			back2TopText.textContent = Math.floor(percent);
+		}
+	});
+</script>
+	</div>
+</body>
+
+
+
+
+
+
+
+<input hidden id="copy" />
+<link rel="stylesheet" href="https://exber.qzz.io/media/css/jquery.fancybox.css" />
+<script src="https://exber.qzz.io/media/js/jquery.fancybox.js"></script>
+<script>
+	// 渲染所有带有 data-markdown 属性的 div 元素
+	!function () {
+		const markdownElements = document.querySelectorAll('div[data-markdown]');
+		
+		markdownElements.forEach((element, index) => {
+			try {
+				const markdownContent = element.getAttribute('data-markdown');
+				
+				if (markdownContent) {
+					const renderedHTML = render_markdown(markdownContent);
+					element.innerHTML = renderedHTML;
+					element.removeAttribute('data-markdown');
+				}
+			} catch (error) {
+				element.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+			}
+		});
+	}();
+</script>
+<script>
+	document.querySelectorAll(".section img").forEach((image) => {
+		var parent = image.parentElement;
+		var next = image.nextElementSibling;
+		parent.removeChild(image);
+		var aelem = document.createElement("a");
+		aelem.href = image.src;
+		aelem.dataset["fancybox"] = "images";
+		aelem.dataset["rel"] = "fancybox-button";
+		aelem.classList.add("fancybox");
+		aelem.appendChild(image);
+		parent.insertBefore(aelem, next);
+	});
+	
+	!function () {
+		let times = document.querySelectorAll('.publish-time');
+		for (let i = 0; i < times.length; i++) {
+			let date = times[i].dataset.t;
+			let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+			if (time < 60) {
+				str = time + '秒之前';
+			} else if (time < 3600) {
+				str = Math.floor(time / 60) + '分钟之前';
+			} else if (time >= 3600 && time < 86400) {
+				str = Math.floor(time / 3600) + '小时之前';
+			} else if (time >= 86400 && time < 259200) {
+				str = Math.floor(time / 86400) + '天之前';
+			} else {
+				str = times[i].textContent;
+			}
+			times[i].textContent = str;
+		}
+	}();
+	
+	let language = '';
+	if (language !== '') {
+		let map = new Map();
+		if (language === 'en') {
+			map.set('search', 'Search');
+			map.set('category', 'Categories');
+			map.set('article', 'Articles');
+			map.set('tag', 'Tags');
+			map.set('top', 'Top');
+			map.set('publish', 'published');
+			map.set('minute', ' minutes');
+			map.set('read-more', 'Read More');
+			map.set('view', 'View');
+			map.set('words', ' words');
+			map.set('category-in', 'category in');
+			map.set('preview', 'Meta');
+			map.set('index', 'Toc');
+			map.set('no-archives', "You haven't created yet");
+			map.set('archives', " articles in total");
+			map.set('cloud-tags', " tags in total");
+			map.set('copyright', "Copyright: ");
+			map.set('author', "Author: ");
+			map.set('link', "Link: ");
+			map.set('leave-message', "Leave a message");
+			map.set('format', "Links Format");
+			map.set('site-name', "Name: ");
+			map.set('site-link', "Link: ");
+			map.set('site-desc', "Desc: ");
+			map.set('stat', " related results, taking ");
+			map.set('stat-time', " ms");
+			map.set('site-img', "Image: ");
+			map.set('copy-markdown', "Copy Markdown");
+		}
+
+		if (map.size > 0) {
+			let lanElems = document.querySelectorAll('.language');
+			lanElems.forEach(elem => {
+				let lan = elem.dataset.lan, text = map.get(lan);
+				if (elem.__proto__ === HTMLInputElement.prototype) {
+					elem.placeholder = text
+				} else {
+					if (elem.dataset.count) {
+						text = elem.dataset.count + text;
+					}
+					elem.textContent = text;
+				}
+			})
+		}
+	}
+
+	function copyCode(e) {
+		if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+			let code = e.currentTarget.querySelector('code');
+			var text = code.innerText;
+			if (e.srcElement.textContent === '复制成功') {
+				return;
+			}
+			e.srcElement.textContent = '复制成功';
+			(function (elem) {
+				setTimeout(() => {
+					if (elem.textContent === '复制成功') {
+						elem.textContent = '复制代码'
+					}
+				}, 1000);
+			})(e.srcElement)
+			Clipboard.copy(text);
+		}
+	}
+
+	let pres = document.querySelectorAll('pre');
+	pres.forEach(pre => {
+		let code = pre.querySelector('code');
+		let copyElem = document.createElement('span');
+		copyElem.classList.add('copy-code');
+		copyElem.textContent = '复制代码';
+		pre.appendChild(copyElem);
+		pre.onclick = copyCode
+	})
+</script>
+<script src="https://exber.qzz.io/media/js/motion.js"></script>
+<script src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+<script>
+	var scroll = new SmoothScroll('a[href*="#"]', {
+		speed: 200
+	});
+</script>
+<script>
+	// 动态调整站点概览位置
+	let hasCacu = false;
+	window.addEventListener("resize", function(e) {
+		calcuHeight();
+	});
+
+	function calcuHeight() {
+		if (!hasCacu) {
+			let sideBar = document.querySelector(".sidebar");
+			let navUl = document.querySelector("#site_nav");
+			sideBar.style =
+				"margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+			hasCacu = true;
+		}
+	}
+	calcuHeight();
+	
+	// 侧边栏固定逻辑
+	let sidebar = document.querySelector('.sidebar');
+	let sidebarWrapper = document.querySelector('#sidebar');
+	if (sidebar) {
+		let hasFix = false;
+		document.addEventListener('scroll', function(e) {
+		  if (document.scrollingElement.scrollTop > parseInt(sidebar.style.marginTop) + 15) {
+			if (!hasFix) {
+				sidebarWrapper.classList.add('sidebar-fixed')
+				hasFix = true;
+			}
+		  } else {
+			if (hasFix) {
+				sidebarWrapper.classList.remove('sidebar-fixed')
+				hasFix = false;
+			}
+		  }
+		});
+	}
+</script>
+<script>
+	// 链接跳转
+	let newWindow = "true";
+	if (newWindow === "true") {
+		let links = document.querySelectorAll(".post-body a");
+		links.forEach((item) => {
+			if (!item.classList.contains("btn")) {
+				item.setAttribute("target", "_blank");
+			}
+		});
+	}
+
+	// 代码高亮
+	hljs.initHighlightingOnLoad();
+
+	// 离开当前页title变化
+	var leaveTitle = "";
+	var normal_title = document.title;
+	if (leaveTitle) {
+		document.addEventListener("visibilitychange", function() {
+			if (document.visibilityState == "hidden") {
+				normal_title = document.title;
+				document.title = leaveTitle;
+			} else {
+				document.title = normal_title;
+			}
+		});
+	}
+</script>
+</html>

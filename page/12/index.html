@@ -1,0 +1,1489 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	
+
+
+
+
+
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="静态个人博客">
+<meta name="description" content="Exber's Blog">
+<meta name="theme-color" content="#000">
+
+<title>Exber's Blog</title>
+
+<link rel="shortcut icon" href="https://exber.qzz.io/favicon.ico?v=1769647447">
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/css/pisces.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/fonts/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/hljs/styles/default.css">
+
+<link
+  href="https://fonts.font.im/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet"
+  type="text/css"
+>
+
+<link rel="stylesheet/less" type="text/css" href="https://exber.qzz.io/styles/main.less">
+<script src="https://cdn.jsdmirror.com/npm/less@4"></script>
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/main.css">
+
+<script src="https://exber.qzz.io/media/js/jquery.js"></script>
+<script src="https://exber.qzz.io/media/hljs/highlight.js"></script>
+
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+<script src="https://cdn.jsdmirror.com/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-texmath/texmath.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-anchor/dist/markdownItAnchor.umd.js"></script>
+
+<script>
+// 处理带空格的链接
+function markdownItLinkEncodeFixed(md) {
+	// 1. 修复链接打开规则
+	const defaultLinkOpenRender = md.renderer.rules.link_open || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const hrefIndex = token.attrIndex('href');
+		
+		if (hrefIndex >= 0) {
+			const originalHref = token.attrs[hrefIndex][1];
+			// 更健壮的编码处理
+			const encodedHref = encodeURI(originalHref).replace(/%20/g, '%20');
+			token.attrs[hrefIndex][1] = encodedHref;
+		}
+		
+		return defaultLinkOpenRender(tokens, idx, options, env, self);
+	};
+
+	// 2. 修复图片规则
+	const defaultImageRender = md.renderer.rules.image || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.image = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const srcIndex = token.attrIndex('src');
+		
+		if (srcIndex >= 0) {
+			const originalSrc = token.attrs[srcIndex][1];
+			const encodedSrc = encodeURI(originalSrc).replace(/%20/g, '%20');
+			token.attrs[srcIndex][1] = encodedSrc;
+		}
+		
+		return defaultImageRender(tokens, idx, options, env, self);
+	};
+
+	// 3. 新增：处理可能被误解析为text的链接[1](@ref)
+	const defaultTextRender = md.renderer.rules.text || 
+		function(tokens, idx, options, env, self) {
+			const token = tokens[idx];
+			return token.content;
+		};
+
+	md.renderer.rules.text = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const content = token.content;
+		
+		// 检测类似链接模式的text token[1](@ref)
+		if (content.includes('[') && content.includes(']') && content.includes('(') && content.includes(')')) {
+			try {
+				// 尝试提取和编码链接
+				const linkMatch = content.match(/\[([^\]]+)\]\(([^)]+)\)/);
+				if (linkMatch) {
+					const linkText = linkMatch[1];
+					const linkUrl = encodeURI(linkMatch[2]).replace(/%20/g, '%20');
+					return `<a href="${linkUrl}">${linkText}</a>`;
+				}
+			} catch (e) {
+				console.warn('链接提取失败:', e);
+			}
+		}
+		
+		return defaultTextRender(tokens, idx, options, env, self);
+	};
+}
+function render_markdown(content)
+{
+	let markdown = window.markdownit({ html: true })
+			 .use(markdownItLinkEncodeFixed)
+			 .use(window.texmath, {
+				 engine: katex,
+				 delimiters: 'dollars'
+			 });
+	// 处理图片路径
+	let temp_container = document.createElement('div');
+	temp_container.innerHTML = markdown.render(content);
+	{
+		let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	{
+		let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	return temp_container.innerHTML;
+}
+</script>
+<script>
+	window.Clipboard = (function (window, document, navigator) {
+		var textArea,
+			copy;
+
+		// 判断是不是ios端
+		function isOS() {
+			return navigator.userAgent.match(/ipad|iphone/i);
+		}
+		//创建文本元素
+		function createTextArea(text) {
+			textArea = document.createElement('textArea');
+			textArea.value = text;
+			textArea.style.width = 0;
+			textArea.style.height = 0;
+			textArea.clientHeight = 0;
+			textArea.clientWidth = 0;
+			document.body.appendChild(textArea);
+		}
+		//选择内容
+		function selectText() {
+			var range,
+				selection;
+
+			if (isOS()) {
+				range = document.createRange();
+				range.selectNodeContents(textArea);
+				selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				textArea.setSelectionRange(0, 999999);
+			} else {
+				textArea.select();
+			}
+		}
+
+		//复制到剪贴板
+		function copyToClipboard() {
+			try {
+				document.execCommand("Copy")
+			} catch (err) {
+				alert("复制错误！请手动复制！")
+			}
+			document.body.removeChild(textArea);
+		}
+
+		copy = function (text) {
+			createTextArea(text);
+			selectText();
+			copyToClipboard();
+		};
+
+		return {
+			copy: copy
+		};
+	})(window, document, navigator);
+</script>
+</head>
+
+<body>
+	<div class="head-top-line"></div>
+	<div class="header-box">
+		
+		
+		
+	<style> /* 搜索相关 */
+		.gridea-search-input{
+			height: 30px;
+			width: 200px;
+			box-sizing: border-box;
+			padding: 0 15px 0 30px;
+			border: 1px solid #e3e3e3;
+			border-radius: 15px;
+			color: #273849;
+			outline: none;
+			transition: border-color 0.2s ease;
+			background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+			background-size: 20px;
+			vertical-align: middle !important;
+		}
+		.gridea-search-input:focus {
+		  border-color: #666666;
+		  right: 0;
+		}
+		/* 自适应轨道 */
+		.slider-track {
+			--track-height: 0.4em; /* 轨道基础高度 */
+			width: 100%;
+			height: var(--track-height);
+			background: #e0e0e0;
+			border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+			position: relative;
+			cursor: default;
+			margin: 0.5em 0; /* 垂直间距自适应 */
+		}
+		
+		/* 进度填充 */
+		.slider-fill {
+			height: 100%;
+			background: #555;
+			border-radius: inherit; /* 继承父级圆角 */
+			width: 50%; /* 初始值 */
+		}
+		
+		/* 自适应滑块 */
+		.slider-thumb {
+			--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+			position: absolute;
+			width: var(--thumb-size);
+			height: var(--thumb-size);
+			background: #555;
+			border-radius: 50%;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: 
+				transform 0.2s ease,
+				box-shadow 0.2s ease;
+			border: 2px solid white; /* 增加辨识度 */
+		}
+		
+		/* 悬停效果 */
+		.slider-thumb:hover {
+			background: #333;
+			transform: translate(-50%, -50%) scale(1.1);
+			box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+		}
+		
+		/* 拖动效果 */
+		.slider-thumb:active {
+			cursor: grabbing;
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		}
+		
+		/* 数值显示 */
+		.value-display {
+			text-align: center;
+			font-family: Arial, sans-serif;
+			color: #555;
+			font-size: 1.2em; /* 基于容器字体大小 */
+			margin-top: 0.5em;
+		}
+	</style>
+
+<div class="pisces">
+  <header class="header">
+    <div class="blog-header box-shadow-wrapper" id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+            <a href="https://exber.qzz.io" class="brand">
+              <span>Exber's Blog</span>
+            </a>  
+        </div>
+        
+			<p class="subtitle">Can't go up</p>
+        
+      </div>
+      <nav class="site-nav bg-color" id="site_nav">
+        <ul id="nav_ul">
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io" target="">
+					首页
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io/tags" target="">
+					按标签筛选
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://csacademy.com/app/graph_editor/" target="_blank">
+					图论编辑器
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="http://yuantiji.ac/zh/" target="_blank">
+					原题机
+				</a>
+            </li>
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://exber.qzz.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.6</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script>
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+
+
+	<script>
+		// 获取DOM元素
+		const sliderTrack = document.getElementById('sliderTrack');
+		const sliderThumb = document.getElementById('sliderThumb');
+		const sliderFill = document.getElementById('sliderFill');
+		const sliderValue = document.getElementById('sliderValue');
+		
+		// 初始化变量
+		let isDragging = false;
+		let currentValue = 0.6;
+		
+		// 更新滑块位置和数值显示
+		function updateSlider(positionX) {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			let newPosition;
+
+			// 检查轨道宽度是否有效
+			if (trackRect.width <= 0) {
+				// 如果轨道宽度无效，则直接使用当前的 currentValue
+				newPosition = currentValue;
+			} else {
+				// 正常计算位置
+				newPosition = (positionX - trackRect.left) / trackRect.width;
+				newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+			}
+
+			// 更新UI
+			sliderThumb.style.left = `${newPosition * 100}%`;
+			sliderFill.style.width = `${newPosition * 100}%`;
+
+			// 更新当前值和表单隐藏域的值
+			currentValue = newPosition;
+			document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+
+			// 更新显示值（保留两位小数）
+			// 使用 Number.isNaN 进行严格检查，确保显示正常
+			const displayValue = Number.isNaN(newPosition) ? '0.60' : newPosition.toFixed(2);
+			sliderValue.textContent = displayValue;
+		}
+		
+		// 响应父容器大小变化
+		function handleResize() {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			const positionX = trackRect.left + trackRect.width * currentValue;
+			updateSlider(positionX);
+		}
+		
+		// 鼠标按下事件 - 仅在圆点上触发
+		sliderThumb.addEventListener('mousedown', (e) => {
+			isDragging = true;
+			sliderThumb.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		
+		// 鼠标移动事件
+		document.addEventListener('mousemove', (e) => {
+			if (!isDragging) return;
+			updateSlider(e.clientX);
+		});
+		
+		// 鼠标释放事件
+		document.addEventListener('mouseup', () => {
+			if (isDragging) {
+				isDragging = false;
+				sliderThumb.style.cursor = 'grab';
+			}
+		});
+		
+		// 监听父容器大小变化
+		const resizeObserver = new ResizeObserver(() => {
+			handleResize();
+		});
+		
+		// 开始观察相关元素
+		resizeObserver.observe(sliderTrack.parentElement);
+		resizeObserver.observe(sliderTrack);
+		
+		// 初始化
+		handleResize();
+	</script>
+
+	</div>
+	<div class="main-continer">
+	<div class="section-layout pisces">
+		<div class="section-layout-wrapper">
+			<div class="sidebar">
+	<div class="sidebar-box box-shadow-wrapper bg-color right-motion" id="sidebar">
+		
+
+
+
+
+
+
+<div class="sidebar-item">
+	<img class="site-author-image right-motion" src="https://exber.qzz.io/avatar.png"/>
+	<p class="site-author-name">Exber</p>
+	
+	<div class="site-description right-motion">
+		<p>洛谷 @Exber</p>
+<p>Codeforces @Rebex</p>
+
+	</div>
+	
+</div>
+<div class="sidebar-item side-item-stat right-motion">
+	<div class="sidebar-item-box">
+		<a href="https://exber.qzz.io/tags">
+			<span class="site-item-stat-count">26</span>
+			<span class="site-item-stat-name language" data-lan="tag">标签</span>
+		</a>
+	</div>
+	<div class="sidebar-item-box">
+		<a>
+			
+			<span class="site-item-stat-count">330</span>
+			<span class="site-item-stat-name language" data-lan="article">文章</span>
+		</a>
+	</div>
+</div>
+
+	</div>
+</div>
+			<div class="section-box pisces">
+				<section class="section bg-color posts-expand slide-down-in">
+					
+	<article class="post-list-box post box-shadow-wrapper">
+		<div class="article-wrapper bg-color">
+			
+			<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/CF1784F%20Minimums%20or%20Medians%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95">CF1784F Minimums or Medians 做题记录</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-08-12 15:09:59">2023-08-12 15:09:59</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>做题记录</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>数学</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>组合计数</span>
+				</a>
+			
+		</span>
+		
+		
+		
+	</div>
+</section>
+
+			<div class="post-body next-md-body">
+			<div data-markdown="> 你有一个包含 $1 \sim 2n$ 共 $2n$ 个整数的集合 $S$。你必须执行恰好 $k$（$1 \le k \le n \le 10^6$）次操作，每个操作都是以下两种其中之一：
+>
+> - 将 $S$ 中第 $1, 2$ 个元素删去。
+>
+> - 将 $S$ 中第 $\frac{|S|}2, \frac{|S|}2 + 1$ 个元素删去。（显然 $|S|$ 一直是偶数，所以 $\frac{|S|}2$ 也一定是整数）
+>
+> 请你统计，通过这些操作可以获得多少个本质不同的最终集合 $S$？答案对 $998244353$ 取模。
+"></div>
+			<div class="post-button text-center">
+				<a class="btn language" data-lan="read-more" href="https://exber.qzz.io/post/CF1784F%20Minimums%20or%20Medians%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95" rel="contents">
+					阅读全文 »
+				</a>
+			</div>
+			</div>
+			<footer class="post-footer">
+				<div class="post-eof"></div>
+			</footer>
+		</div>
+	</article>
+
+	<article class="post-list-box post box-shadow-wrapper">
+		<div class="article-wrapper bg-color">
+			
+			<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/CF1648E%20Air%20Reform%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95">CF1648E Air Reform 做题记录</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-08-12 09:43:51">2023-08-12 09:43:51</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>做题记录</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>图论</span>
+				</a>
+			
+		</span>
+		
+		
+		
+	</div>
+</section>
+
+			<div class="post-body next-md-body">
+			<div data-markdown="> 一张 $n$ 个点 $m$ 条边的无向带权简单连通图，其上一条路径的权值为其中所有边权的 $\max$。
+>
+> 考虑这张图的补图，补图中一条边的权值为原图中该边两端点间的最短路（路径长度的定义同上）。保证补图亦是连通图。
+>
+> 对于原图中每条边，求出其两端点在补图中的最短路（定义仍同上）。
+> 
+> $1\le n,m\le 2\times 10^5$，边权范围 $[0,10^9]$。
+"></div>
+			<div class="post-button text-center">
+				<a class="btn language" data-lan="read-more" href="https://exber.qzz.io/post/CF1648E%20Air%20Reform%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95" rel="contents">
+					阅读全文 »
+				</a>
+			</div>
+			</div>
+			<footer class="post-footer">
+				<div class="post-eof"></div>
+			</footer>
+		</div>
+	</article>
+
+	<article class="post-list-box post box-shadow-wrapper">
+		<div class="article-wrapper bg-color">
+			
+			<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/%E6%95%B0%E5%AD%A6%E6%9C%9F%E6%9C%9B%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0">数学期望学习笔记</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-08-08 20:50:23">2023-08-08 20:50:23</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>学习笔记</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>数学</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>概率、期望</span>
+				</a>
+			
+		</span>
+		
+		
+		
+	</div>
+</section>
+
+			<div class="post-body next-md-body">
+			<div data-markdown=""></div>
+			<div class="post-button text-center">
+				<a class="btn language" data-lan="read-more" href="https://exber.qzz.io/post/%E6%95%B0%E5%AD%A6%E6%9C%9F%E6%9C%9B%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0" rel="contents">
+					阅读全文 »
+				</a>
+			</div>
+			</div>
+			<footer class="post-footer">
+				<div class="post-eof"></div>
+			</footer>
+		</div>
+	</article>
+
+	<article class="post-list-box post box-shadow-wrapper">
+		<div class="article-wrapper bg-color">
+			
+			<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/CF1172F%20Nauuo%20and%20Bug%20%26%20P5609%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95">CF1172F Nauuo and Bug & P5609 做题记录</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-08-08 18:59:20">2023-08-08 18:59:20</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>做题记录</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>数据结构</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>结论</span>
+				</a>
+			
+		</span>
+		
+		
+		
+	</div>
+</section>
+
+			<div class="post-body next-md-body">
+			<div data-markdown="> 给定一个如图所示的计算方法：
+>
+> ![](../post-images/1691492484006.webp)
+>
+> 现在给定长 $n$ 的数组 $a$ 和 $p$，要求 $q$ 次询问 $\text{sum}(a,l_i,r_i,p)$ 的值。
+>
+> $1\le n\le 10^6$，$1\le m\le 2\times 10^5$，$1\le p\le 10^9$，$|a_i|\le 10^9$。
+"></div>
+			<div class="post-button text-center">
+				<a class="btn language" data-lan="read-more" href="https://exber.qzz.io/post/CF1172F%20Nauuo%20and%20Bug%20%26%20P5609%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95" rel="contents">
+					阅读全文 »
+				</a>
+			</div>
+			</div>
+			<footer class="post-footer">
+				<div class="post-eof"></div>
+			</footer>
+		</div>
+	</article>
+
+	<article class="post-list-box post box-shadow-wrapper">
+		<div class="article-wrapper bg-color">
+			
+			<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/AGC040E%20Prefix%20Suffix%20Addition%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95">AGC040E Prefix Suffix Addition 做题记录</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-08-07 08:31:00">2023-08-07 08:31:00</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>做题记录</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>DP</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>结论</span>
+				</a>
+			
+		</span>
+		
+		
+		
+	</div>
+</section>
+
+			<div class="post-body next-md-body">
+			<div data-markdown="> 你有一个长为 $n$ 的序列 $x_1,x_2,\dots,x_n$，一开始全部为 $0$，你现在可以以任意顺序进行任意次以下两种操作：
+>
+> 1. 选定整数 $1\le k\le n$ 与不下降非负整数序列 $c_1,c_2,\dots,c_k$，对所有 $1\le i \le k$，令 $x_i$ 加上 $c_i$。
+> 2. 选定整数 $1\le k\le n$ 与不上升非负整数序列 $c_1,c_2,\dots,c_k$，对所有 $1\le i \le k$，令 $x_{n-k+i}$ 加上 $c_i$。
+>
+> 问最少进行多少次操作使得 $x_i=a_i$。
+>
+> $1\le n\le 2\times 10^5$，$1\le a_i\le 10^9$。
+"></div>
+			<div class="post-button text-center">
+				<a class="btn language" data-lan="read-more" href="https://exber.qzz.io/post/AGC040E%20Prefix%20Suffix%20Addition%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95" rel="contents">
+					阅读全文 »
+				</a>
+			</div>
+			</div>
+			<footer class="post-footer">
+				<div class="post-eof"></div>
+			</footer>
+		</div>
+	</article>
+
+	<article class="post-list-box post box-shadow-wrapper">
+		<div class="article-wrapper bg-color">
+			
+			<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/AGC024E%20Sequence%20Growing%20Hard%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95">AGC024E Sequence Growing Hard 做题记录</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-07-21 15:11:40">2023-07-21 15:11:40</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>做题记录</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>数学</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>组合计数</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>DP</span>
+				</a>
+			
+		</span>
+		
+		
+		
+	</div>
+</section>
+
+			<div class="post-body next-md-body">
+			<div data-markdown="> 给定 $n$, $k$, $m$ , 问有多少个序列组 $(A_0,A_1,\dots,A_n)$ 满足：
+>
+> - 序列 $A_i$ 的元素个数为 $i$；
+>- 所有元素都在 $[1,k]$ 内；
+> - $\forall i\in[0,n-1]$，$A_i$ 是 $A_{i+1}$ 的子序列且 $A_i$ 的字典序小于 $A_{i+1}$；
+>
+> 答案对 $m$ 取模。
+> 
+> $1\le n,k\le 300$，$2\le m\le 10^9$。
+
+"></div>
+			<div class="post-button text-center">
+				<a class="btn language" data-lan="read-more" href="https://exber.qzz.io/post/AGC024E%20Sequence%20Growing%20Hard%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95" rel="contents">
+					阅读全文 »
+				</a>
+			</div>
+			</div>
+			<footer class="post-footer">
+				<div class="post-eof"></div>
+			</footer>
+		</div>
+	</article>
+
+	<article class="post-list-box post box-shadow-wrapper">
+		<div class="article-wrapper bg-color">
+			
+			<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/CF1456E%20XOR-ranges%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95">CF1456E XOR-ranges 做题记录</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-07-20 21:17:05">2023-07-20 21:17:05</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>做题记录</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>DP</span>
+				</a>
+			
+		</span>
+		
+		
+		
+	</div>
+</section>
+
+			<div class="post-body next-md-body">
+			<div data-markdown="> 给定 $n$ 和 $k$，有 $n$ 个 $< 2^k$ 的非负整数变量 $x_1,x_2,\dots,x_n$，其中 $x_i$ 的取值范围是 $[l_i,r_i]$。
+>
+> 给出数列 $c_0,c_1,\dots,c_{K-1}$，并由此定义一个代价函数 $f(x)$：
+>
+> $$
+> f(x)=\sum_{i=0}^{k-1}(\lfloor\tfrac x{2^i}\rfloor\bmod 2)\cdot c_i
+> $$
+> 确定每个变量的取值，使得 $\sum_{i=2}^nf(x_i\oplus x_{i-1})$ 最小，输出该最小值。
+>
+> $2\le n\le50$，$1\le k\le50$，$0\le l_i\le r_i< 2^k$，$0\le c_i\le10^{12}$。
+"></div>
+			<div class="post-button text-center">
+				<a class="btn language" data-lan="read-more" href="https://exber.qzz.io/post/CF1456E%20XOR-ranges%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95" rel="contents">
+					阅读全文 »
+				</a>
+			</div>
+			</div>
+			<footer class="post-footer">
+				<div class="post-eof"></div>
+			</footer>
+		</div>
+	</article>
+
+	<article class="post-list-box post box-shadow-wrapper">
+		<div class="article-wrapper bg-color">
+			
+			<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/%E5%90%AF%E5%8F%91%E5%BC%8F%E5%88%86%E8%A3%82%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0">启发式分裂 学习笔记</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-07-17 20:43:39">2023-07-17 20:43:39</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>学习笔记</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>小技巧</span>
+				</a>
+			
+		</span>
+		
+		
+		
+	</div>
+</section>
+
+			<div class="post-body next-md-body">
+			<div data-markdown=""></div>
+			<div class="post-button text-center">
+				<a class="btn language" data-lan="read-more" href="https://exber.qzz.io/post/%E5%90%AF%E5%8F%91%E5%BC%8F%E5%88%86%E8%A3%82%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0" rel="contents">
+					阅读全文 »
+				</a>
+			</div>
+			</div>
+			<footer class="post-footer">
+				<div class="post-eof"></div>
+			</footer>
+		</div>
+	</article>
+
+	<article class="post-list-box post box-shadow-wrapper">
+		<div class="article-wrapper bg-color">
+			
+			<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/CF1844G%20Tree%20Weights%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95">CF1844G Tree Weights 做题记录</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-07-17 15:19:55">2023-07-17 15:19:55</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>做题记录</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>构造</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>数学</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>结论</span>
+				</a>
+			
+		</span>
+		
+		
+		
+	</div>
+</section>
+
+			<div class="post-body next-md-body">
+			<div data-markdown="> 给定一棵 $n$ 个点的无根树，每条边有一个未知的正整数边权。
+> 
+> 对于所有的 $1 \le i < n$，给出点 $i$ 到点 $i + 1$ 的距离 $d_i$，请还原出任意一组合法的边权，可能无解。
+> 
+> $2\le n\le 10^5$，$1\le d_i\le 10^{12}$。
+"></div>
+			<div class="post-button text-center">
+				<a class="btn language" data-lan="read-more" href="https://exber.qzz.io/post/CF1844G%20Tree%20Weights%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95" rel="contents">
+					阅读全文 »
+				</a>
+			</div>
+			</div>
+			<footer class="post-footer">
+				<div class="post-eof"></div>
+			</footer>
+		</div>
+	</article>
+
+	<article class="post-list-box post box-shadow-wrapper">
+		<div class="article-wrapper bg-color">
+			
+			<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/CF1830E%20Bully%20Sort%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95">CF1830E Bully Sort 做题记录</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-07-17 07:46:10">2023-07-17 07:46:10</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>做题记录</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>结论</span>
+				</a>
+			
+		</span>
+		
+		
+		
+	</div>
+</section>
+
+			<div class="post-body next-md-body">
+			<div data-markdown="> 对于排列 $\{p_i\}$，定义一次操作为按顺序执行以下步骤：
+> 1. 令 $p_i$ 为排列中最大的满足 $p_i\neq i$ 的数；
+> 2. 令 $p_j$ 为排列中最小的满足 $j>i$ 的数；
+> 3. 交换 $p_i$ 和 $p_j$；
+> 定义 $f(p)$ 为将 $p$ 升序排序所需的操作次数。
+>
+> 给定一个排列 $p$，会进行 $q$ 次交换 $p_{x_i},p_{y_i}$ 的操作，每次操作后输出 $f(p)$，交换操作是永久的。
+> 
+> $2\le n\le 5\times 10^5$，$1\le q\le 5\times 10^4$。
+"></div>
+			<div class="post-button text-center">
+				<a class="btn language" data-lan="read-more" href="https://exber.qzz.io/post/CF1830E%20Bully%20Sort%20%E5%81%9A%E9%A2%98%E8%AE%B0%E5%BD%95" rel="contents">
+					阅读全文 »
+				</a>
+			</div>
+			</div>
+			<footer class="post-footer">
+				<div class="post-eof"></div>
+			</footer>
+		</div>
+	</article>
+
+					
+
+
+
+<div class="page bg-color">
+  <ul class="pagination-ul">
+    <!-- < -->
+    
+      <li class="pagination-dir">
+		
+			<a href="https://exber.qzz.io/page/11">
+		
+				<i class="fa fa-angle-left"></i>
+			</a>
+      </li>
+    
+    
+		<!-- 1 ... X-1 X X+1 ... N-->
+		<li class="pagination-li">
+			<a href="/">1</a>
+		</li>
+		<li class="pagination-li">…</li>
+		<li class="pagination-li">
+			<a href="https://exber.qzz.io/page/11">11</a>
+		</li>
+		<li class="pagination-li pagination-active">
+			<a href="https://exber.qzz.io/page/12">12</a>
+		</li>
+		<li class="pagination-li">
+			<a href="https://exber.qzz.io/page/13">13</a>
+		</li>
+		<li class="pagination-li">…</li>
+		<li class="pagination-li">
+			<a href='https://exber.qzz.io/page/33'>
+				33
+			</a>
+		</li>
+    
+    
+		<li class="pagination-dir">
+			<a href="https://exber.qzz.io/page/13">
+				<i class="fa fa-angle-right"></i>
+			</a>
+		</li>
+    
+  </ul>
+</div>
+				</section>
+			</div>
+		</div>
+	</div>
+	
+
+
+
+
+
+
+<div class="footer-box">
+	<footer class="footer">
+		<center id="runTimeBox">
+			已运行: <span id="run_time"></span>
+		</center>
+		<script>
+			BirthDay = new Date('2023-03-01');
+			if (BirthDay.getTime()) {
+				function runTime() {
+					str = "";
+					today = new Date();
+					timeold = today.getTime() - BirthDay.getTime();
+					msPerDay = 24 * 60 * 60 * 1000;
+					e_daysold = timeold / msPerDay;
+					daysold = Math.floor(e_daysold);
+					str += daysold + " 天";
+					return str;
+				}
+				setInterval(function () {
+					$("#run_time").html(runTime());
+				}, 1000);
+			} else {
+				document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+			}
+		</script>
+		<div class="poweredby">
+			Powered by Exber
+		</div>
+	</footer>
+	<div class="pisces back-to-top" id="back_to_top">
+		<i class="fa fa-arrow-up"></i>
+		<span class="scrollpercent">
+			<span id="back_to_top_text">0</span>%
+		</span>
+	</div>
+</div>
+<script>
+	// back2top
+	let back2Top = document.querySelector("#back_to_top"),
+		back2TopText = document.querySelector("#back_to_top_text");
+
+	function scrollAnimation(currentY, targetY) {
+		let needScrollTop = targetY - currentY;
+		let _currentY = currentY;
+		setTimeout(() => {
+			const dist = Math.ceil(needScrollTop / 10);
+			_currentY += dist;
+			window.scrollTo(_currentY, currentY);
+			if (needScrollTop > 10 || needScrollTop < -10) {
+				scrollAnimation(_currentY, targetY);
+			} else {
+				window.scrollTo(_currentY, targetY);
+			}
+		}, 1);
+	}
+
+	back2Top.addEventListener("click", function(e) {
+		scrollAnimation(document.scrollingElement.scrollTop, 0);
+		e.stopPropagation();
+		return false;
+	});
+
+	window.addEventListener("scroll", function(e) {
+		let percent =
+			(document.scrollingElement.scrollTop /
+				(document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight)) *
+			100;
+		if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+			back2Top.classList.add("back-top-active");
+		}
+		if (percent == 0) {
+			back2Top.classList.remove("back-top-active");
+		}
+		if (back2TopText) {
+			back2TopText.textContent = Math.floor(percent);
+		}
+	});
+</script>
+	</div>
+</body>
+
+
+
+
+
+
+
+<input hidden id="copy" />
+<link rel="stylesheet" href="https://exber.qzz.io/media/css/jquery.fancybox.css" />
+<script src="https://exber.qzz.io/media/js/jquery.fancybox.js"></script>
+<script>
+	// 渲染所有带有 data-markdown 属性的 div 元素
+	!function () {
+		const markdownElements = document.querySelectorAll('div[data-markdown]');
+		
+		markdownElements.forEach((element, index) => {
+			try {
+				const markdownContent = element.getAttribute('data-markdown');
+				
+				if (markdownContent) {
+					const renderedHTML = render_markdown(markdownContent);
+					element.innerHTML = renderedHTML;
+					element.removeAttribute('data-markdown');
+				}
+			} catch (error) {
+				element.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+			}
+		});
+	}();
+</script>
+<script>
+	document.querySelectorAll(".section img").forEach((image) => {
+		var parent = image.parentElement;
+		var next = image.nextElementSibling;
+		parent.removeChild(image);
+		var aelem = document.createElement("a");
+		aelem.href = image.src;
+		aelem.dataset["fancybox"] = "images";
+		aelem.dataset["rel"] = "fancybox-button";
+		aelem.classList.add("fancybox");
+		aelem.appendChild(image);
+		parent.insertBefore(aelem, next);
+	});
+	
+	!function () {
+		let times = document.querySelectorAll('.publish-time');
+		for (let i = 0; i < times.length; i++) {
+			let date = times[i].dataset.t;
+			let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+			if (time < 60) {
+				str = time + '秒之前';
+			} else if (time < 3600) {
+				str = Math.floor(time / 60) + '分钟之前';
+			} else if (time >= 3600 && time < 86400) {
+				str = Math.floor(time / 3600) + '小时之前';
+			} else if (time >= 86400 && time < 259200) {
+				str = Math.floor(time / 86400) + '天之前';
+			} else {
+				str = times[i].textContent;
+			}
+			times[i].textContent = str;
+		}
+	}();
+	
+	let language = '';
+	if (language !== '') {
+		let map = new Map();
+		if (language === 'en') {
+			map.set('search', 'Search');
+			map.set('category', 'Categories');
+			map.set('article', 'Articles');
+			map.set('tag', 'Tags');
+			map.set('top', 'Top');
+			map.set('publish', 'published');
+			map.set('minute', ' minutes');
+			map.set('read-more', 'Read More');
+			map.set('view', 'View');
+			map.set('words', ' words');
+			map.set('category-in', 'category in');
+			map.set('preview', 'Meta');
+			map.set('index', 'Toc');
+			map.set('no-archives', "You haven't created yet");
+			map.set('archives', " articles in total");
+			map.set('cloud-tags', " tags in total");
+			map.set('copyright', "Copyright: ");
+			map.set('author', "Author: ");
+			map.set('link', "Link: ");
+			map.set('leave-message', "Leave a message");
+			map.set('format', "Links Format");
+			map.set('site-name', "Name: ");
+			map.set('site-link', "Link: ");
+			map.set('site-desc', "Desc: ");
+			map.set('stat', " related results, taking ");
+			map.set('stat-time', " ms");
+			map.set('site-img', "Image: ");
+			map.set('copy-markdown', "Copy Markdown");
+		}
+
+		if (map.size > 0) {
+			let lanElems = document.querySelectorAll('.language');
+			lanElems.forEach(elem => {
+				let lan = elem.dataset.lan, text = map.get(lan);
+				if (elem.__proto__ === HTMLInputElement.prototype) {
+					elem.placeholder = text
+				} else {
+					if (elem.dataset.count) {
+						text = elem.dataset.count + text;
+					}
+					elem.textContent = text;
+				}
+			})
+		}
+	}
+
+	function copyCode(e) {
+		if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+			let code = e.currentTarget.querySelector('code');
+			var text = code.innerText;
+			if (e.srcElement.textContent === '复制成功') {
+				return;
+			}
+			e.srcElement.textContent = '复制成功';
+			(function (elem) {
+				setTimeout(() => {
+					if (elem.textContent === '复制成功') {
+						elem.textContent = '复制代码'
+					}
+				}, 1000);
+			})(e.srcElement)
+			Clipboard.copy(text);
+		}
+	}
+
+	let pres = document.querySelectorAll('pre');
+	pres.forEach(pre => {
+		let code = pre.querySelector('code');
+		let copyElem = document.createElement('span');
+		copyElem.classList.add('copy-code');
+		copyElem.textContent = '复制代码';
+		pre.appendChild(copyElem);
+		pre.onclick = copyCode
+	})
+</script>
+<script src="https://exber.qzz.io/media/js/motion.js"></script>
+<script src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+<script>
+	var scroll = new SmoothScroll('a[href*="#"]', {
+		speed: 200
+	});
+</script>
+<script>
+	// 动态调整站点概览位置
+	let hasCacu = false;
+	window.addEventListener("resize", function(e) {
+		calcuHeight();
+	});
+
+	function calcuHeight() {
+		if (!hasCacu) {
+			let sideBar = document.querySelector(".sidebar");
+			let navUl = document.querySelector("#site_nav");
+			sideBar.style =
+				"margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+			hasCacu = true;
+		}
+	}
+	calcuHeight();
+	
+	// 侧边栏固定逻辑
+	let sidebar = document.querySelector('.sidebar');
+	let sidebarWrapper = document.querySelector('#sidebar');
+	if (sidebar) {
+		let hasFix = false;
+		document.addEventListener('scroll', function(e) {
+		  if (document.scrollingElement.scrollTop > parseInt(sidebar.style.marginTop) + 15) {
+			if (!hasFix) {
+				sidebarWrapper.classList.add('sidebar-fixed')
+				hasFix = true;
+			}
+		  } else {
+			if (hasFix) {
+				sidebarWrapper.classList.remove('sidebar-fixed')
+				hasFix = false;
+			}
+		  }
+		});
+	}
+</script>
+<script>
+	// 链接跳转
+	let newWindow = "true";
+	if (newWindow === "true") {
+		let links = document.querySelectorAll(".post-body a");
+		links.forEach((item) => {
+			if (!item.classList.contains("btn")) {
+				item.setAttribute("target", "_blank");
+			}
+		});
+	}
+
+	// 代码高亮
+	hljs.initHighlightingOnLoad();
+
+	// 离开当前页title变化
+	var leaveTitle = "";
+	var normal_title = document.title;
+	if (leaveTitle) {
+		document.addEventListener("visibilitychange", function() {
+			if (document.visibilityState == "hidden") {
+				normal_title = document.title;
+				document.title = leaveTitle;
+			} else {
+				document.title = normal_title;
+			}
+		});
+	}
+</script>
+</html>

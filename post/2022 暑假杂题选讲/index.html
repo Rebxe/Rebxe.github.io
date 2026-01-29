@@ -1,0 +1,2002 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	
+
+
+
+
+
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="静态个人博客">
+<meta name="description" content="Exber's Blog">
+<meta name="theme-color" content="#000">
+
+<title>2022 暑假杂题选讲|Exber's Blog</title>
+
+<link rel="shortcut icon" href="https://exber.qzz.io/favicon.ico?v=1769647447">
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/css/pisces.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/fonts/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/hljs/styles/default.css">
+
+<link
+  href="https://fonts.font.im/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet"
+  type="text/css"
+>
+
+<link rel="stylesheet/less" type="text/css" href="https://exber.qzz.io/styles/main.less">
+<script src="https://cdn.jsdmirror.com/npm/less@4"></script>
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/main.css">
+
+<script src="https://exber.qzz.io/media/js/jquery.js"></script>
+<script src="https://exber.qzz.io/media/hljs/highlight.js"></script>
+
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+<script src="https://cdn.jsdmirror.com/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-texmath/texmath.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-anchor/dist/markdownItAnchor.umd.js"></script>
+
+<script>
+// 处理带空格的链接
+function markdownItLinkEncodeFixed(md) {
+	// 1. 修复链接打开规则
+	const defaultLinkOpenRender = md.renderer.rules.link_open || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const hrefIndex = token.attrIndex('href');
+		
+		if (hrefIndex >= 0) {
+			const originalHref = token.attrs[hrefIndex][1];
+			// 更健壮的编码处理
+			const encodedHref = encodeURI(originalHref).replace(/%20/g, '%20');
+			token.attrs[hrefIndex][1] = encodedHref;
+		}
+		
+		return defaultLinkOpenRender(tokens, idx, options, env, self);
+	};
+
+	// 2. 修复图片规则
+	const defaultImageRender = md.renderer.rules.image || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.image = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const srcIndex = token.attrIndex('src');
+		
+		if (srcIndex >= 0) {
+			const originalSrc = token.attrs[srcIndex][1];
+			const encodedSrc = encodeURI(originalSrc).replace(/%20/g, '%20');
+			token.attrs[srcIndex][1] = encodedSrc;
+		}
+		
+		return defaultImageRender(tokens, idx, options, env, self);
+	};
+
+	// 3. 新增：处理可能被误解析为text的链接[1](@ref)
+	const defaultTextRender = md.renderer.rules.text || 
+		function(tokens, idx, options, env, self) {
+			const token = tokens[idx];
+			return token.content;
+		};
+
+	md.renderer.rules.text = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const content = token.content;
+		
+		// 检测类似链接模式的text token[1](@ref)
+		if (content.includes('[') && content.includes(']') && content.includes('(') && content.includes(')')) {
+			try {
+				// 尝试提取和编码链接
+				const linkMatch = content.match(/\[([^\]]+)\]\(([^)]+)\)/);
+				if (linkMatch) {
+					const linkText = linkMatch[1];
+					const linkUrl = encodeURI(linkMatch[2]).replace(/%20/g, '%20');
+					return `<a href="${linkUrl}">${linkText}</a>`;
+				}
+			} catch (e) {
+				console.warn('链接提取失败:', e);
+			}
+		}
+		
+		return defaultTextRender(tokens, idx, options, env, self);
+	};
+}
+function render_markdown(content)
+{
+	let markdown = window.markdownit({ html: true })
+			 .use(markdownItLinkEncodeFixed)
+			 .use(window.texmath, {
+				 engine: katex,
+				 delimiters: 'dollars'
+			 });
+	// 处理图片路径
+	let temp_container = document.createElement('div');
+	temp_container.innerHTML = markdown.render(content);
+	{
+		let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	{
+		let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	return temp_container.innerHTML;
+}
+</script>
+<script>
+	window.Clipboard = (function (window, document, navigator) {
+		var textArea,
+			copy;
+
+		// 判断是不是ios端
+		function isOS() {
+			return navigator.userAgent.match(/ipad|iphone/i);
+		}
+		//创建文本元素
+		function createTextArea(text) {
+			textArea = document.createElement('textArea');
+			textArea.value = text;
+			textArea.style.width = 0;
+			textArea.style.height = 0;
+			textArea.clientHeight = 0;
+			textArea.clientWidth = 0;
+			document.body.appendChild(textArea);
+		}
+		//选择内容
+		function selectText() {
+			var range,
+				selection;
+
+			if (isOS()) {
+				range = document.createRange();
+				range.selectNodeContents(textArea);
+				selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				textArea.setSelectionRange(0, 999999);
+			} else {
+				textArea.select();
+			}
+		}
+
+		//复制到剪贴板
+		function copyToClipboard() {
+			try {
+				document.execCommand("Copy")
+			} catch (err) {
+				alert("复制错误！请手动复制！")
+			}
+			document.body.removeChild(textArea);
+		}
+
+		copy = function (text) {
+			createTextArea(text);
+			selectText();
+			copyToClipboard();
+		};
+
+		return {
+			copy: copy
+		};
+	})(window, document, navigator);
+</script>
+	<meta name="description" content="2022 暑假杂题选讲" />
+</head>
+
+<body>
+	<div class="head-top-line"></div>
+	<div class="header-box">
+		
+		
+	<style> /* 搜索相关 */
+		.gridea-search-input{
+			height: 30px;
+			width: 200px;
+			box-sizing: border-box;
+			padding: 0 15px 0 30px;
+			border: 1px solid #e3e3e3;
+			border-radius: 15px;
+			color: #273849;
+			outline: none;
+			transition: border-color 0.2s ease;
+			background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+			background-size: 20px;
+			vertical-align: middle !important;
+		}
+		.gridea-search-input:focus {
+		  border-color: #666666;
+		  right: 0;
+		}
+		/* 自适应轨道 */
+		.slider-track {
+			--track-height: 0.4em; /* 轨道基础高度 */
+			width: 100%;
+			height: var(--track-height);
+			background: #e0e0e0;
+			border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+			position: relative;
+			cursor: default;
+			margin: 0.5em 0; /* 垂直间距自适应 */
+		}
+		
+		/* 进度填充 */
+		.slider-fill {
+			height: 100%;
+			background: #555;
+			border-radius: inherit; /* 继承父级圆角 */
+			width: 50%; /* 初始值 */
+		}
+		
+		/* 自适应滑块 */
+		.slider-thumb {
+			--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+			position: absolute;
+			width: var(--thumb-size);
+			height: var(--thumb-size);
+			background: #555;
+			border-radius: 50%;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: 
+				transform 0.2s ease,
+				box-shadow 0.2s ease;
+			border: 2px solid white; /* 增加辨识度 */
+		}
+		
+		/* 悬停效果 */
+		.slider-thumb:hover {
+			background: #333;
+			transform: translate(-50%, -50%) scale(1.1);
+			box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+		}
+		
+		/* 拖动效果 */
+		.slider-thumb:active {
+			cursor: grabbing;
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		}
+		
+		/* 数值显示 */
+		.value-display {
+			text-align: center;
+			font-family: Arial, sans-serif;
+			color: #555;
+			font-size: 1.2em; /* 基于容器字体大小 */
+			margin-top: 0.5em;
+		}
+	</style>
+
+<div class="pisces">
+  <header class="header">
+    <div class="blog-header box-shadow-wrapper" id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+            <a href="https://exber.qzz.io" class="brand">
+              <span>Exber's Blog</span>
+            </a>  
+        </div>
+        
+			<p class="subtitle">Can't go up</p>
+        
+      </div>
+      <nav class="site-nav bg-color" id="site_nav">
+        <ul id="nav_ul">
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io" target="">
+					首页
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io/tags" target="">
+					按标签筛选
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://csacademy.com/app/graph_editor/" target="_blank">
+					图论编辑器
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="http://yuantiji.ac/zh/" target="_blank">
+					原题机
+				</a>
+            </li>
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://exber.qzz.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.6</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script>
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+
+
+	<script>
+		// 获取DOM元素
+		const sliderTrack = document.getElementById('sliderTrack');
+		const sliderThumb = document.getElementById('sliderThumb');
+		const sliderFill = document.getElementById('sliderFill');
+		const sliderValue = document.getElementById('sliderValue');
+		
+		// 初始化变量
+		let isDragging = false;
+		let currentValue = 0.6;
+		
+		// 更新滑块位置和数值显示
+		function updateSlider(positionX) {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			let newPosition;
+
+			// 检查轨道宽度是否有效
+			if (trackRect.width <= 0) {
+				// 如果轨道宽度无效，则直接使用当前的 currentValue
+				newPosition = currentValue;
+			} else {
+				// 正常计算位置
+				newPosition = (positionX - trackRect.left) / trackRect.width;
+				newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+			}
+
+			// 更新UI
+			sliderThumb.style.left = `${newPosition * 100}%`;
+			sliderFill.style.width = `${newPosition * 100}%`;
+
+			// 更新当前值和表单隐藏域的值
+			currentValue = newPosition;
+			document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+
+			// 更新显示值（保留两位小数）
+			// 使用 Number.isNaN 进行严格检查，确保显示正常
+			const displayValue = Number.isNaN(newPosition) ? '0.60' : newPosition.toFixed(2);
+			sliderValue.textContent = displayValue;
+		}
+		
+		// 响应父容器大小变化
+		function handleResize() {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			const positionX = trackRect.left + trackRect.width * currentValue;
+			updateSlider(positionX);
+		}
+		
+		// 鼠标按下事件 - 仅在圆点上触发
+		sliderThumb.addEventListener('mousedown', (e) => {
+			isDragging = true;
+			sliderThumb.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		
+		// 鼠标移动事件
+		document.addEventListener('mousemove', (e) => {
+			if (!isDragging) return;
+			updateSlider(e.clientX);
+		});
+		
+		// 鼠标释放事件
+		document.addEventListener('mouseup', () => {
+			if (isDragging) {
+				isDragging = false;
+				sliderThumb.style.cursor = 'grab';
+			}
+		});
+		
+		// 监听父容器大小变化
+		const resizeObserver = new ResizeObserver(() => {
+			handleResize();
+		});
+		
+		// 开始观察相关元素
+		resizeObserver.observe(sliderTrack.parentElement);
+		resizeObserver.observe(sliderTrack);
+		
+		// 初始化
+		handleResize();
+	</script>
+
+	</div>
+	<div class="main-continer">
+	<div class="section-layout pisces">
+		<div class="section-layout-wrapper">
+			<div class="sidebar">
+	<div class="sidebar-box box-shadow-wrapper bg-color right-motion" id="sidebar">
+		<div class="post-list-sidebar" id="sidebar-selector">
+			<div class="sidebar-title">
+				<span id="tocSideBar" class="sidebar-title-item sidebar-title-active language" data-lan="index">文章目录</span>
+				<span id="metaSideBar" class="sidebar-title-item language" data-lan="preview">站点概览</span>
+			</div>
+		</div>
+		<div class="sidebar-body pisces" id="sidebar_body">
+			<div class="post-side-meta" id="post_side_meta">
+				
+
+
+
+
+
+
+<div class="sidebar-item">
+	<img class="site-author-image right-motion" src="https://exber.qzz.io/avatar.png"/>
+	<p class="site-author-name">Exber</p>
+	
+	<div class="site-description right-motion">
+		<p>洛谷 @Exber</p>
+<p>Codeforces @Rebex</p>
+
+	</div>
+	
+</div>
+<div class="sidebar-item side-item-stat right-motion">
+	<div class="sidebar-item-box">
+		<a href="https://exber.qzz.io/tags">
+			<span class="site-item-stat-count">26</span>
+			<span class="site-item-stat-name language" data-lan="tag">标签</span>
+		</a>
+	</div>
+	<div class="sidebar-item-box">
+		<a>
+			
+			<span class="site-item-stat-count">330</span>
+			<span class="site-item-stat-name language" data-lan="article">文章</span>
+		</a>
+	</div>
+</div>
+
+			</div>
+			<div class="post-toc sidebar-body-active" id="post_toc" style="opacity: 1;">
+				<div class="toc-box right-motion">
+					<div class="toc-wrapper  no_compress" id="toc_wrapper">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+			<div class="section-box box-shadow-wrapper">
+				<div class="section bg-color post post-page">
+					
+					<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/2022%20%E6%9A%91%E5%81%87%E6%9D%82%E9%A2%98%E9%80%89%E8%AE%B2">2022 暑假杂题选讲</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-03-25 21:56:01">2023-03-25 21:56:01</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>杂题选讲</span>
+				</a>
+			
+		</span>
+		
+		
+		
+		<span class="meta-item pc-show">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-copy"></i>
+			<a class="language" data-lan="copy-markdown" data-src-markdown="这些都是近来我 VP CF 遇到的奇奇妙妙的题。
+
+
+
+# 构造
+
+这一类题通常需要大胆猜结论/经验积累。
+
+### [CF1514B AND 0, Sum Big](https://www.luogu.com.cn/problem/CF1514B)
+
+首先因为与运算和为 $0$，所以**每一位上都至少有一个数这一位为 $0$**。
+
+然后因为元素的和要尽量大，所以**肯定不存在两个数同一位为 $0$**。
+
+那么**每一位都需要让 $a_{1\sim n}$  中的恰好一个在这一位为 $0$**，所以答案即为 $n^k$。
+
+### [CF1630A And Matching](https://www.luogu.com.cn/problem/CF1630A)
+
+首先来看三个性质：
+
+- $i\&(n-1-i)=0$，因为 $i$ 和 $n-1-i$ 的二进制是“错开”的；
+- $i\&(n-1)=i$，因为 $n-1$ 的二进制全是 $1$；
+- $i\&0=0$，显然。
+
+接下来分类讨论：
+
+- 若 $k\not=n-1$：
+
+可以**先构造出 $k\&(n-1)=k$ 和 $(n-1-k)\&0=0$，然后对于每个 $1\le i\le n-1$ 且 $i\not=k$ 且 $i\not=n-1-k$ 的 $i$ 构造出 $i\&(n-1-i)=0$。**
+
+注意**特判 $k=0$，这时不需要构造 $(n-1-k)\&0=0$**。
+
+- 若 $k=n-1$
+
+这时容易发现让其中一对与为 $k$ 的办法行不通了，所以我们要另辟蹊径，**让两对的与加起来为 $k$**。
+
+显然 $(n-1)\&(n-2)=n-2$，$1\&(n-3)=1$，那么先构造这两对即可。
+
+接下来发现 $n-1-(n-1)=0$，$n-1-(n-3)=2$，$n-1-(n-2)=1$ 也就是说 $0$ 和 $2$ 不能组成 $i\&(n-1-i)=0$ 了，那么让它们单独组，**构造 $0\&2=0$**。
+
+接下来构造 $i\&(n-1-i)=0$ 即可。
+
+注意到**若 $n\le 4$ 则 $n-1$、$n-2$、$n-3$、$0$、$1$、$2$ 会重叠，这时是无解的**。
+
+### [CF1659D Reverse Sort Sum](https://www.luogu.com.cn/problem/CF1659D)
+
+不难发现，由于每个 $1$ 对 $\sum C$ 都有且仅有 $n$ 的贡献，所以 **$A$ 中 $1$ 的个数即为 $\dfrac{\sum C}{n}$**。
+
+接下来，我们很容易发现 **$A_n=1$ 当且仅当 $C_n=n$**，因为 $A_n=1$ 时 $B_{i,n}$ 一定为 $1$。
+
+有了这个性质的启示，不难想到可以**通过减掉 $B_n$ 对 $C$ 的贡献来实现缩小问题的规模，令 $n$ 变为 $n-1$**。实际上实现起来也并不难，因为**我们已经取得了 $A$ 中 $1$ 的个数 $m$，$B_n$ 一定只会对 $[n-m+1,n]$ 有 $1$ 的贡献，那么用差分来实现快速区间减法即可**。
+
+### [CF1658D2 388535 (Hard Version)](https://www.luogu.com.cn/problem/CF1658D2)
+
+首先**肯定有一个 $a_i$ 满足 $a_i\operatorname{xor} l=x$，即它本来是 $l$**。那么我们枚举每个 $a_i$，判断它原来是不是 $l$ 即可。
+
+接下来思考判断的方法。不难发现，**由于 $a_i$ 原来是不重复的一个排列，所以异或后的 $a_i$ 也是不重复的一个排列，所以只要 $a_i$ 满足 $r=\max\operatorname{xor}(a_i\operatorname{xor} l)$ 就说明 $a_i$ 原来是 $l$**。
+
+这个东西用 trie 维护即可。
+
+### [CF1592C Bakry and Partitioning](https://www.luogu.com.cn/problem/CF1592C)
+
+从每一部分的异或和相同出发，设分割后每一部分的异或和都为 $k$，所有 $a_i$ 的异或和为 $sum$。不难发现**要么 $sum=0$ 即最后是偶数个 $k$ 异或起来，要么 $sum=k$ 即最后是奇数个 $k$ 异或起来**。
+
+- 若 $sum=0$，我们**割断任意一条边都一定合法。因为割出来的两部分只有异或和相同它们异或起来的结果 $sum$ 才为 $0$**。
+
+- 若 $sum=k$，那么**割断两条边，分割出三个异或和为 $k$ 的连通块显然是最优的**。所以**考虑找到两个异或和都为 $k$ 的连通块，剩下那一块异或和就自然为 $k$**。因为**肯定有一个满足条件的连通块是一棵子树，减掉它的贡献后又会有一个满足条件的连通块是一棵子树**，所以跑一次 $dfs$，**求出每个节点子树去掉异或和为的 $k$ 子树后的异或和** $dp_u=\operatorname{xor}_{v\text{ 是 }u\text{ 的儿子}}[dp_v\not=k]dp_v$ 即可。最后若 $\sum\limits_{u} [dp_u=k]\ge2$ 就说明有解。
+
+部分代码如下：
+
+```cpp
+void dfs(int u,int fa,long long val)
+{
+	dp[u]=a[u];
+	for(int i=h[u];i;i=nxt[i])
+	{
+		int v=to[i];
+		if(v==fa)
+		{
+			continue;
+		}
+		dfs(v,u,val);
+		if(dp[v]!=val)
+		{
+			dp[u]^=dp[v];
+		}
+	}
+}
+
+inline void slove()
+{
+	esum=0;
+	scanf(&quot;%d%d&quot;,&n,&k);
+	long long sm=0;
+	for(int i=1;i<=n;i++)
+	{
+		h[i]=0;
+		dp[i]=0;
+		scanf(&quot;%lld&quot;,&a[i]);
+		sm^=a[i];
+	}
+	for(int i=1;i<=n-1;i++)
+	{
+		int x,y;
+		scanf(&quot;%d%d&quot;,&x,&y);
+		add(x,y);
+		add(y,x);
+	}
+	if(sm==0)
+	{
+		puts(&quot;YES&quot;);
+		return;
+	}
+	if(k==2)
+	{
+		puts(&quot;NO&quot;);
+		return;
+	}
+	dfs(1,0,sm);
+	int cnt=0;
+	for(int i=1;i<=n;i++)
+	{
+		cnt+=dp[i]==sm;
+	}
+	puts(cnt>=2?&quot;YES&quot;:&quot;NO&quot;);
+}
+```
+
+
+
+# 交互
+
+这一类题通常需要程序和交互库互动，思维难度较高。
+
+### [CF1503B 3-Coloring](https://www.luogu.com.cn/problem/CF1503B)
+
+用 $1$ 和 $2$ 交替着填，实在不行用 $3$ 即可。
+
+### [CF1592D Hemose in ICPC](https://www.luogu.com.cn/problem/CF1592D)
+
+首先由于 $\gcd$ 里的数越多，结果就越小，所以**最大的 $Dist$ 一定是一条边的边权**。
+
+那么我们**先询问所有节点求出最大的 $Dist=val$，然后二分所有的边**。
+
+考虑如何二分，显然需要把树“拍扁”，用类似 $dfs$ 序的东西来解决。具体的，考虑节点 $u$ 和它的所有儿子 ${v_i}$，显然 $u\to v_i$ 都有一条边，那么**先往序列里加入 $u$，再在 $dfs$ 完每个 $v_i$ 后都加入 $u$ 即可**。
+
+### [CF1634D Finding Zero](https://www.luogu.com.cn/problem/CF1634D)
+
+![img](https://cdn.luogu.com.cn/upload/vjudge_pic/CF1634D/74895b22455b2b459cd8609f4caa3df7273f47e6.png)
+
+考虑从 $4$ 个可能的下标 $b_1,b_2,b_3,b_4$ 中去掉一些不可能的下标。
+
+显然一次询问的结果是三个数的极差。记 $q_1,q_2,q_3,q_4$ 为询问四个下标里分别除去 $b_1,b_2,b_3,b_4$ 的结果，即 $q_1$ 为询问 $b_2,b_3,b_4$ 的结果。那么**显然 $m=\max(q_1,q_2,q_3,q_4)$ 就是 $a_{b_1},a_{b_2},a_{b_3},a_{b_4}$ 的极差**。
+
+不难发现，**若 $q_i=m$，那么 $b_i$ 一定不可能为 $0$**。因为去掉 $0$ 后三个数的极差一定不是这四个数的极差。
+
+这样每排除一次至少可以去掉至少两个不可能的下标，总共需要的次数上限就是 $\dfrac{4n}{2}=2n$，足以通过此题。
+
+特别的，若剩下三个下标未排除，拿一个排除过的下标和它们组队即可。
+
+
+
+# 杂题
+
+最后给两道匕匕车交女少白勺杂题。
+
+### [CF1632D New Year Concert](https://www.luogu.com.cn/problem/CF1632D)
+
+不难发现，当区间 $[l,r]$ 的右端点 $r$ 固定不动，左端点 $l$ 减小时，$\gcd(a_l,a_{l+1},a_{l+2},\dots,a_r)$ 是单调不增的，而 $r-l+1$ 则是单调递增的，这造成了它们最多只会有一个交点。也就是说，**对于一个固定的 $r$，最多有一个 $l$ 满足 $\gcd(a_l,a_{l+1},a_{l+2},\dots,a_r)=r-l+1$**。
+
+那么用倍增实现 $O(n\log n\log v)$ 预处理 $O(1)$ 查询 $\gcd$，然后枚举 $r$，每次找满足条件的 $l$，如果有那么答案加一并且把 $a_l$ 改为 $1$ 即可。
+
+部分代码如下：
+
+```cpp
+int ans=0,lb=1;
+for(int i=1;i<=n;i++)
+{
+	while(lb<i&&que(lb,i)<i-lb+1)
+	{
+		lb++;
+	}
+	if(que(lb,i)==i-lb+1)
+	{
+		ans++;
+		lb=i+1;
+	}
+	printf(&quot;%d &quot;,ans);
+}
+printf(&quot;\n&quot;);
+```
+
+### [CF1594D The Number of Imposters](https://www.luogu.com.cn/problem/CF1594D)
+
+并查集拆点模板题，建议先看一下我的[博客](https://www.luogu.com.cn/blog/251130/awa-bing-zha-ji-xue-xi-bi-ji)。
+
+每个人拆两个点 $i$ 和 $i+n$，分别表示这个人是好人和坏人的情况，**统计答案的时候对每个集合的“帮主”是好人/坏人的情况下的好人的数量取最大值，加起来即可**。
+
+
+
+## [CF1685B Linguistics](https://www.luogu.com.cn/problem/CF1685B)
+
+贪心。
+
+题意显然可以转化为**把 $a$ 个 $\texttt{A}$、$b$ 个 $\texttt{B}$、$c$ 个 $\texttt{A}\texttt{B}$ 和 $d$ 个 $\texttt{B}\texttt{A}$ 不重叠地放进字符串 $s$ 中，使得对应位相等**。
+
+首先若放的 $\texttt{\texttt{A}}$、$\texttt{B}$ 的个数和 $s$ 中 $\texttt{A}$、$\texttt{B}$ 的个数不同，那么就是不行的。接下来考虑让所有放单个 $\texttt{A}$ 和 $\texttt{B}$ 的操作都挪到最后进行，那么问题就转化为判断能否把 $c$ 个 $\texttt{A}\texttt{B}$ 和 $d$ 个 $\texttt{B}\texttt{A}$ 都放进 $s$ 里面。
+
+考虑一段形如 $\texttt{A}\texttt{B}\texttt{A}\texttt{B}\texttt{A}\texttt{B}\texttt{A}\texttt{B}$ 这样 **$\texttt{A}\texttt{B}$ 相间的极长子串**，设它的长度为 $cnt$，那么分类讨论：
+
+- 若 $cnt$ 是奇数，那么这一段可以**放 $\lfloor\frac{cnt}{2}\rfloor$ 个 $\texttt{A}\texttt{B}$ 或 $\texttt{B}\texttt{A}$**；
+- 若 $cnt$ 是偶数，那么：
+  * 若这一段以 $\texttt{B}$ 结尾，即形如 $\texttt{A}\texttt{B}\texttt{A}\texttt{B}$，那么可以**放 $\lfloor\frac{cnt}{2}\rfloor-1$ 个 $\texttt{A}\texttt{B}$ 或 $\texttt{B}\texttt{A}$，或者可以放 $\lfloor\frac{cnt}{2}\rfloor$ 个 $\texttt{A}\texttt{B}$**；
+  * 若这一段以 $\texttt{A}$ 结尾，即形如 $\texttt{B}\texttt{A}\texttt{B}\texttt{A}$，那么可以**放 $\lfloor\frac{cnt}{2}\rfloor-1$ 个 $\texttt{A}\texttt{B}$ 或 $\texttt{B}\texttt{A}$，或者可以放 $\lfloor\frac{cnt}{2}\rfloor$ 个 $\texttt{B}\texttt{A}$**；
+
+不难发现，当 $cnt$ 为奇数时这一段**对 $\texttt{A}\texttt{B}$ 和 $\texttt{B}\texttt{A}$ 都是公平的**，即它们放的上限都是 $\lfloor\frac{cnt}{2}\rfloor$，并且对放多少个 $\texttt{A}\texttt{B}$ 和多少个 $\texttt{B}\texttt{A}$ 没有限制，只要它们数量加起来不超过 $\lfloor\frac{cnt}{2}\rfloor$ 就可以了。
+
+所以可以令 $bot=\sum\limits_{cnt\operatorname{mod}2=1}\lfloor\frac{cnt}{2}\rfloor$ 即**奇数段最多可以放的 $\texttt{A}\texttt{B}$ 和 $\texttt{B}\texttt{A}$ 的数量**。
+
+若 $cnt$ 为偶数，那么这一段**对 $\texttt{A}\texttt{B}$ 和 $\texttt{B}\texttt{A}$ 是不公平的**，即它们放的上限一个多，一个少。为了减少位置的浪费，不妨**先钦定这一段都放上限多的那种字符串，再用两个数组 $vala$ 和 $valb$ 存偏心 $\texttt{A}\texttt{B}$ 或者 $\texttt{B}\texttt{A}$ 即能放更多 $\texttt{A}\texttt{B}$ 或 $\texttt{B}\texttt{A}$ 的偶数段中两种字符串放置的上限**。
+
+最后**若每一段偶数段都放上限多的字符串时 $c$ 或 $d$ 还是大于 $0$，那么就让偏心另一种字符串的偶数段分一些位置放这种字符串**即可。不难发现由于没分之前偶数段总共能放 $\lfloor\frac{cnt}{2}\rfloor$ 个字符串，分了之后只能放 $\lfloor\frac{cnt}{2}\rfloor-1$ 个，所以**分的段数肯定是越少越好**。那么按段的长度从大到小分即可。
+
+代码如下：
+
+```cpp
+// Problem: D. Linguistics
+// Contest: Codeforces Round #794 (Div. 2)
+// URL: https://codeforces.com/contest/1686/problem/D
+// Memory Limit: 256 MB
+// Time Limit: 1000 ms
+// 
+// Powered by CP Editor (https://cpeditor.org)
+
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <queue>
+#include <vector>
+#include <map>
+#include <set>
+
+using namespace std;
+
+const int S=1919810;
+
+struct node
+{
+	int x,y;
+}vala[S],valb[S];
+
+int n,a,b,c,d;
+char str[S];
+
+inline bool cmp(node x,node y)
+{
+	return x.y>y.y;
+}
+
+inline void slove()
+{
+	cin>>a>>b>>c>>d>>(str+1);
+	n=strlen(str+1);
+	int cnta=0,cntb=0;
+	for(int i=1;i<=n;i++)
+	{
+		cnta+=str[i]=='A';
+		cntb+=str[i]=='B';
+	}
+	if(cnta-c-d!=a||cntb-c-d!=b) // A 或 B 的数量不符合的情况
+	{
+		cout<<&quot;NO&quot;<<endl;
+		return;
+	}
+	int m1=0,m2=0,bot=0;
+	str[n+1]=str[n];
+	for(int i=1,cnt=0;i<=n+1;i++)
+	{
+		if(str[i]!=str[i-1])
+		{
+			cnt++;
+		}
+		else
+		{
+			if(cnt>1)
+			{
+				if(cnt&1) // 公平的奇数段
+				{
+					bot+=cnt/2;
+				}
+				else
+				{
+					if(str[i-1]=='B')
+					{
+						vala[++m1]=(node){cnt/2,cnt/2-1}; // 偏心 AB
+						c-=cnt/2;
+					}
+					else
+					{
+						valb[++m2]=(node){cnt/2,cnt/2-1}; // 偏心 BA
+						d-=cnt/2;
+					}
+				}
+			}
+			cnt=1;
+		}
+	}
+	if(d>0)
+	{
+		sort(vala+1,vala+m1+1,cmp);
+		for(int i=1;i<=m1;i++)
+		{
+			if(c+vala[i].x<=0)
+			{
+				c+=vala[i].x;
+				d-=vala[i].y;
+			}
+			else
+			{
+				int lft=vala[i].x+c;
+				if(lft>vala[i].y)
+				{
+					continue;
+				}
+				d-=vala[i].y-lft;
+				c=0;
+			}
+		}
+	}
+	else
+	{
+		sort(valb+1,valb+m2+1,cmp);
+		for(int i=1;i<=m2;i++)
+		{
+			if(d+valb[i].x<=0)
+			{
+				d+=valb[i].x;
+				c-=valb[i].y;
+			}
+			else
+			{
+				int lft=valb[i].x+d;
+				if(lft>valb[i].y)
+				{
+					continue;
+				}
+				c-=valb[i].y-lft;
+				d=0;
+			}
+		}
+	}
+	c=max(c,0);
+	d=max(d,0);
+	cout<<(c+d<=bot?&quot;YES&quot;:&quot;NO&quot;)<<endl;
+}
+
+int main()
+{
+	ios::sync_with_stdio(false);
+	int _=1;
+	cin>>_;
+	while(_--)
+	{
+		slove();
+	}
+	return 0;
+}
+```
+
+" onclick="copyMarkdown(this)">复制 Markdown</a>
+		</span>
+		
+	</div>
+</section>
+
+<script>
+	function copyMarkdown(e) {
+		let text = e.getAttribute('data-src-markdown');
+		if (e.innerHTML == '复制成功') {
+			return;
+		}
+		e.innerHTML = '复制成功';
+		(function (elem) {
+			setTimeout(() => {
+				if (elem.innerHTML == '复制成功') {
+					elem.innerHTML = '复制 Markdown'
+				}
+			}, 1000);
+		})(e)
+		Clipboard.copy(text);
+	}
+</script>
+
+					<div class="post-body next-md-body" id="post_body" data-post-markdown="这些都是近来我 VP CF 遇到的奇奇妙妙的题。
+
+
+
+# 构造
+
+这一类题通常需要大胆猜结论/经验积累。
+
+### [CF1514B AND 0, Sum Big](https://www.luogu.com.cn/problem/CF1514B)
+
+首先因为与运算和为 $0$，所以**每一位上都至少有一个数这一位为 $0$**。
+
+然后因为元素的和要尽量大，所以**肯定不存在两个数同一位为 $0$**。
+
+那么**每一位都需要让 $a_{1\sim n}$  中的恰好一个在这一位为 $0$**，所以答案即为 $n^k$。
+
+### [CF1630A And Matching](https://www.luogu.com.cn/problem/CF1630A)
+
+首先来看三个性质：
+
+- $i\&(n-1-i)=0$，因为 $i$ 和 $n-1-i$ 的二进制是“错开”的；
+- $i\&(n-1)=i$，因为 $n-1$ 的二进制全是 $1$；
+- $i\&0=0$，显然。
+
+接下来分类讨论：
+
+- 若 $k\not=n-1$：
+
+可以**先构造出 $k\&(n-1)=k$ 和 $(n-1-k)\&0=0$，然后对于每个 $1\le i\le n-1$ 且 $i\not=k$ 且 $i\not=n-1-k$ 的 $i$ 构造出 $i\&(n-1-i)=0$。**
+
+注意**特判 $k=0$，这时不需要构造 $(n-1-k)\&0=0$**。
+
+- 若 $k=n-1$
+
+这时容易发现让其中一对与为 $k$ 的办法行不通了，所以我们要另辟蹊径，**让两对的与加起来为 $k$**。
+
+显然 $(n-1)\&(n-2)=n-2$，$1\&(n-3)=1$，那么先构造这两对即可。
+
+接下来发现 $n-1-(n-1)=0$，$n-1-(n-3)=2$，$n-1-(n-2)=1$ 也就是说 $0$ 和 $2$ 不能组成 $i\&(n-1-i)=0$ 了，那么让它们单独组，**构造 $0\&2=0$**。
+
+接下来构造 $i\&(n-1-i)=0$ 即可。
+
+注意到**若 $n\le 4$ 则 $n-1$、$n-2$、$n-3$、$0$、$1$、$2$ 会重叠，这时是无解的**。
+
+### [CF1659D Reverse Sort Sum](https://www.luogu.com.cn/problem/CF1659D)
+
+不难发现，由于每个 $1$ 对 $\sum C$ 都有且仅有 $n$ 的贡献，所以 **$A$ 中 $1$ 的个数即为 $\dfrac{\sum C}{n}$**。
+
+接下来，我们很容易发现 **$A_n=1$ 当且仅当 $C_n=n$**，因为 $A_n=1$ 时 $B_{i,n}$ 一定为 $1$。
+
+有了这个性质的启示，不难想到可以**通过减掉 $B_n$ 对 $C$ 的贡献来实现缩小问题的规模，令 $n$ 变为 $n-1$**。实际上实现起来也并不难，因为**我们已经取得了 $A$ 中 $1$ 的个数 $m$，$B_n$ 一定只会对 $[n-m+1,n]$ 有 $1$ 的贡献，那么用差分来实现快速区间减法即可**。
+
+### [CF1658D2 388535 (Hard Version)](https://www.luogu.com.cn/problem/CF1658D2)
+
+首先**肯定有一个 $a_i$ 满足 $a_i\operatorname{xor} l=x$，即它本来是 $l$**。那么我们枚举每个 $a_i$，判断它原来是不是 $l$ 即可。
+
+接下来思考判断的方法。不难发现，**由于 $a_i$ 原来是不重复的一个排列，所以异或后的 $a_i$ 也是不重复的一个排列，所以只要 $a_i$ 满足 $r=\max\operatorname{xor}(a_i\operatorname{xor} l)$ 就说明 $a_i$ 原来是 $l$**。
+
+这个东西用 trie 维护即可。
+
+### [CF1592C Bakry and Partitioning](https://www.luogu.com.cn/problem/CF1592C)
+
+从每一部分的异或和相同出发，设分割后每一部分的异或和都为 $k$，所有 $a_i$ 的异或和为 $sum$。不难发现**要么 $sum=0$ 即最后是偶数个 $k$ 异或起来，要么 $sum=k$ 即最后是奇数个 $k$ 异或起来**。
+
+- 若 $sum=0$，我们**割断任意一条边都一定合法。因为割出来的两部分只有异或和相同它们异或起来的结果 $sum$ 才为 $0$**。
+
+- 若 $sum=k$，那么**割断两条边，分割出三个异或和为 $k$ 的连通块显然是最优的**。所以**考虑找到两个异或和都为 $k$ 的连通块，剩下那一块异或和就自然为 $k$**。因为**肯定有一个满足条件的连通块是一棵子树，减掉它的贡献后又会有一个满足条件的连通块是一棵子树**，所以跑一次 $dfs$，**求出每个节点子树去掉异或和为的 $k$ 子树后的异或和** $dp_u=\operatorname{xor}_{v\text{ 是 }u\text{ 的儿子}}[dp_v\not=k]dp_v$ 即可。最后若 $\sum\limits_{u} [dp_u=k]\ge2$ 就说明有解。
+
+部分代码如下：
+
+```cpp
+void dfs(int u,int fa,long long val)
+{
+	dp[u]=a[u];
+	for(int i=h[u];i;i=nxt[i])
+	{
+		int v=to[i];
+		if(v==fa)
+		{
+			continue;
+		}
+		dfs(v,u,val);
+		if(dp[v]!=val)
+		{
+			dp[u]^=dp[v];
+		}
+	}
+}
+
+inline void slove()
+{
+	esum=0;
+	scanf(&quot;%d%d&quot;,&n,&k);
+	long long sm=0;
+	for(int i=1;i<=n;i++)
+	{
+		h[i]=0;
+		dp[i]=0;
+		scanf(&quot;%lld&quot;,&a[i]);
+		sm^=a[i];
+	}
+	for(int i=1;i<=n-1;i++)
+	{
+		int x,y;
+		scanf(&quot;%d%d&quot;,&x,&y);
+		add(x,y);
+		add(y,x);
+	}
+	if(sm==0)
+	{
+		puts(&quot;YES&quot;);
+		return;
+	}
+	if(k==2)
+	{
+		puts(&quot;NO&quot;);
+		return;
+	}
+	dfs(1,0,sm);
+	int cnt=0;
+	for(int i=1;i<=n;i++)
+	{
+		cnt+=dp[i]==sm;
+	}
+	puts(cnt>=2?&quot;YES&quot;:&quot;NO&quot;);
+}
+```
+
+
+
+# 交互
+
+这一类题通常需要程序和交互库互动，思维难度较高。
+
+### [CF1503B 3-Coloring](https://www.luogu.com.cn/problem/CF1503B)
+
+用 $1$ 和 $2$ 交替着填，实在不行用 $3$ 即可。
+
+### [CF1592D Hemose in ICPC](https://www.luogu.com.cn/problem/CF1592D)
+
+首先由于 $\gcd$ 里的数越多，结果就越小，所以**最大的 $Dist$ 一定是一条边的边权**。
+
+那么我们**先询问所有节点求出最大的 $Dist=val$，然后二分所有的边**。
+
+考虑如何二分，显然需要把树“拍扁”，用类似 $dfs$ 序的东西来解决。具体的，考虑节点 $u$ 和它的所有儿子 ${v_i}$，显然 $u\to v_i$ 都有一条边，那么**先往序列里加入 $u$，再在 $dfs$ 完每个 $v_i$ 后都加入 $u$ 即可**。
+
+### [CF1634D Finding Zero](https://www.luogu.com.cn/problem/CF1634D)
+
+![img](https://cdn.luogu.com.cn/upload/vjudge_pic/CF1634D/74895b22455b2b459cd8609f4caa3df7273f47e6.png)
+
+考虑从 $4$ 个可能的下标 $b_1,b_2,b_3,b_4$ 中去掉一些不可能的下标。
+
+显然一次询问的结果是三个数的极差。记 $q_1,q_2,q_3,q_4$ 为询问四个下标里分别除去 $b_1,b_2,b_3,b_4$ 的结果，即 $q_1$ 为询问 $b_2,b_3,b_4$ 的结果。那么**显然 $m=\max(q_1,q_2,q_3,q_4)$ 就是 $a_{b_1},a_{b_2},a_{b_3},a_{b_4}$ 的极差**。
+
+不难发现，**若 $q_i=m$，那么 $b_i$ 一定不可能为 $0$**。因为去掉 $0$ 后三个数的极差一定不是这四个数的极差。
+
+这样每排除一次至少可以去掉至少两个不可能的下标，总共需要的次数上限就是 $\dfrac{4n}{2}=2n$，足以通过此题。
+
+特别的，若剩下三个下标未排除，拿一个排除过的下标和它们组队即可。
+
+
+
+# 杂题
+
+最后给两道匕匕车交女少白勺杂题。
+
+### [CF1632D New Year Concert](https://www.luogu.com.cn/problem/CF1632D)
+
+不难发现，当区间 $[l,r]$ 的右端点 $r$ 固定不动，左端点 $l$ 减小时，$\gcd(a_l,a_{l+1},a_{l+2},\dots,a_r)$ 是单调不增的，而 $r-l+1$ 则是单调递增的，这造成了它们最多只会有一个交点。也就是说，**对于一个固定的 $r$，最多有一个 $l$ 满足 $\gcd(a_l,a_{l+1},a_{l+2},\dots,a_r)=r-l+1$**。
+
+那么用倍增实现 $O(n\log n\log v)$ 预处理 $O(1)$ 查询 $\gcd$，然后枚举 $r$，每次找满足条件的 $l$，如果有那么答案加一并且把 $a_l$ 改为 $1$ 即可。
+
+部分代码如下：
+
+```cpp
+int ans=0,lb=1;
+for(int i=1;i<=n;i++)
+{
+	while(lb<i&&que(lb,i)<i-lb+1)
+	{
+		lb++;
+	}
+	if(que(lb,i)==i-lb+1)
+	{
+		ans++;
+		lb=i+1;
+	}
+	printf(&quot;%d &quot;,ans);
+}
+printf(&quot;\n&quot;);
+```
+
+### [CF1594D The Number of Imposters](https://www.luogu.com.cn/problem/CF1594D)
+
+并查集拆点模板题，建议先看一下我的[博客](https://www.luogu.com.cn/blog/251130/awa-bing-zha-ji-xue-xi-bi-ji)。
+
+每个人拆两个点 $i$ 和 $i+n$，分别表示这个人是好人和坏人的情况，**统计答案的时候对每个集合的“帮主”是好人/坏人的情况下的好人的数量取最大值，加起来即可**。
+
+
+
+## [CF1685B Linguistics](https://www.luogu.com.cn/problem/CF1685B)
+
+贪心。
+
+题意显然可以转化为**把 $a$ 个 $\texttt{A}$、$b$ 个 $\texttt{B}$、$c$ 个 $\texttt{A}\texttt{B}$ 和 $d$ 个 $\texttt{B}\texttt{A}$ 不重叠地放进字符串 $s$ 中，使得对应位相等**。
+
+首先若放的 $\texttt{\texttt{A}}$、$\texttt{B}$ 的个数和 $s$ 中 $\texttt{A}$、$\texttt{B}$ 的个数不同，那么就是不行的。接下来考虑让所有放单个 $\texttt{A}$ 和 $\texttt{B}$ 的操作都挪到最后进行，那么问题就转化为判断能否把 $c$ 个 $\texttt{A}\texttt{B}$ 和 $d$ 个 $\texttt{B}\texttt{A}$ 都放进 $s$ 里面。
+
+考虑一段形如 $\texttt{A}\texttt{B}\texttt{A}\texttt{B}\texttt{A}\texttt{B}\texttt{A}\texttt{B}$ 这样 **$\texttt{A}\texttt{B}$ 相间的极长子串**，设它的长度为 $cnt$，那么分类讨论：
+
+- 若 $cnt$ 是奇数，那么这一段可以**放 $\lfloor\frac{cnt}{2}\rfloor$ 个 $\texttt{A}\texttt{B}$ 或 $\texttt{B}\texttt{A}$**；
+- 若 $cnt$ 是偶数，那么：
+  * 若这一段以 $\texttt{B}$ 结尾，即形如 $\texttt{A}\texttt{B}\texttt{A}\texttt{B}$，那么可以**放 $\lfloor\frac{cnt}{2}\rfloor-1$ 个 $\texttt{A}\texttt{B}$ 或 $\texttt{B}\texttt{A}$，或者可以放 $\lfloor\frac{cnt}{2}\rfloor$ 个 $\texttt{A}\texttt{B}$**；
+  * 若这一段以 $\texttt{A}$ 结尾，即形如 $\texttt{B}\texttt{A}\texttt{B}\texttt{A}$，那么可以**放 $\lfloor\frac{cnt}{2}\rfloor-1$ 个 $\texttt{A}\texttt{B}$ 或 $\texttt{B}\texttt{A}$，或者可以放 $\lfloor\frac{cnt}{2}\rfloor$ 个 $\texttt{B}\texttt{A}$**；
+
+不难发现，当 $cnt$ 为奇数时这一段**对 $\texttt{A}\texttt{B}$ 和 $\texttt{B}\texttt{A}$ 都是公平的**，即它们放的上限都是 $\lfloor\frac{cnt}{2}\rfloor$，并且对放多少个 $\texttt{A}\texttt{B}$ 和多少个 $\texttt{B}\texttt{A}$ 没有限制，只要它们数量加起来不超过 $\lfloor\frac{cnt}{2}\rfloor$ 就可以了。
+
+所以可以令 $bot=\sum\limits_{cnt\operatorname{mod}2=1}\lfloor\frac{cnt}{2}\rfloor$ 即**奇数段最多可以放的 $\texttt{A}\texttt{B}$ 和 $\texttt{B}\texttt{A}$ 的数量**。
+
+若 $cnt$ 为偶数，那么这一段**对 $\texttt{A}\texttt{B}$ 和 $\texttt{B}\texttt{A}$ 是不公平的**，即它们放的上限一个多，一个少。为了减少位置的浪费，不妨**先钦定这一段都放上限多的那种字符串，再用两个数组 $vala$ 和 $valb$ 存偏心 $\texttt{A}\texttt{B}$ 或者 $\texttt{B}\texttt{A}$ 即能放更多 $\texttt{A}\texttt{B}$ 或 $\texttt{B}\texttt{A}$ 的偶数段中两种字符串放置的上限**。
+
+最后**若每一段偶数段都放上限多的字符串时 $c$ 或 $d$ 还是大于 $0$，那么就让偏心另一种字符串的偶数段分一些位置放这种字符串**即可。不难发现由于没分之前偶数段总共能放 $\lfloor\frac{cnt}{2}\rfloor$ 个字符串，分了之后只能放 $\lfloor\frac{cnt}{2}\rfloor-1$ 个，所以**分的段数肯定是越少越好**。那么按段的长度从大到小分即可。
+
+代码如下：
+
+```cpp
+// Problem: D. Linguistics
+// Contest: Codeforces Round #794 (Div. 2)
+// URL: https://codeforces.com/contest/1686/problem/D
+// Memory Limit: 256 MB
+// Time Limit: 1000 ms
+// 
+// Powered by CP Editor (https://cpeditor.org)
+
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <queue>
+#include <vector>
+#include <map>
+#include <set>
+
+using namespace std;
+
+const int S=1919810;
+
+struct node
+{
+	int x,y;
+}vala[S],valb[S];
+
+int n,a,b,c,d;
+char str[S];
+
+inline bool cmp(node x,node y)
+{
+	return x.y>y.y;
+}
+
+inline void slove()
+{
+	cin>>a>>b>>c>>d>>(str+1);
+	n=strlen(str+1);
+	int cnta=0,cntb=0;
+	for(int i=1;i<=n;i++)
+	{
+		cnta+=str[i]=='A';
+		cntb+=str[i]=='B';
+	}
+	if(cnta-c-d!=a||cntb-c-d!=b) // A 或 B 的数量不符合的情况
+	{
+		cout<<&quot;NO&quot;<<endl;
+		return;
+	}
+	int m1=0,m2=0,bot=0;
+	str[n+1]=str[n];
+	for(int i=1,cnt=0;i<=n+1;i++)
+	{
+		if(str[i]!=str[i-1])
+		{
+			cnt++;
+		}
+		else
+		{
+			if(cnt>1)
+			{
+				if(cnt&1) // 公平的奇数段
+				{
+					bot+=cnt/2;
+				}
+				else
+				{
+					if(str[i-1]=='B')
+					{
+						vala[++m1]=(node){cnt/2,cnt/2-1}; // 偏心 AB
+						c-=cnt/2;
+					}
+					else
+					{
+						valb[++m2]=(node){cnt/2,cnt/2-1}; // 偏心 BA
+						d-=cnt/2;
+					}
+				}
+			}
+			cnt=1;
+		}
+	}
+	if(d>0)
+	{
+		sort(vala+1,vala+m1+1,cmp);
+		for(int i=1;i<=m1;i++)
+		{
+			if(c+vala[i].x<=0)
+			{
+				c+=vala[i].x;
+				d-=vala[i].y;
+			}
+			else
+			{
+				int lft=vala[i].x+c;
+				if(lft>vala[i].y)
+				{
+					continue;
+				}
+				d-=vala[i].y-lft;
+				c=0;
+			}
+		}
+	}
+	else
+	{
+		sort(valb+1,valb+m2+1,cmp);
+		for(int i=1;i<=m2;i++)
+		{
+			if(d+valb[i].x<=0)
+			{
+				d+=valb[i].x;
+				c-=valb[i].y;
+			}
+			else
+			{
+				int lft=valb[i].x+d;
+				if(lft>valb[i].y)
+				{
+					continue;
+				}
+				c-=valb[i].y-lft;
+				d=0;
+			}
+		}
+	}
+	c=max(c,0);
+	d=max(d,0);
+	cout<<(c+d<=bot?&quot;YES&quot;:&quot;NO&quot;)<<endl;
+}
+
+int main()
+{
+	ios::sync_with_stdio(false);
+	int _=1;
+	cin>>_;
+	while(_--)
+	{
+		slove();
+	}
+	return 0;
+}
+```
+
+"></div>
+					<div class="post-footer">
+	<ul class="post-copyright">
+		<li class="post-copyright-author">
+			<strong class="language" data-lan="author">本文作者：</strong>Exber
+		</li>
+		<li class="post-copyright-link">
+			<strong class="language" data-lan="link">本文链接：</strong>
+			<a href="https://exber.qzz.io/post/2022%20%E6%9A%91%E5%81%87%E6%9D%82%E9%A2%98%E9%80%89%E8%AE%B2" title="2022 暑假杂题选讲">https://exber.qzz.io/post/2022%20%E6%9A%91%E5%81%87%E6%9D%82%E9%A2%98%E9%80%89%E8%AE%B2</a>
+		</li>
+		<li class="post-copyright-license">
+			<strong class="language" data-lan="copyright">版权声明： </strong>
+			本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+		</li>
+	</ul>
+	<div class="tags">
+		
+			<a href="https://exber.qzz.io/tags"># 杂题选讲</a>
+		
+	</div>
+</div>
+				</div>
+			</div>
+			<script>
+	// 处理目录
+	function work_with_toc() {
+		let lastTop = 0, lList = [], hList = [], postBody, lastIndex = -1;
+		let active = 'active-show', activeClass = 'active-current';
+		let tocWrapper = document.querySelector('#toc_wrapper');
+		let tocContent = tocWrapper.children[0];
+		let autoNumber = tocWrapper && tocWrapper.classList.contains('auto-number');
+
+		function addTocNumber(elem, deep) {
+			if (!elem) {
+				return;
+			}
+			let prop = elem.__proto__;
+
+			if (prop === HTMLUListElement.prototype) {
+				for (let i = 0; i < elem.children.length; i++) {
+					addTocNumber(elem.children[i], deep + (i + 1) + '.');
+				}
+			} else if (prop === HTMLLIElement.prototype) {
+				// 保存li元素
+				if (elem.children[0] && elem.children[0].__proto__ === HTMLAnchorElement.prototype) {
+					lList.push(elem);
+				}
+				for (let i = 0; i < elem.children.length; i++) {
+					let cur = elem.children[i];
+					if (cur.__proto__ === HTMLAnchorElement.prototype) {
+						if (autoNumber) {
+							cur.text = deep + ' ' + cur.text;
+						}
+					} else if (cur.__proto__ === HTMLUListElement.prototype) {
+						addTocNumber(cur, deep);
+					}
+				}
+			}
+		}
+
+		function removeParentActiveClass() {
+			let parents = tocContent.querySelectorAll('.' + active)
+			parents.forEach(function (elem) {
+				elem.classList.remove(active);
+			});
+		}
+
+		function addActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.add(activeClass);
+			}
+		}
+
+		function removeActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.remove(activeClass);
+			}
+		}
+
+		function addActiveLiElemment(elem, parent) {
+			if (!elem || elem === parent) {
+				return;
+			} else {
+				if (elem.__proto__ === HTMLLIElement.prototype) {
+					elem.classList.add(active);
+				}
+				addActiveLiElemment(elem.parentElement, parent);
+			}
+		}
+
+		function showToc() {
+			if (tocWrapper) {
+				postBody = document.querySelector('#post_body');
+				for (let i = 0; i < postBody.children.length; i++) {
+					if (postBody.children[i].__proto__ === HTMLHeadingElement.prototype) {
+						hList.push(postBody.children[i]);
+					}
+				}
+				if (tocWrapper.classList.contains('compress')) {
+					tocContent.classList.add('closed');
+				} else if (tocWrapper.classList.contains('no_compress')) {
+					tocContent.classList.add('expanded');
+				} else {
+					if (hList.length > 10) {
+						active = 'active-hidden'
+						tocContent.classList.add('closed');
+					} else {
+						tocContent.classList.add('expanded');
+					}
+				}
+			}
+		}
+
+		(function () {
+			// 处理不是从一级标题开始目录
+			while (tocContent.children.length === 1 && tocContent.children[0].__proto__ === HTMLUListElement.prototype) {
+				let con = tocContent.children[0];
+				tocContent.innerHTML = con.innerHTML;
+			}
+			addTocNumber(tocContent, '');
+		})();
+
+		document.addEventListener('scroll', function (e) {
+			if (lList.length <= 0) {
+				return;
+			}
+			let scrollTop = document.scrollingElement.scrollTop + 10;
+			let dir;
+
+			if (lastTop - scrollTop > 0) {
+				dir = 'up';
+			} else {
+				dir = 'down';
+			}
+
+			lastTop = scrollTop;
+			if (scrollTop <= 0) {
+				if (lastIndex >= 0 && lastIndex < hList.length) {
+					lList[lastIndex].classList.remove(activeClass);
+				}
+				return;
+			}
+
+			let current = 0, hasFind = false;
+			for (let i = 0; i < hList.length; i++) {
+				if (hList[i].offsetTop > scrollTop) {
+					current = i;
+					hasFind = true;
+					break;
+				}
+			}
+			if (!hasFind && scrollTop > lList[lList.length - 1].offsetTop) {
+				current = hList.length - 1;
+			} else {
+				current--;
+			}
+			if (dir === 'down') {
+				if (current > lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex)
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			} else {
+				if (current < lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex);
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			}
+		});
+
+
+		window.addEventListener('load', function () {
+			showToc();
+			document.querySelector('#sidebar').style = 'display: block;';
+			tocWrapper.classList.add('toc-active');
+			setTimeout(function () {
+				if ("createEvent" in document) {
+					let evt = document.createEvent("HTMLEvents");
+					evt.initEvent("scroll", false, true);
+					document.dispatchEvent(evt);
+				}
+				else {
+					document.fireEvent("scroll");
+				}
+			}, 500)
+		})
+		
+		const SIDEBAR_TITLE_ACTIVE = 'sidebar-title-active';
+		const SIDEBAR_BODY_ACTIVE = 'sidebar-body-active';
+		const SLIDE_UP_IN = 'slide-up-in';
+
+		let tocSideBar = document.querySelector('#tocSideBar'),
+		metaSideBar = document.querySelector('#metaSideBar'),
+		postToc = document.querySelector('#post_toc'),
+		postSiteMeta = document.querySelector('#post_side_meta'),
+		sidebarTitle = document.querySelector('.sidebar-title'),
+		sidebarBody = document.querySelector('#sidebar_body');
+
+		tocSideBar && tocSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		metaSideBar && metaSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		function toggleSidebar(e) {
+			let currentTitle = document.querySelector("."+SIDEBAR_TITLE_ACTIVE);
+			if (currentTitle == e.srcElement) {
+				return ;
+			}
+			let current, showElement, hideElement;
+			if (e.srcElement == metaSideBar) {
+				showElement = postSiteMeta;
+				hideElement = postToc;
+			} else if (e.srcElement == tocSideBar){
+				showElement = postToc;
+				hideElement = postSiteMeta;
+			}
+			currentTitle.classList.remove(SIDEBAR_TITLE_ACTIVE);
+			e.srcElement.classList.add(SIDEBAR_TITLE_ACTIVE);
+
+			jQuery.Velocity(hideElement, 'stop');
+			jQuery.Velocity(hideElement, 'transition.slideUpOut', {
+				display: 'none',
+				duration: 200,
+				complete: function () {
+					jQuery.Velocity(showElement, 'transition.slideDownIn', {
+						duration: 200
+					});
+				}
+			})
+			hideElement.classList.remove(SIDEBAR_BODY_ACTIVE);
+			showElement.classList.add(SIDEBAR_BODY_ACTIVE);
+		}
+
+		postToc && postToc.addEventListener('transitionend', function() {
+			this.classList.remove(SLIDE_UP_IN);
+		});
+	}
+</script>
+<script>
+	// 没有目录时删除侧边栏目录相关
+	function remove_toc(){
+		document.querySelector('#sidebar-selector').remove();
+		document.querySelector('#post_toc').remove();
+		document.querySelector('#post_side_meta').classList.remove("post-side-meta");
+	}
+</script>
+<script>
+	// 渲染文章 markdown 并生成目录
+	function render_post_markdown(content)
+	{
+		let markdown = window.markdownit({ html: true })
+				.use(markdownItLinkEncodeFixed)
+				.use(window.markdownItAnchor, {
+					permalink: false,
+					permalinkBefore: false
+				})
+				.use(window.texmath, {
+					engine: katex,
+					delimiters: 'dollars'
+				});
+		// 处理图片路径
+		let temp_container = document.createElement('div');
+		temp_container.innerHTML = markdown.render(content);
+		{
+			let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		{
+			let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		return temp_container.innerHTML;
+	}
+	function generateToc() {
+		const contentElement = document.getElementById('post_body');
+		const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+		const tocElement = document.getElementById('toc_wrapper');
+		
+		if (headings.length === 0) {
+			return false;
+		}
+		let toc_ul = "<ul style='list-style: none;'>";
+		let toc_li = "<li style='list-style: none;'>";
+		let tocHtml = toc_ul;
+		let currentLevel = 1;
+		let stack = [0];
+		
+		headings.forEach((heading, index) => {
+			const level = parseInt(heading.tagName.substring(1));
+			const id = heading.id || `heading-${index}`;
+			heading.id = id;
+			
+			// 提取包含公式的 HTML 内容
+			let headingContent = heading.innerHTML;
+			
+			// 调整层级逻辑
+			if (level > currentLevel) {
+				for (let i = currentLevel; i < level; i++) {
+					tocHtml += toc_ul;
+					stack[i] = 0;
+				}
+			} else if (level < currentLevel) {
+				for (let i = currentLevel; i > level; i--) {
+					tocHtml += '</ul></li>';
+					stack.pop();
+				}
+			} else if (index > 0) {
+				tocHtml += '</li>';
+			}
+			
+			stack[level-1] = (stack[level-1] || 0) + 1;
+			for (let i = level; i < stack.length; i++) {
+				stack[i] = 0;
+			}
+			
+			// 使用渲染后的内容（包含已处理的公式）
+			tocHtml += toc_li+`<a href="#${id}">${headingContent}</a>`;
+			currentLevel = level;
+		});
+		
+		for (let i = 1; i < currentLevel; i++) {
+			tocHtml += '</ul></li>';
+		}
+		if (headings.length > 0) {
+			tocHtml += '</li>';
+		}
+		
+		tocHtml += '</ul>';
+		tocElement.innerHTML = tocHtml;
+		
+		return true;
+	}
+</script>
+<script>
+	!function () {
+		const post_body = document.querySelector('div[data-post-markdown]');
+		
+		try {
+			const markdownContent = post_body.getAttribute('data-post-markdown');
+			
+			if (markdownContent) {
+				const renderedHTML = render_post_markdown(markdownContent);
+				post_body.innerHTML = renderedHTML;
+				post_body.removeAttribute('data-post-markdown');
+				if(generateToc()) work_with_toc();
+				else remove_toc();
+			}
+		} catch (error) {
+			post_body.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+		}
+	}();
+</script>
+		</div>
+	</div>
+	
+
+
+
+
+
+
+<div class="footer-box">
+	<footer class="footer">
+		<center id="runTimeBox">
+			已运行: <span id="run_time"></span>
+		</center>
+		<script>
+			BirthDay = new Date('2023-03-01');
+			if (BirthDay.getTime()) {
+				function runTime() {
+					str = "";
+					today = new Date();
+					timeold = today.getTime() - BirthDay.getTime();
+					msPerDay = 24 * 60 * 60 * 1000;
+					e_daysold = timeold / msPerDay;
+					daysold = Math.floor(e_daysold);
+					str += daysold + " 天";
+					return str;
+				}
+				setInterval(function () {
+					$("#run_time").html(runTime());
+				}, 1000);
+			} else {
+				document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+			}
+		</script>
+		<div class="poweredby">
+			Powered by Exber
+		</div>
+	</footer>
+	<div class="pisces back-to-top" id="back_to_top">
+		<i class="fa fa-arrow-up"></i>
+		<span class="scrollpercent">
+			<span id="back_to_top_text">0</span>%
+		</span>
+	</div>
+</div>
+<script>
+	// back2top
+	let back2Top = document.querySelector("#back_to_top"),
+		back2TopText = document.querySelector("#back_to_top_text");
+
+	function scrollAnimation(currentY, targetY) {
+		let needScrollTop = targetY - currentY;
+		let _currentY = currentY;
+		setTimeout(() => {
+			const dist = Math.ceil(needScrollTop / 10);
+			_currentY += dist;
+			window.scrollTo(_currentY, currentY);
+			if (needScrollTop > 10 || needScrollTop < -10) {
+				scrollAnimation(_currentY, targetY);
+			} else {
+				window.scrollTo(_currentY, targetY);
+			}
+		}, 1);
+	}
+
+	back2Top.addEventListener("click", function(e) {
+		scrollAnimation(document.scrollingElement.scrollTop, 0);
+		e.stopPropagation();
+		return false;
+	});
+
+	window.addEventListener("scroll", function(e) {
+		let percent =
+			(document.scrollingElement.scrollTop /
+				(document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight)) *
+			100;
+		if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+			back2Top.classList.add("back-top-active");
+		}
+		if (percent == 0) {
+			back2Top.classList.remove("back-top-active");
+		}
+		if (back2TopText) {
+			back2TopText.textContent = Math.floor(percent);
+		}
+	});
+</script>
+	</div>
+</body>
+
+
+
+
+
+
+
+<input hidden id="copy" />
+<link rel="stylesheet" href="https://exber.qzz.io/media/css/jquery.fancybox.css" />
+<script src="https://exber.qzz.io/media/js/jquery.fancybox.js"></script>
+<script>
+	// 渲染所有带有 data-markdown 属性的 div 元素
+	!function () {
+		const markdownElements = document.querySelectorAll('div[data-markdown]');
+		
+		markdownElements.forEach((element, index) => {
+			try {
+				const markdownContent = element.getAttribute('data-markdown');
+				
+				if (markdownContent) {
+					const renderedHTML = render_markdown(markdownContent);
+					element.innerHTML = renderedHTML;
+					element.removeAttribute('data-markdown');
+				}
+			} catch (error) {
+				element.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+			}
+		});
+	}();
+</script>
+<script>
+	document.querySelectorAll(".section img").forEach((image) => {
+		var parent = image.parentElement;
+		var next = image.nextElementSibling;
+		parent.removeChild(image);
+		var aelem = document.createElement("a");
+		aelem.href = image.src;
+		aelem.dataset["fancybox"] = "images";
+		aelem.dataset["rel"] = "fancybox-button";
+		aelem.classList.add("fancybox");
+		aelem.appendChild(image);
+		parent.insertBefore(aelem, next);
+	});
+	
+	!function () {
+		let times = document.querySelectorAll('.publish-time');
+		for (let i = 0; i < times.length; i++) {
+			let date = times[i].dataset.t;
+			let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+			if (time < 60) {
+				str = time + '秒之前';
+			} else if (time < 3600) {
+				str = Math.floor(time / 60) + '分钟之前';
+			} else if (time >= 3600 && time < 86400) {
+				str = Math.floor(time / 3600) + '小时之前';
+			} else if (time >= 86400 && time < 259200) {
+				str = Math.floor(time / 86400) + '天之前';
+			} else {
+				str = times[i].textContent;
+			}
+			times[i].textContent = str;
+		}
+	}();
+	
+	let language = '';
+	if (language !== '') {
+		let map = new Map();
+		if (language === 'en') {
+			map.set('search', 'Search');
+			map.set('category', 'Categories');
+			map.set('article', 'Articles');
+			map.set('tag', 'Tags');
+			map.set('top', 'Top');
+			map.set('publish', 'published');
+			map.set('minute', ' minutes');
+			map.set('read-more', 'Read More');
+			map.set('view', 'View');
+			map.set('words', ' words');
+			map.set('category-in', 'category in');
+			map.set('preview', 'Meta');
+			map.set('index', 'Toc');
+			map.set('no-archives', "You haven't created yet");
+			map.set('archives', " articles in total");
+			map.set('cloud-tags', " tags in total");
+			map.set('copyright', "Copyright: ");
+			map.set('author', "Author: ");
+			map.set('link', "Link: ");
+			map.set('leave-message', "Leave a message");
+			map.set('format', "Links Format");
+			map.set('site-name', "Name: ");
+			map.set('site-link', "Link: ");
+			map.set('site-desc', "Desc: ");
+			map.set('stat', " related results, taking ");
+			map.set('stat-time', " ms");
+			map.set('site-img', "Image: ");
+			map.set('copy-markdown', "Copy Markdown");
+		}
+
+		if (map.size > 0) {
+			let lanElems = document.querySelectorAll('.language');
+			lanElems.forEach(elem => {
+				let lan = elem.dataset.lan, text = map.get(lan);
+				if (elem.__proto__ === HTMLInputElement.prototype) {
+					elem.placeholder = text
+				} else {
+					if (elem.dataset.count) {
+						text = elem.dataset.count + text;
+					}
+					elem.textContent = text;
+				}
+			})
+		}
+	}
+
+	function copyCode(e) {
+		if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+			let code = e.currentTarget.querySelector('code');
+			var text = code.innerText;
+			if (e.srcElement.textContent === '复制成功') {
+				return;
+			}
+			e.srcElement.textContent = '复制成功';
+			(function (elem) {
+				setTimeout(() => {
+					if (elem.textContent === '复制成功') {
+						elem.textContent = '复制代码'
+					}
+				}, 1000);
+			})(e.srcElement)
+			Clipboard.copy(text);
+		}
+	}
+
+	let pres = document.querySelectorAll('pre');
+	pres.forEach(pre => {
+		let code = pre.querySelector('code');
+		let copyElem = document.createElement('span');
+		copyElem.classList.add('copy-code');
+		copyElem.textContent = '复制代码';
+		pre.appendChild(copyElem);
+		pre.onclick = copyCode
+	})
+</script>
+<script src="https://exber.qzz.io/media/js/motion.js"></script>
+<script src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+<script>
+	var scroll = new SmoothScroll('a[href*="#"]', {
+		speed: 200
+	});
+</script>
+<script>
+	// 动态调整站点概览位置
+	let hasCacu = false;
+	window.addEventListener("resize", function(e) {
+		calcuHeight();
+	});
+
+	function calcuHeight() {
+		if (!hasCacu) {
+			let sideBar = document.querySelector(".sidebar");
+			let navUl = document.querySelector("#site_nav");
+			sideBar.style =
+				"margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+			hasCacu = true;
+		}
+	}
+	calcuHeight();
+	
+	// 侧边栏固定逻辑
+	let sidebar = document.querySelector('.sidebar');
+	let sidebarWrapper = document.querySelector('#sidebar');
+	if (sidebar) {
+		let hasFix = false;
+		document.addEventListener('scroll', function(e) {
+		  if (document.scrollingElement.scrollTop > parseInt(sidebar.style.marginTop) + 15) {
+			if (!hasFix) {
+				sidebarWrapper.classList.add('sidebar-fixed')
+				hasFix = true;
+			}
+		  } else {
+			if (hasFix) {
+				sidebarWrapper.classList.remove('sidebar-fixed')
+				hasFix = false;
+			}
+		  }
+		});
+	}
+</script>
+<script>
+	// 链接跳转
+	let newWindow = "true";
+	if (newWindow === "true") {
+		let links = document.querySelectorAll(".post-body a");
+		links.forEach((item) => {
+			if (!item.classList.contains("btn")) {
+				item.setAttribute("target", "_blank");
+			}
+		});
+	}
+
+	// 代码高亮
+	hljs.initHighlightingOnLoad();
+
+	// 离开当前页title变化
+	var leaveTitle = "";
+	var normal_title = document.title;
+	if (leaveTitle) {
+		document.addEventListener("visibilitychange", function() {
+			if (document.visibilityState == "hidden") {
+				normal_title = document.title;
+				document.title = leaveTitle;
+			} else {
+				document.title = normal_title;
+			}
+		});
+	}
+</script>
+</html>

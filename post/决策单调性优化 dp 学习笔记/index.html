@@ -1,0 +1,2582 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	
+
+
+
+
+
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="静态个人博客">
+<meta name="description" content="Exber's Blog">
+<meta name="theme-color" content="#000">
+
+<title>决策单调性优化 dp 学习笔记|Exber's Blog</title>
+
+<link rel="shortcut icon" href="https://exber.qzz.io/favicon.ico?v=1769647447">
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/css/pisces.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/fonts/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/hljs/styles/default.css">
+
+<link
+  href="https://fonts.font.im/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet"
+  type="text/css"
+>
+
+<link rel="stylesheet/less" type="text/css" href="https://exber.qzz.io/styles/main.less">
+<script src="https://cdn.jsdmirror.com/npm/less@4"></script>
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/main.css">
+
+<script src="https://exber.qzz.io/media/js/jquery.js"></script>
+<script src="https://exber.qzz.io/media/hljs/highlight.js"></script>
+
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+<script src="https://cdn.jsdmirror.com/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-texmath/texmath.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-anchor/dist/markdownItAnchor.umd.js"></script>
+
+<script>
+// 处理带空格的链接
+function markdownItLinkEncodeFixed(md) {
+	// 1. 修复链接打开规则
+	const defaultLinkOpenRender = md.renderer.rules.link_open || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const hrefIndex = token.attrIndex('href');
+		
+		if (hrefIndex >= 0) {
+			const originalHref = token.attrs[hrefIndex][1];
+			// 更健壮的编码处理
+			const encodedHref = encodeURI(originalHref).replace(/%20/g, '%20');
+			token.attrs[hrefIndex][1] = encodedHref;
+		}
+		
+		return defaultLinkOpenRender(tokens, idx, options, env, self);
+	};
+
+	// 2. 修复图片规则
+	const defaultImageRender = md.renderer.rules.image || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.image = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const srcIndex = token.attrIndex('src');
+		
+		if (srcIndex >= 0) {
+			const originalSrc = token.attrs[srcIndex][1];
+			const encodedSrc = encodeURI(originalSrc).replace(/%20/g, '%20');
+			token.attrs[srcIndex][1] = encodedSrc;
+		}
+		
+		return defaultImageRender(tokens, idx, options, env, self);
+	};
+
+	// 3. 新增：处理可能被误解析为text的链接[1](@ref)
+	const defaultTextRender = md.renderer.rules.text || 
+		function(tokens, idx, options, env, self) {
+			const token = tokens[idx];
+			return token.content;
+		};
+
+	md.renderer.rules.text = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const content = token.content;
+		
+		// 检测类似链接模式的text token[1](@ref)
+		if (content.includes('[') && content.includes(']') && content.includes('(') && content.includes(')')) {
+			try {
+				// 尝试提取和编码链接
+				const linkMatch = content.match(/\[([^\]]+)\]\(([^)]+)\)/);
+				if (linkMatch) {
+					const linkText = linkMatch[1];
+					const linkUrl = encodeURI(linkMatch[2]).replace(/%20/g, '%20');
+					return `<a href="${linkUrl}">${linkText}</a>`;
+				}
+			} catch (e) {
+				console.warn('链接提取失败:', e);
+			}
+		}
+		
+		return defaultTextRender(tokens, idx, options, env, self);
+	};
+}
+function render_markdown(content)
+{
+	let markdown = window.markdownit({ html: true })
+			 .use(markdownItLinkEncodeFixed)
+			 .use(window.texmath, {
+				 engine: katex,
+				 delimiters: 'dollars'
+			 });
+	// 处理图片路径
+	let temp_container = document.createElement('div');
+	temp_container.innerHTML = markdown.render(content);
+	{
+		let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	{
+		let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	return temp_container.innerHTML;
+}
+</script>
+<script>
+	window.Clipboard = (function (window, document, navigator) {
+		var textArea,
+			copy;
+
+		// 判断是不是ios端
+		function isOS() {
+			return navigator.userAgent.match(/ipad|iphone/i);
+		}
+		//创建文本元素
+		function createTextArea(text) {
+			textArea = document.createElement('textArea');
+			textArea.value = text;
+			textArea.style.width = 0;
+			textArea.style.height = 0;
+			textArea.clientHeight = 0;
+			textArea.clientWidth = 0;
+			document.body.appendChild(textArea);
+		}
+		//选择内容
+		function selectText() {
+			var range,
+				selection;
+
+			if (isOS()) {
+				range = document.createRange();
+				range.selectNodeContents(textArea);
+				selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				textArea.setSelectionRange(0, 999999);
+			} else {
+				textArea.select();
+			}
+		}
+
+		//复制到剪贴板
+		function copyToClipboard() {
+			try {
+				document.execCommand("Copy")
+			} catch (err) {
+				alert("复制错误！请手动复制！")
+			}
+			document.body.removeChild(textArea);
+		}
+
+		copy = function (text) {
+			createTextArea(text);
+			selectText();
+			copyToClipboard();
+		};
+
+		return {
+			copy: copy
+		};
+	})(window, document, navigator);
+</script>
+	<meta name="description" content="决策单调性优化 dp 学习笔记" />
+</head>
+
+<body>
+	<div class="head-top-line"></div>
+	<div class="header-box">
+		
+		
+	<style> /* 搜索相关 */
+		.gridea-search-input{
+			height: 30px;
+			width: 200px;
+			box-sizing: border-box;
+			padding: 0 15px 0 30px;
+			border: 1px solid #e3e3e3;
+			border-radius: 15px;
+			color: #273849;
+			outline: none;
+			transition: border-color 0.2s ease;
+			background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+			background-size: 20px;
+			vertical-align: middle !important;
+		}
+		.gridea-search-input:focus {
+		  border-color: #666666;
+		  right: 0;
+		}
+		/* 自适应轨道 */
+		.slider-track {
+			--track-height: 0.4em; /* 轨道基础高度 */
+			width: 100%;
+			height: var(--track-height);
+			background: #e0e0e0;
+			border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+			position: relative;
+			cursor: default;
+			margin: 0.5em 0; /* 垂直间距自适应 */
+		}
+		
+		/* 进度填充 */
+		.slider-fill {
+			height: 100%;
+			background: #555;
+			border-radius: inherit; /* 继承父级圆角 */
+			width: 50%; /* 初始值 */
+		}
+		
+		/* 自适应滑块 */
+		.slider-thumb {
+			--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+			position: absolute;
+			width: var(--thumb-size);
+			height: var(--thumb-size);
+			background: #555;
+			border-radius: 50%;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: 
+				transform 0.2s ease,
+				box-shadow 0.2s ease;
+			border: 2px solid white; /* 增加辨识度 */
+		}
+		
+		/* 悬停效果 */
+		.slider-thumb:hover {
+			background: #333;
+			transform: translate(-50%, -50%) scale(1.1);
+			box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+		}
+		
+		/* 拖动效果 */
+		.slider-thumb:active {
+			cursor: grabbing;
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		}
+		
+		/* 数值显示 */
+		.value-display {
+			text-align: center;
+			font-family: Arial, sans-serif;
+			color: #555;
+			font-size: 1.2em; /* 基于容器字体大小 */
+			margin-top: 0.5em;
+		}
+	</style>
+
+<div class="pisces">
+  <header class="header">
+    <div class="blog-header box-shadow-wrapper" id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+            <a href="https://exber.qzz.io" class="brand">
+              <span>Exber's Blog</span>
+            </a>  
+        </div>
+        
+			<p class="subtitle">Can't go up</p>
+        
+      </div>
+      <nav class="site-nav bg-color" id="site_nav">
+        <ul id="nav_ul">
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io" target="">
+					首页
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io/tags" target="">
+					按标签筛选
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://csacademy.com/app/graph_editor/" target="_blank">
+					图论编辑器
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="http://yuantiji.ac/zh/" target="_blank">
+					原题机
+				</a>
+            </li>
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://exber.qzz.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.6</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script>
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+
+
+	<script>
+		// 获取DOM元素
+		const sliderTrack = document.getElementById('sliderTrack');
+		const sliderThumb = document.getElementById('sliderThumb');
+		const sliderFill = document.getElementById('sliderFill');
+		const sliderValue = document.getElementById('sliderValue');
+		
+		// 初始化变量
+		let isDragging = false;
+		let currentValue = 0.6;
+		
+		// 更新滑块位置和数值显示
+		function updateSlider(positionX) {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			let newPosition;
+
+			// 检查轨道宽度是否有效
+			if (trackRect.width <= 0) {
+				// 如果轨道宽度无效，则直接使用当前的 currentValue
+				newPosition = currentValue;
+			} else {
+				// 正常计算位置
+				newPosition = (positionX - trackRect.left) / trackRect.width;
+				newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+			}
+
+			// 更新UI
+			sliderThumb.style.left = `${newPosition * 100}%`;
+			sliderFill.style.width = `${newPosition * 100}%`;
+
+			// 更新当前值和表单隐藏域的值
+			currentValue = newPosition;
+			document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+
+			// 更新显示值（保留两位小数）
+			// 使用 Number.isNaN 进行严格检查，确保显示正常
+			const displayValue = Number.isNaN(newPosition) ? '0.60' : newPosition.toFixed(2);
+			sliderValue.textContent = displayValue;
+		}
+		
+		// 响应父容器大小变化
+		function handleResize() {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			const positionX = trackRect.left + trackRect.width * currentValue;
+			updateSlider(positionX);
+		}
+		
+		// 鼠标按下事件 - 仅在圆点上触发
+		sliderThumb.addEventListener('mousedown', (e) => {
+			isDragging = true;
+			sliderThumb.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		
+		// 鼠标移动事件
+		document.addEventListener('mousemove', (e) => {
+			if (!isDragging) return;
+			updateSlider(e.clientX);
+		});
+		
+		// 鼠标释放事件
+		document.addEventListener('mouseup', () => {
+			if (isDragging) {
+				isDragging = false;
+				sliderThumb.style.cursor = 'grab';
+			}
+		});
+		
+		// 监听父容器大小变化
+		const resizeObserver = new ResizeObserver(() => {
+			handleResize();
+		});
+		
+		// 开始观察相关元素
+		resizeObserver.observe(sliderTrack.parentElement);
+		resizeObserver.observe(sliderTrack);
+		
+		// 初始化
+		handleResize();
+	</script>
+
+	</div>
+	<div class="main-continer">
+	<div class="section-layout pisces">
+		<div class="section-layout-wrapper">
+			<div class="sidebar">
+	<div class="sidebar-box box-shadow-wrapper bg-color right-motion" id="sidebar">
+		<div class="post-list-sidebar" id="sidebar-selector">
+			<div class="sidebar-title">
+				<span id="tocSideBar" class="sidebar-title-item sidebar-title-active language" data-lan="index">文章目录</span>
+				<span id="metaSideBar" class="sidebar-title-item language" data-lan="preview">站点概览</span>
+			</div>
+		</div>
+		<div class="sidebar-body pisces" id="sidebar_body">
+			<div class="post-side-meta" id="post_side_meta">
+				
+
+
+
+
+
+
+<div class="sidebar-item">
+	<img class="site-author-image right-motion" src="https://exber.qzz.io/avatar.png"/>
+	<p class="site-author-name">Exber</p>
+	
+	<div class="site-description right-motion">
+		<p>洛谷 @Exber</p>
+<p>Codeforces @Rebex</p>
+
+	</div>
+	
+</div>
+<div class="sidebar-item side-item-stat right-motion">
+	<div class="sidebar-item-box">
+		<a href="https://exber.qzz.io/tags">
+			<span class="site-item-stat-count">26</span>
+			<span class="site-item-stat-name language" data-lan="tag">标签</span>
+		</a>
+	</div>
+	<div class="sidebar-item-box">
+		<a>
+			
+			<span class="site-item-stat-count">330</span>
+			<span class="site-item-stat-name language" data-lan="article">文章</span>
+		</a>
+	</div>
+</div>
+
+			</div>
+			<div class="post-toc sidebar-body-active" id="post_toc" style="opacity: 1;">
+				<div class="toc-box right-motion">
+					<div class="toc-wrapper  no_compress" id="toc_wrapper">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+			<div class="section-box box-shadow-wrapper">
+				<div class="section bg-color post post-page">
+					
+					<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/%E5%86%B3%E7%AD%96%E5%8D%95%E8%B0%83%E6%80%A7%E4%BC%98%E5%8C%96%20dp%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0">决策单调性优化 dp 学习笔记</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2026-01-27 19:28:52">2026-01-27 19:28:52</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>学习笔记</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>DP</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>数学</span>
+				</a>
+			
+		</span>
+		
+		
+		
+		<span class="meta-item pc-show">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-copy"></i>
+			<a class="language" data-lan="copy-markdown" data-src-markdown="决策单调性一般可用观察法/分析四边形不等式得出，这里主要介绍四边形不等式。
+
+在这里我们只讨论代价为二元函数 $w(l,r)$ 的 dp。
+
+## Part 1 定义 & 性质
+
+### 1.1 dp 维数定义
+
+描述 dp 的时间复杂度时，往往会用 xD/yD 这样的说法，其中 $x$ 为 $\text{状态数}\log n$，$y$ 为 $\text{单次转移复杂度}\log n$。
+
+例如 $f_{l,r}=\sum\limits_{k=l+1}^rf_{l,k-1}+f_{k,r}$ 是 2D/1D 的 dp。
+
+### 1.2 决策单调性
+
+设 dp 的状态集合为 $S$，状态 $u$ 的最优决策点为 $\text{opt}(u)$。
+
+若 $\forall i,j\in S,i<j$ 都有 $\text{opt}(i)\le\text{opt}(j)$，则称该 dp 满足决策单调性。
+
+### 1.3 区间包含单调性和四边形不等式
+
+这两个东西都是定义在二元函数 $f(l,r)$ 上的。
+
+#### 1.3.1 区间包含单调性
+
+若 $\forall l\le l'\le r'\le r$，都有 $f(l',r')\le f(l,r)$，则称 $f$ 满足区间包含单调性。
+
+#### 1.3.2 四边形不等式
+
+若 $\forall l\le l'\le r'\le r$，都有 $f(l,r')+f(l',r)\le f(l,r)+f(l',r')$，则称 $f$ 满足四边形不等式。
+
+即相交小于包含。
+
+#### 1.3.3 一些帮助证明的性质
+
+- 若 $w(l+1,r)\le w(l,r)$ 且 $w(l,r-1)\le w(l,r)$，则可以归纳证明 $w(l,r)$ 满足区间包含单调性；
+- 若 $w(l+1,r)+w(l,r-1)\le w(l,r)+w(l+1,r-1)$，则可以归纳证明 $w(l,r)$ 满足四边形不等式；
+- 线性性：若 $f(l,r)$ 与 $g(l,r)$ 均满足区间包含单调性 / 四边形不等式，则 $\forall c1,c2\ge 0$，$c1\times f(l,r)+c2\times g(l,r)$ 也满足区间包含单调性 / 四边形不等式；
+- 若 $w(l,r)=f(r)-g(l)$：
+  - $w(l,r)$ 满足四边形恒等式（$\le$ 恒取 $=$）；
+  - 若 $f,g$ 均单调不增，则 $w(l,r)$ 还满足区间包含单调性；
+- 若 $f(x)$ 为下凸函数（导数不降），$w(l,r)$ 满足区间包含单调性和四边形不等式：
+  - $f(w(l,r))$ 满足四边形不等式；
+  - 若 $f(x)$ 单调不降，则 $f(w(l,r))$ 还满足区间包含单调性；
+
+<details><summary>证明</summary><p>
+
+> (2）：
+> $$
+> \begin{aligned}
+> w(l+1,r)+w(l,r-1)\le w(l,r)+w(l+1,r-1)\qquad&(1)\\
+> w(l+1,r-1)+w(l,r-2)\le w(l,r-1)+w(l+1,r-2)\qquad&(2)\\
+> w(l+1,r)+w(l,r-1)+w(l+1,r-1)+w(l,r-2)\\
+> \le\\w(l,r)+w(l+1,r-1)+ w(l,r-1)+w(l+1,r-2)\\
+> &(1)+(2)\\
+> w(l+1,r)+w(l,r-2)\le w(l,r)+w(l+1,r-2)
+> \end{aligned}
+> $$
+> (5).1：不会证，感性理解一下：
+>
+> - 满足区间包含单调性：更长的区间 $w(l,r)$ 更大；
+> - 下凸函数：更大的 $w(l,r)$ 增长得更快；
+> - 原本就满足四边形不等式：相交总和更小；
+
+</p></details>
+
+## Part 2 应用
+
+这里默认代价函数为二元函数 $w(l,r)$，且该函数计算时间复杂度为 $O(1)$。
+
+### 2.1 优化 1D/1D dp
+
+若 $w(l,r)$ 满足四边形不等式，则如下 1D/1D dp 存在决策单调性：
+$$
+f_i=\min\limits_{j=0}^{i-1}\{w(j+1,i)\}\qquad\text{朴素形}\\
+f_i=\min\limits_{j=0}^{i-1}\{f_j+w(j+1,i)\}\qquad\text{区间划分形}
+$$
+即 $\forall i<j$，$\text{opt}(i)\le \text{opt}(j)$。
+
+<details><summary>证明</summary><p>
+
+> 先证明第二个：
+> 
+>  ![](../post-images/1703129569887.jpg)
+>
+>  解释：若出现上面的情况，则可以交换变成下面的情况，$f_i+f_{j}$ 变小，与 $f_i$ 和 $f_j$ 均为最小值相悖。
+>  
+>  第一个只不过是把黑色部分去掉了。
+
+</p></details>
+
+那么就可以分治或者在队列上二分来快速转移，时间复杂度 $O(n\log n)$。
+
+#### 2.1.1 分治优化转移
+
+该方法仅适用于转移不依赖之前状态的情况（朴素形），在这种情况下，仅需求出 $\text{opt}(i)$ 即可得出 $f_i$。
+
+考虑分治，令 $mid=\lfloor\frac{n}{2}\rfloor$，先求出 $k=\text{opt}(mid)$，接下来：
+
+- 对于 $i\in[1,mid-1]$，$\text{opt}(i)\le k$；
+- 对于 $i\in [mid+1,n]$，$\text{opt}(i)\ge k$；
+
+那么在分治的时候记录 $\text{opt}(i)$ 的上下界即可。这样分治树的高度为 $O(\log n)$，每一层每一个转移点只会被遍历到最多两次，总时间复杂度即为 $O(n\log n)$。
+
+<details><summary>示例代码</summary><p>
+
+```cpp
+void dfs(int opt[],int(*calw)(int,int),int l,int r,int kl,int kr)
+{
+	if(l>r) return;
+	int mid=l+r>>1,k=kl;
+	for(int i=kl;i<=kr&&i<=mid;i++)
+	{
+		if(calw(i,mid)<calw(k,mid)) k=i;
+	}
+	opt[mid]=k;
+	dfs(opt,calw,l,mid-1,kl,k);
+	dfs(opt,calw,mid+1,r,k,kr);
+}
+```
+
+</p></details>
+
+例题：[P3515 [POI2011] Lightning Conductor](https://www.luogu.com.cn/problem/P3515)
+
+<details><summary>题解</summary><p>
+
+> 考虑拆成两半求解，先求满足 $[1,i]$ 的 $p$，再求满足 $[i,n]$ 的 $p$，取 $\max$。
+>
+> 设 $f_i$ 为前一半的 $p$，有：
+> $$
+> \begin{aligned}
+> f_i&=\max\limits_{j<i}\{a_j+\sqrt{i-j}-a_i\}\\
+> &=-\min\limits_{j<i}\{a_i-a_j-\sqrt{i-j}\}
+> \end{aligned}
+> $$
+> 由于 $w1(j,i)=-\sqrt{i-j}$ 和 $w2(j,i)=a_i-a_j$ 都满足四边形不等式，所以 $w(j,i)=w1(j,i)+w2(j,i)$ 也满足四边形不等式。
+>
+> 那么直接分治优化转移即可，时间复杂度 $O(n\log n)$。
+>
+> 记得寻找 $\text{opt}(i)$ 时代价不能上取整，要最后再上取整。
+>
+> <details><summary>参考代码</summary><p>
+>
+> ```cpp
+> #include <iostream>
+> #include <cstdio>
+> #include <cmath>
+> 
+> using namespace std;
+> 
+> typedef long double db;
+> 
+> const int S=500005;
+> 
+> int n,a[S];
+> int opt1[S],opt2[S];
+> int ans[S];
+> 
+> inline db calw(int l,int r)
+> {
+> 	return a[r]-a[l]-sqrt((db)(r-l));
+> }
+> 
+> void dfs(int opt[],db(*calw)(int,int),int l,int r,int kl,int kr)
+> {
+> 	if(l>r) return;
+> 	int mid=l+r>>1,k=kl;
+> 	for(int i=kl;i<=kr&&i<=mid;i++)
+> 	{
+> 		if(calw(i,mid)<calw(k,mid)) k=i;
+> 	}
+> 	opt[mid]=k;
+> 	dfs(opt,calw,l,mid-1,kl,k);
+> 	dfs(opt,calw,mid+1,r,k,kr);
+> }
+> 
+> int main()
+> {
+> 	scanf(&quot;%d&quot;,&n);
+> 	for(int i=1;i<=n;i++) scanf(&quot;%d&quot;,&a[i]);
+> 	dfs(opt1,calw,1,n,1,n);
+> 	for(int i=1;i<=n;i++) ans[i]=ceil(-calw(opt1[i],i));
+> 	for(int i=1;i<=n/2;i++) swap(a[i],a[n-i+1]);
+> 	dfs(opt2,calw,1,n,1,n);
+> 	for(int i=1;i<=n;i++) ans[n-i+1]=max(ans[n-i+1],(int)ceil(-calw(opt2[i],i)));
+> 	for(int i=1;i<=n;i++) printf(&quot;%d\n&quot;,ans[i]);
+> 	return 0;
+> }
+> ```
+>
+> </p></details>
+
+</p></details>
+
+练习：[Loj #6039. 「雅礼集训 2017 Day5」珠宝 /「NAIPC2016」Jewel Thief](https://loj.ac/p/6039)
+
+#### 2.1.2 二分队列优化转移
+
+该方法适用于转移依赖之前状态的情况（区间划分形）。
+
+观察到对于特定的 $j$，$\text{opt}(i)=j$ 的 $i$ 肯定形成一个区间。
+
+那么不妨用单调队列维护 $j$ 和其对应的区间 $[l_j,r_j]$，队头为 $l_j$ 最小的，队尾为 $l_j$ 最大的。
+
+每次转移到新的 $i$ 时：
+
+- 先把队头 $r_j<i$ 的决策点弹掉，得到 $\text{opt}(i)$，从而得到 $f_i$，令队头 $l_j=i+1$；
+- 然后对于队尾决策点 $j$，若 $f_i+w(i+1,l_j)<f_j+w(j+1,l_j)$ 则弹掉队尾；
+- 若队列为空，加入决策 $i$，令 $l_i=i+1$，$r_i=n$；
+- 否则二分找到分界点再加入决策 $i$；
+
+这样每个决策点最多只会入队一次，所以总时间复杂度为均摊 $O(n\log n)$。
+
+<details><summary>参考代码</summary><p>
+
+```cpp
+lb[0]=1,rb[0]=n;
+hed=1,til=0;
+que[++til]=0;
+f[0]=0;
+for(int i=1;i<=n;i++)
+{
+	while(rb[que[hed]]<i) hed++;
+	int opti=que[hed];
+	f[i]=f[opti]+calw(opti+1,i);
+	if(rb[opti]==i) hed++;
+	else lb[opti]=i+1;
+	while(hed<=til&&
+		f[i]+calw(i+1,lb[que[til]])
+					<
+		f[que[til]]+calw(que[til]+1,lb[que[til]])
+	) til--;
+	if(hed>til)
+	{
+		if(i<n)
+		{
+			lb[i]=i+1,rb[i]=n;
+			que[++til]=i;
+		}
+	}
+	else
+	{
+		int j=que[til];
+		int l=lb[j],r=rb[j],p=lb[j];
+		while(l<=r)
+		{
+			int mid=l+r>>1;
+			if(f[j]+calw(j+1,mid)<f[i]+calw(i+1,mid)) p=mid,l=mid+1;
+			else r=mid-1;
+		}
+		rb[j]=p;
+		if(p<n)
+		{
+			lb[i]=p+1,rb[i]=n;
+			que[++til]=i;
+		}
+	}
+}
+```
+
+</p></details>
+
+例题：[P3195 [HNOI2008] 玩具装箱](https://www.luogu.com.cn/problem/P3195)
+
+<details><summary>题解</summary><p>
+
+> 设 $f_i$ 表示 $[1,i]$ 的代价，那么有转移：
+> $$
+> f_i=\min\limits_{0\le j<i}\{f_j+w(j+1,i)\}
+> $$
+> 其中 $w(l,r)=(r-l+\sum\limits_{l\le k\le r}C_k-L)^2$。
+>
+> 设 $S_i=\sum\limits_{1\le j\le i}C_j$，那么 $w(l,r)=(r-l+S_r-S_{l-1}-L)^2$。
+>
+> 显然 $r-l+S_r-S_{l-1}-L$ 满足区间包含单调性和四边形不等式，由于 $f(x)=x^2$ 是下凸函数，所以 $w(l,r)$ 满足四边形不等式。
+>
+> 那么直接二分队列优化转移即可，时间复杂度 $O(n\log n)$。
+>
+> <details><summary>参考代码</summary><p>
+>
+> ```cpp
+> #include <iostream>
+> #include <cstdio>
+> 
+> using namespace std;
+> 
+> typedef long long ll;
+> 
+> const int S=50005;
+> 
+> int n,L;
+> ll a[S];
+> int lb[S],rb[S];
+> int hed,til,que[S];
+> ll f[S];
+> 
+> inline ll calw(int l,int r)
+> {
+> 	ll x=r-l+a[r]-a[l-1];
+> 	return (x-L)*(x-L);
+> }
+> 
+> int main()
+> {
+> 	scanf(&quot;%d%d&quot;,&n,&L);
+> 	for(int i=1;i<=n;i++) scanf(&quot;%lld&quot;,&a[i]),a[i]+=a[i-1];
+> 	lb[0]=1,rb[0]=n;
+> 	hed=1,til=0;
+> 	que[++til]=0;
+> 	f[0]=0;
+> 	for(int i=1;i<=n;i++)
+> 	{
+> 		while(rb[que[hed]]<i) hed++;
+> 		int opti=que[hed];
+> 		f[i]=f[opti]+calw(opti+1,i);
+> 		if(rb[opti]==i) hed++;
+> 		else lb[opti]=i+1;
+> 		while(hed<=til&&
+> 			f[i]+calw(i+1,lb[que[til]])
+> 						<
+> 			f[que[til]]+calw(que[til]+1,lb[que[til]])
+> 		) til--;
+> 		if(hed>til)
+> 		{
+> 			if(i<n)
+> 			{
+> 				lb[i]=i+1,rb[i]=n;
+> 				que[++til]=i;
+> 			}
+> 		}
+> 		else
+> 		{
+> 			int j=que[til];
+> 			int l=lb[j],r=rb[j],p=lb[j];
+> 			while(l<=r)
+> 			{
+> 				int mid=l+r>>1;
+> 				if(f[j]+calw(j+1,mid)<f[i]+calw(i+1,mid)) p=mid,l=mid+1;
+> 				else r=mid-1;
+> 			}
+> 			rb[j]=p;
+> 			if(p<n)
+> 			{
+> 				lb[i]=p+1,rb[i]=n;
+> 				que[++til]=i;
+> 			}
+> 		}
+> 	}
+> 	printf(&quot;%lld\n&quot;,f[n]);
+> 	return 0;
+> }
+> ```
+>
+> </p></details>
+
+</p></details>
+
+### 2.2 优化 2D/1D dp
+
+#### 2.2.1 恰好 $k$ 段的区间划分形
+
+若 $w(l,r)$ 满足四边形不等式，则如下 2D/1D dp 存在决策单调性：
+$$
+f_{i,k}=\min\limits_{0\le j<i}\{f_{j,k-1}+w(j+1,i)\}
+$$
+即满足 $\text{opt}(i,k-1)\le\text{opt}(i,k)\le \text{opt}(i+1,k)$。
+
+<details><summary>证明</summary><p>
+
+>$\text{opt}(i,k)\le \text{opt}(i+1,k)$ 套用 1D/1D 的区间划分形 dp 的证明方法即可，仅需证明 $\text{opt}(i,k-1)\le \text{opt}(i,k)$。
+>
+>不会证，感性理解一下。
+
+</p></details>
+
+并且这类问题有个神奇的性质（同样不会证）：
+
+> $f_{i,k}$ 是关于 $k$ 的下凸函数。
+
+感性理解一下就是刚开始分的越多越好，超过一个临界点分多点反而不好了。
+
+也就是说，这类问题都可以 wqs 二分。
+
+#### 2.2.2 区间合并形
+
+若 $w(l,r)$ 满足四边形不等式和区间包含单调性，则如下 2D/1D dp 存在决策单调性：
+$$
+f_{l,r}=\min\limits_{l\le k< r}\{f_{l,k}+f_{k+1,r}\}+w(l,r)
+$$
+即满足 $\text{opt}(l,r-1)\le\text{opt}(l,r)\le \text{opt}(l+1,r)$，且 $f_{l,r}$ 也满足四边形不等式。
+
+并且若 $w(l,r)$ 和 $f_{l,r}$ 均非负，$f_{l,r}$ 也满足区间包含单调性。
+
+<details><summary>证明</summary><p>
+
+> 四边形不等式和区间包含单调性的证明：
+>
+> - 四边形不等式：
+>
+>   考虑归纳，$l\ge r-2$ 时显然成立。
+>
+>   仅需证明 $f_{l,r-1}+f_{l+1,r}\le f_{l,r}+f_{l+1,r-1}$。
+>
+>   不妨设 $\text{opt}(l,r)=k$。
+>
+>   - $k=l$ 或 $k=r-1$：
+>
+>     这里假设 $k=r-1$，另一种情况同理。
+>
+>     有：
+>     $$
+>     \begin{aligned}
+>     f_{l,r}+f_{l+1,r-1}&=f_{l,k}+f_{k+1,r}+w(l,r)+f_{l+1,r-1}\\
+>     &=f_{l,r-1}+f_{r,r}+w(l,r)+f_{l+1,r-1}\\
+>     \end{aligned}
+>     $$
+>
+>     由于 $w(l,r)$ 满足区间包含单调性，所以 $w(l,r-1)\le w(l,r)$，那么有：
+>     $$
+>     \begin{aligned}
+>     f_{l,r}+f_{l+1,r-1}&\ge f_{l,r-1}+f_{r,r}+w(l,r-1)+f_{l+1,r-1}\\
+>     &\ge f_{l,r-1}+f_{l+1,r}\\
+>     \end{aligned}
+>     $$
+>     最后一步是根据 dp 转移式得到的。
+>
+>   - $l<k<r-1$：
+>
+>     此时设 $\text{opt}(l+1,r-1)=p$，不妨假设 $k\le p$，$k>p$ 同理：
+>     $$
+>     \begin{aligned}
+>     f_{l,r}+f_{l+1,r-1}&=f_{l,k}+f_{k+1,r}+w(l,r)+f_{l+1,p}+f_{p+1,r-1}+w(l+1,r-1)\\
+>     &\ge f_{k+1,r-1}+f_{p+1,r}+f_{l,k}+f_{l+1,p}+w(l,r)+w(l+1,r-1)\\
+>     &\ge f_{k+1,r-1}+f_{p+1,r}+f_{l,k}+f_{l+1,p}+w(l,r-1)+w(l+1,r)\\
+>     &\ge f_{l,r-1}+f_{l+1,r}
+>     \end{aligned}
+>     $$
+>     其中：
+>
+>     - 第二个不等式是因为根据归纳假设，有 $f_{k+1,r-1}+f_{p+1,r}\le f_{k+1,r}+f_{p+1,r-1}$；
+>     - 第三个不等式是因为 $w(l,r)$ 满足四边形不等式；
+>     - 第四个不等式是根据 dp 转移式得到的；
+>
+> - 区间包含单调性：
+>
+>   证明起来比较简单，依旧考虑归纳，$l=r$ 时显然成立。
+>
+>   仅需证明 $f_{l,r-1}\le f_{l,r}$ 和 $f_{l+1,r}\le f_{l,r}$。
+>
+>   这里证明 $f_{l,r-1}\le f_{l,r}$，另一个的证明是一样的。
+>
+>   设 $\text{opt}(l,r)=k$。
+>
+>   - $l\le k<r-1$：
+>
+>     有：
+>     $$
+>     \begin{aligned}
+>     f_{l,r}&=f_{l,k}+f_{k+1,r}+w(l,r)\\
+>     &\ge f_{l,k}+f_{k+1,r-1}+w(l,r-1)\\
+>     &\ge f_{l,r-1}
+>     \end{aligned}
+>     $$
+>     其中：
+>
+>     - 第二个不等式是因为 $w(l,r)$ 满足区间包含单调性，并且根据归纳假设，有 $f_{k+1,r-1}\le f_{k,r}$；
+>     - 第三个不等式是根据 dp 转移式得到的；
+>
+>   - $k=r-1$：
+>
+>     设 $\text{opt}(l,r-1)=p$，有：
+>     $$
+>     \begin{aligned}
+>     f_{l,r}&=f_{l,r-1}+f_{r,r}+w(l,r)
+>     \end{aligned}
+>     $$
+>     由于 $w(l,r)$ 非负，$f_{r,r}$ 也非负，所以 $f_{l,r}\ge f_{l,r-1}$。
+>
+>
+> 决策单调性的证明：
+>
+> ![](../post-images/1703581345467.jpg)
+>
+
+</p></details>
+
+根据决策单调性，我们在 dp 的时候就可以记录 $\text{opt}(l,r)$，转移的时候先枚举区间长度，枚举 $k$ 只在 $\text{opt}(l,r-1)$ 和 $\text{opt}(l+1,r)$ 之间枚举。这样长度相同的区间的枚举 $k$ 的时间复杂度总和是 $O(n)$ 的，那么整体时间复杂度也就是 $O(n^2)$ 的了。
+
+例题：石子合并（加强版）
+
+> 有 n 堆石子排成一个环，第 $i$ 堆石子有 $a_i$ 个。
+>
+> 可以把相邻的两堆石子合并为一堆，合并的代价为两堆石子的个数之和，求把所有石子合并成一堆的最小代价和最大代价。
+>
+> $1\le n\le 2500$。
+
+<details><summary>题解</summary><p>
+
+> 先段环为链，设 $s_{i}=\sum\limits_{j=1}^i a_j$，$f_{l,r}$ 为把 $a_{[l,r]}$ 合并为一堆的最小代价，那么有转移：
+> $$
+> f_{l,r}=\min\limits_{l\le k<r}\{f_{l,k}+f_{k+1,r}\}+s_{r}-s_{l-1}
+> $$
+> 显然由于 $a_i$ 非负，所以 $w(l,r)=s_r-s_{l-1}$ 满足区间包含单调性和四边形不等式，那么 $f_{l,r}$ 满足决策单调性，所以可以直接优化到 $O(n^2)$。
+
+</p></details>
+
+### 2.3 更多练习
+
+- [P4767 [IOI2000] 邮局](https://www.luogu.com.cn/problem/P4767)
+- [CF321E Ciel and Gondolas](https://www.luogu.com.cn/problem/CF321E)
+- [SP33372 LARMY](https://www.luogu.com.cn/problem/SP33372)
+- [P6932 [ICPC2017 WF] Money for Nothing](https://www.luogu.com.cn/problem/P6932)
+
+## Upd 20250206 更具有启发性的严格定义
+
+### 关于单调性的定义
+
+启发：对于这种二维的事物，不妨考虑矩阵/二维平面。
+
+仅考虑最小化的情况，最大化情况同理。
+
+关于最小值的位置，若有多个则默认为第一个。
+
+- 单调矩阵 $A_{n\times m}$：设 $\min_i$ 为第 $i$ 行的最小值的位置，则 $\forall i_1< i_2$，有 $\min_{i_1}\le \min_{i_2}$；
+- 完全单调矩阵 $C_{n\times m}$：对于其所有子矩阵 $A$（不一定要连续），$A$ 都是单调矩阵；
+- 蒙日矩阵 $M_{n\times m}$：对于任意一个 $2\times 2$ 的子矩阵 $\begin{bmatrix}a&b\\c&d\end{bmatrix}$（不一定要连续），其满足 $a+d\le b+c$（相交小于包含）；
+
+### 一些性质
+
+- 蒙日矩阵一定是完全单调矩阵。
+
+单调矩阵一般都是完全单调矩阵，而大部分完全单调矩阵都是蒙日矩阵。
+
+- 根据定义，不难发现仅需 check $2\times 2$ 的子矩阵即可得知一个矩阵是否完全单调，相当于对于所有 $2\times 2$ 的子矩阵 $\begin{bmatrix}a&b\\c&d\end{bmatrix}$ 都需要满足 $[a\le b]+[c>d]>0$，即这两个条件至少满足一个；
+
+那么由此可以得出一个性质：
+
+- 对于一个完全单调矩阵 $C$ 的任意两列 $j_1$ 和 $j_2$，其对应位置的值的某个前缀满足 $\le $，剩下的后缀满足 $>$，如图：
+
+  ![](../post-images/1738811494386.png)
+
+并且也可以证明蒙日矩阵一定是完全单调矩阵，反证法：若 $a>b$ 且 $c\le d$，则一定有 $a+d>b+c$。
+
+- 根据蒙日矩阵的定义，check 一个矩阵 $M_{n\times m}$ 是否蒙日矩阵仅需 check $2\times 2$ 的**连续**子矩阵即可；
+
+  因为若 $a+d\le b+c$ 则 $a+d-b-c\le 0$，注意到这个是二维差分的形式，即 $M$ 可以看作一个非正矩阵的二维前缀和，而 $2\times 2$ 的子矩阵（不一定连续）的 $a+d-b-c$ 相当于该非正矩阵一个矩形中数的和，显然其也非正；
+
+  故证明四边形不等式时仅需考虑 $[l,r]$ 和 $[l+1,r+1]$；
+
+- 给蒙日矩阵中某一行整体加同一个数，矩阵仍是蒙日矩阵；
+
+### 关于应用的定义
+
+蒙日矩阵一般都是定义在区间上的，即 $M_{n\times n}$，其中 $M_{i,j}$ 是区间 $[i,j]$ 的代价。
+
+这样定义会带来一些问题，因为 $i>j$ 的区间不存在，若将其简单定义为 $\infin$ 则会导致形如 $\begin{bmatrix}\infin&a\\\infin&\infin\end{bmatrix}$ 的子矩阵会导出 $\infin+\infin\le \infin+a$ 的错误式子，且形如 $\begin{bmatrix}\infin&a\\\infin&b\end{bmatrix}$ 的子矩阵会导出 $b\le a$ 的不一定成立的式子（给某一行整体加同一个数不改变蒙日性，但此时可能有 $b>a$）。
+
+一个聪慧的构造是考虑令 $i<j$ 时 $M_{i,j}=(j-i)^2\times \infin$，不难验证该构造满足蒙日性。
+
+#### 分治优化
+
+本质其实是找到矩阵中第 $mid$ 行的最小值的位置，并分治处理左和右下矩阵：
+
+![](../post-images/1738813756881.png)
+
+所以该方法仅要求矩阵是单调矩阵。
+
+#### 二分队列优化
+
+本质上是从左往右扫每一列，对于每列维护出最小值在该列的行的区间，每次插入一列的时候干掉一个后缀的区间并插入一个新区间：
+
+![](../post-images/1738814520441.png)
+
+所以该方法仅要求矩阵是完全单调矩阵。
+
+#### 蒙日矩阵最短路——区间划分型 dp
+
+不难发现，若将区间 $(l,r]$ 的代价对应的蒙日矩阵看作 $n$ 个点的图 $G$ 的邻接矩阵，则序列的最小代价区间划分对应着由 $0$ 到 $n$ 的最短路。特别的，任意两点 $l,r$ 间的最短路对应着区间 $[l+1,r]$ 的最小代价区间划分。
+
+##### 一些性质
+
+- 设 $f(x,y,k)$ 为 $x\to y$ 的经过 $k$ 条边的的蒙日矩阵最短路的长度，则 $f(x,y,k)$ 关于 $k$ 是凸的；
+
+  > 考虑证 $f(x,y,k)-f(x,y,k-1)\le f(x,y,k+1)-f(x,y,k)$ 相当于证 $2f(x,y,k)\le f(x,y,k-1)+f(x,y,k+1)$。
+  >
+  > 将 $f(x,y,k-1)$ 和 $f(x,y,k+1)$ 对应的最短路径拿出来，考虑根据这两条路径构造两条长度为 $k$ 的路径使得它们的和不变大。按照编号若某个点来自 $k-1$ 则写下 $\text{a}$，否则写下 $\text b$，编号相同的顺序任意，得到序列 $p_{[1,2k]}$，那么 $\text a$ 一定比 $\text b$ 少两个。
+  >
+  > 考虑找到某个前缀 $p_{[1,i]}$ 满足 $\text a$ 比 $\text b$ 恰好少一个，且 $p_i=p_{i+1}=\text b$：
+  >
+  > ![](../post-images/1738840162672.png)
+  >
+  > 则此时 $p_{[i+1,2k]}$ 一定也满足 $\text a$ 比 $\text b$ 恰好少一个，那么可以这样构造两条长 $k$ 的路径：
+  >
+  > - $p_{[1,i]}$ 中的 $\text a$ 接上 $p_{[i+1,2k]}$ 中的 $\text b$；
+  > - $p_{[1,i]}$ 中的 $\text b$ 接上 $p_{[i+1,2k]}$ 中的 $\text a$；
+  >
+  > 注意到由于 $p_i=p_{i+1}=\text b$，所以中间部分实际上是将一个包含变为了相交，故路径代价总和不增。
+  >
+  > 故证明一定能找到这样的 $i$ 即可。
+  >
+  > 考虑折线图，将 $\text a$ 看作 $1$，$\text b$ 看作 $-1$，则该折线从 $0$ 出发，在 $-2$ 处终止。由于折线是连续的，故一定有某个时刻位于 $-1$，此时若下一个时刻位于 $0$，则后半部分递归了，否则就找到了连续的两个 $\text b$。
+
+##### 经典例题：环上划分问题
+
+- [QOJ2211 IOI Problem Revised](../QOJ2211 IOI Problem Revised 做题记录/)，【2025NOIP模拟赛44】网络规划
+
+## Upd 20260127 1D/1D dp 更具有通用性的算法
+
+普通分治要求离线，二分队列无法处理转移代价 $w(l,r)$ 要莫队算的情况。
+
+这里介绍一种可以 $O(n\log n)$ 处理半在线且代价需要莫队算的 1D/1D dp 的方法，要求 $w(l,r)$ 是完全单调矩阵。
+
+### 大体思想
+
+依旧考虑分治。我们希望设计一个函数 $\text{doit}(l,r)$，使得在计算完 $f_{[0,l-1]}$ 后调用它即可计算出 $f_{[l,r]}$。
+
+考虑充分利用完全单调矩阵的性质，即 $f_{[0,l]}$ 到 $f_{[l,r]}$ 的转移也满足决策单调性，设计如下函数：
+
+- $\text{doit}(l,r)$ 要求已经计算完 $f_{[0,l]}$ 和对应决策点 $p_{[0,l]}$，并且 $f_{[0,l]}$ 对 $f_r$ 的贡献和对应决策点 $p_r$（只考虑 $f_{[0,l]}$）也算完了；
+
+显然边界 $\text{doit}(l,l+1)$ 是对的。
+
+对于 $r>l+1$ 的 $\text{doit}(l,r)$ 的具体流程：
+
+1. 遍历决策点 $[p_l,p_r]$，计算 $f_{[0,l]}$ 对 $f_{mid}$ 的贡献和对应决策点 $p_{mid}$；
+2. 递归 $\text{doit}(l,mid)$；
+3. 遍历决策点 $[l+1,mid]$，计算 $f_{l+1,mid}$ 对 $f_r$ 的贡献，更新 $p_r$；
+4. 递归 $\text{doit}(mid,r)$；
+
+那么这样做正确性显然是对的，由于每层第一步和第三步的决策点区间分别拼起来可以得到整个序列，故时间复杂度是 $O(n\log n)$。
+
+并且若给第一步和第三步分别开一个莫队计算 $w(l,r)$，莫队的端点总移动次数也是 $O(n\log n)$ 的。证明可以考虑决策点区间 $[l,r]$ 对莫队端点移动次数的贡献是 $O(r-l+1)$ 的，而决策点区间总长度是 $O(n\log n)$。
+
+### 示例代码
+
+```cpp
+void doit(int l,int r)
+{
+	if(r-l+1<=2) return;
+	int mid=l+r>>1;
+    f[mid]=-inf;
+    for(int i=pos[l];i<=pos[r];i++)
+    {
+        int pre=get(i,mid);
+        if(pre>f[mid]) f[mid]=pre,pos[mid]=i;
+    }
+    doit(l,mid);
+    for(int i=l+1;i<=mid;i++)
+    {
+        int pre=get(i,r);
+        if(pre>f[r]) f[r]=pre,pos[r]=i;
+    }
+    doit(mid,r);
+}
+```
+" onclick="copyMarkdown(this)">复制 Markdown</a>
+		</span>
+		
+	</div>
+</section>
+
+<script>
+	function copyMarkdown(e) {
+		let text = e.getAttribute('data-src-markdown');
+		if (e.innerHTML == '复制成功') {
+			return;
+		}
+		e.innerHTML = '复制成功';
+		(function (elem) {
+			setTimeout(() => {
+				if (elem.innerHTML == '复制成功') {
+					elem.innerHTML = '复制 Markdown'
+				}
+			}, 1000);
+		})(e)
+		Clipboard.copy(text);
+	}
+</script>
+
+					<div class="post-body next-md-body" id="post_body" data-post-markdown="决策单调性一般可用观察法/分析四边形不等式得出，这里主要介绍四边形不等式。
+
+在这里我们只讨论代价为二元函数 $w(l,r)$ 的 dp。
+
+## Part 1 定义 & 性质
+
+### 1.1 dp 维数定义
+
+描述 dp 的时间复杂度时，往往会用 xD/yD 这样的说法，其中 $x$ 为 $\text{状态数}\log n$，$y$ 为 $\text{单次转移复杂度}\log n$。
+
+例如 $f_{l,r}=\sum\limits_{k=l+1}^rf_{l,k-1}+f_{k,r}$ 是 2D/1D 的 dp。
+
+### 1.2 决策单调性
+
+设 dp 的状态集合为 $S$，状态 $u$ 的最优决策点为 $\text{opt}(u)$。
+
+若 $\forall i,j\in S,i<j$ 都有 $\text{opt}(i)\le\text{opt}(j)$，则称该 dp 满足决策单调性。
+
+### 1.3 区间包含单调性和四边形不等式
+
+这两个东西都是定义在二元函数 $f(l,r)$ 上的。
+
+#### 1.3.1 区间包含单调性
+
+若 $\forall l\le l'\le r'\le r$，都有 $f(l',r')\le f(l,r)$，则称 $f$ 满足区间包含单调性。
+
+#### 1.3.2 四边形不等式
+
+若 $\forall l\le l'\le r'\le r$，都有 $f(l,r')+f(l',r)\le f(l,r)+f(l',r')$，则称 $f$ 满足四边形不等式。
+
+即相交小于包含。
+
+#### 1.3.3 一些帮助证明的性质
+
+- 若 $w(l+1,r)\le w(l,r)$ 且 $w(l,r-1)\le w(l,r)$，则可以归纳证明 $w(l,r)$ 满足区间包含单调性；
+- 若 $w(l+1,r)+w(l,r-1)\le w(l,r)+w(l+1,r-1)$，则可以归纳证明 $w(l,r)$ 满足四边形不等式；
+- 线性性：若 $f(l,r)$ 与 $g(l,r)$ 均满足区间包含单调性 / 四边形不等式，则 $\forall c1,c2\ge 0$，$c1\times f(l,r)+c2\times g(l,r)$ 也满足区间包含单调性 / 四边形不等式；
+- 若 $w(l,r)=f(r)-g(l)$：
+  - $w(l,r)$ 满足四边形恒等式（$\le$ 恒取 $=$）；
+  - 若 $f,g$ 均单调不增，则 $w(l,r)$ 还满足区间包含单调性；
+- 若 $f(x)$ 为下凸函数（导数不降），$w(l,r)$ 满足区间包含单调性和四边形不等式：
+  - $f(w(l,r))$ 满足四边形不等式；
+  - 若 $f(x)$ 单调不降，则 $f(w(l,r))$ 还满足区间包含单调性；
+
+<details><summary>证明</summary><p>
+
+> (2）：
+> $$
+> \begin{aligned}
+> w(l+1,r)+w(l,r-1)\le w(l,r)+w(l+1,r-1)\qquad&(1)\\
+> w(l+1,r-1)+w(l,r-2)\le w(l,r-1)+w(l+1,r-2)\qquad&(2)\\
+> w(l+1,r)+w(l,r-1)+w(l+1,r-1)+w(l,r-2)\\
+> \le\\w(l,r)+w(l+1,r-1)+ w(l,r-1)+w(l+1,r-2)\\
+> &(1)+(2)\\
+> w(l+1,r)+w(l,r-2)\le w(l,r)+w(l+1,r-2)
+> \end{aligned}
+> $$
+> (5).1：不会证，感性理解一下：
+>
+> - 满足区间包含单调性：更长的区间 $w(l,r)$ 更大；
+> - 下凸函数：更大的 $w(l,r)$ 增长得更快；
+> - 原本就满足四边形不等式：相交总和更小；
+
+</p></details>
+
+## Part 2 应用
+
+这里默认代价函数为二元函数 $w(l,r)$，且该函数计算时间复杂度为 $O(1)$。
+
+### 2.1 优化 1D/1D dp
+
+若 $w(l,r)$ 满足四边形不等式，则如下 1D/1D dp 存在决策单调性：
+$$
+f_i=\min\limits_{j=0}^{i-1}\{w(j+1,i)\}\qquad\text{朴素形}\\
+f_i=\min\limits_{j=0}^{i-1}\{f_j+w(j+1,i)\}\qquad\text{区间划分形}
+$$
+即 $\forall i<j$，$\text{opt}(i)\le \text{opt}(j)$。
+
+<details><summary>证明</summary><p>
+
+> 先证明第二个：
+> 
+>  ![](../post-images/1703129569887.jpg)
+>
+>  解释：若出现上面的情况，则可以交换变成下面的情况，$f_i+f_{j}$ 变小，与 $f_i$ 和 $f_j$ 均为最小值相悖。
+>  
+>  第一个只不过是把黑色部分去掉了。
+
+</p></details>
+
+那么就可以分治或者在队列上二分来快速转移，时间复杂度 $O(n\log n)$。
+
+#### 2.1.1 分治优化转移
+
+该方法仅适用于转移不依赖之前状态的情况（朴素形），在这种情况下，仅需求出 $\text{opt}(i)$ 即可得出 $f_i$。
+
+考虑分治，令 $mid=\lfloor\frac{n}{2}\rfloor$，先求出 $k=\text{opt}(mid)$，接下来：
+
+- 对于 $i\in[1,mid-1]$，$\text{opt}(i)\le k$；
+- 对于 $i\in [mid+1,n]$，$\text{opt}(i)\ge k$；
+
+那么在分治的时候记录 $\text{opt}(i)$ 的上下界即可。这样分治树的高度为 $O(\log n)$，每一层每一个转移点只会被遍历到最多两次，总时间复杂度即为 $O(n\log n)$。
+
+<details><summary>示例代码</summary><p>
+
+```cpp
+void dfs(int opt[],int(*calw)(int,int),int l,int r,int kl,int kr)
+{
+	if(l>r) return;
+	int mid=l+r>>1,k=kl;
+	for(int i=kl;i<=kr&&i<=mid;i++)
+	{
+		if(calw(i,mid)<calw(k,mid)) k=i;
+	}
+	opt[mid]=k;
+	dfs(opt,calw,l,mid-1,kl,k);
+	dfs(opt,calw,mid+1,r,k,kr);
+}
+```
+
+</p></details>
+
+例题：[P3515 [POI2011] Lightning Conductor](https://www.luogu.com.cn/problem/P3515)
+
+<details><summary>题解</summary><p>
+
+> 考虑拆成两半求解，先求满足 $[1,i]$ 的 $p$，再求满足 $[i,n]$ 的 $p$，取 $\max$。
+>
+> 设 $f_i$ 为前一半的 $p$，有：
+> $$
+> \begin{aligned}
+> f_i&=\max\limits_{j<i}\{a_j+\sqrt{i-j}-a_i\}\\
+> &=-\min\limits_{j<i}\{a_i-a_j-\sqrt{i-j}\}
+> \end{aligned}
+> $$
+> 由于 $w1(j,i)=-\sqrt{i-j}$ 和 $w2(j,i)=a_i-a_j$ 都满足四边形不等式，所以 $w(j,i)=w1(j,i)+w2(j,i)$ 也满足四边形不等式。
+>
+> 那么直接分治优化转移即可，时间复杂度 $O(n\log n)$。
+>
+> 记得寻找 $\text{opt}(i)$ 时代价不能上取整，要最后再上取整。
+>
+> <details><summary>参考代码</summary><p>
+>
+> ```cpp
+> #include <iostream>
+> #include <cstdio>
+> #include <cmath>
+> 
+> using namespace std;
+> 
+> typedef long double db;
+> 
+> const int S=500005;
+> 
+> int n,a[S];
+> int opt1[S],opt2[S];
+> int ans[S];
+> 
+> inline db calw(int l,int r)
+> {
+> 	return a[r]-a[l]-sqrt((db)(r-l));
+> }
+> 
+> void dfs(int opt[],db(*calw)(int,int),int l,int r,int kl,int kr)
+> {
+> 	if(l>r) return;
+> 	int mid=l+r>>1,k=kl;
+> 	for(int i=kl;i<=kr&&i<=mid;i++)
+> 	{
+> 		if(calw(i,mid)<calw(k,mid)) k=i;
+> 	}
+> 	opt[mid]=k;
+> 	dfs(opt,calw,l,mid-1,kl,k);
+> 	dfs(opt,calw,mid+1,r,k,kr);
+> }
+> 
+> int main()
+> {
+> 	scanf(&quot;%d&quot;,&n);
+> 	for(int i=1;i<=n;i++) scanf(&quot;%d&quot;,&a[i]);
+> 	dfs(opt1,calw,1,n,1,n);
+> 	for(int i=1;i<=n;i++) ans[i]=ceil(-calw(opt1[i],i));
+> 	for(int i=1;i<=n/2;i++) swap(a[i],a[n-i+1]);
+> 	dfs(opt2,calw,1,n,1,n);
+> 	for(int i=1;i<=n;i++) ans[n-i+1]=max(ans[n-i+1],(int)ceil(-calw(opt2[i],i)));
+> 	for(int i=1;i<=n;i++) printf(&quot;%d\n&quot;,ans[i]);
+> 	return 0;
+> }
+> ```
+>
+> </p></details>
+
+</p></details>
+
+练习：[Loj #6039. 「雅礼集训 2017 Day5」珠宝 /「NAIPC2016」Jewel Thief](https://loj.ac/p/6039)
+
+#### 2.1.2 二分队列优化转移
+
+该方法适用于转移依赖之前状态的情况（区间划分形）。
+
+观察到对于特定的 $j$，$\text{opt}(i)=j$ 的 $i$ 肯定形成一个区间。
+
+那么不妨用单调队列维护 $j$ 和其对应的区间 $[l_j,r_j]$，队头为 $l_j$ 最小的，队尾为 $l_j$ 最大的。
+
+每次转移到新的 $i$ 时：
+
+- 先把队头 $r_j<i$ 的决策点弹掉，得到 $\text{opt}(i)$，从而得到 $f_i$，令队头 $l_j=i+1$；
+- 然后对于队尾决策点 $j$，若 $f_i+w(i+1,l_j)<f_j+w(j+1,l_j)$ 则弹掉队尾；
+- 若队列为空，加入决策 $i$，令 $l_i=i+1$，$r_i=n$；
+- 否则二分找到分界点再加入决策 $i$；
+
+这样每个决策点最多只会入队一次，所以总时间复杂度为均摊 $O(n\log n)$。
+
+<details><summary>参考代码</summary><p>
+
+```cpp
+lb[0]=1,rb[0]=n;
+hed=1,til=0;
+que[++til]=0;
+f[0]=0;
+for(int i=1;i<=n;i++)
+{
+	while(rb[que[hed]]<i) hed++;
+	int opti=que[hed];
+	f[i]=f[opti]+calw(opti+1,i);
+	if(rb[opti]==i) hed++;
+	else lb[opti]=i+1;
+	while(hed<=til&&
+		f[i]+calw(i+1,lb[que[til]])
+					<
+		f[que[til]]+calw(que[til]+1,lb[que[til]])
+	) til--;
+	if(hed>til)
+	{
+		if(i<n)
+		{
+			lb[i]=i+1,rb[i]=n;
+			que[++til]=i;
+		}
+	}
+	else
+	{
+		int j=que[til];
+		int l=lb[j],r=rb[j],p=lb[j];
+		while(l<=r)
+		{
+			int mid=l+r>>1;
+			if(f[j]+calw(j+1,mid)<f[i]+calw(i+1,mid)) p=mid,l=mid+1;
+			else r=mid-1;
+		}
+		rb[j]=p;
+		if(p<n)
+		{
+			lb[i]=p+1,rb[i]=n;
+			que[++til]=i;
+		}
+	}
+}
+```
+
+</p></details>
+
+例题：[P3195 [HNOI2008] 玩具装箱](https://www.luogu.com.cn/problem/P3195)
+
+<details><summary>题解</summary><p>
+
+> 设 $f_i$ 表示 $[1,i]$ 的代价，那么有转移：
+> $$
+> f_i=\min\limits_{0\le j<i}\{f_j+w(j+1,i)\}
+> $$
+> 其中 $w(l,r)=(r-l+\sum\limits_{l\le k\le r}C_k-L)^2$。
+>
+> 设 $S_i=\sum\limits_{1\le j\le i}C_j$，那么 $w(l,r)=(r-l+S_r-S_{l-1}-L)^2$。
+>
+> 显然 $r-l+S_r-S_{l-1}-L$ 满足区间包含单调性和四边形不等式，由于 $f(x)=x^2$ 是下凸函数，所以 $w(l,r)$ 满足四边形不等式。
+>
+> 那么直接二分队列优化转移即可，时间复杂度 $O(n\log n)$。
+>
+> <details><summary>参考代码</summary><p>
+>
+> ```cpp
+> #include <iostream>
+> #include <cstdio>
+> 
+> using namespace std;
+> 
+> typedef long long ll;
+> 
+> const int S=50005;
+> 
+> int n,L;
+> ll a[S];
+> int lb[S],rb[S];
+> int hed,til,que[S];
+> ll f[S];
+> 
+> inline ll calw(int l,int r)
+> {
+> 	ll x=r-l+a[r]-a[l-1];
+> 	return (x-L)*(x-L);
+> }
+> 
+> int main()
+> {
+> 	scanf(&quot;%d%d&quot;,&n,&L);
+> 	for(int i=1;i<=n;i++) scanf(&quot;%lld&quot;,&a[i]),a[i]+=a[i-1];
+> 	lb[0]=1,rb[0]=n;
+> 	hed=1,til=0;
+> 	que[++til]=0;
+> 	f[0]=0;
+> 	for(int i=1;i<=n;i++)
+> 	{
+> 		while(rb[que[hed]]<i) hed++;
+> 		int opti=que[hed];
+> 		f[i]=f[opti]+calw(opti+1,i);
+> 		if(rb[opti]==i) hed++;
+> 		else lb[opti]=i+1;
+> 		while(hed<=til&&
+> 			f[i]+calw(i+1,lb[que[til]])
+> 						<
+> 			f[que[til]]+calw(que[til]+1,lb[que[til]])
+> 		) til--;
+> 		if(hed>til)
+> 		{
+> 			if(i<n)
+> 			{
+> 				lb[i]=i+1,rb[i]=n;
+> 				que[++til]=i;
+> 			}
+> 		}
+> 		else
+> 		{
+> 			int j=que[til];
+> 			int l=lb[j],r=rb[j],p=lb[j];
+> 			while(l<=r)
+> 			{
+> 				int mid=l+r>>1;
+> 				if(f[j]+calw(j+1,mid)<f[i]+calw(i+1,mid)) p=mid,l=mid+1;
+> 				else r=mid-1;
+> 			}
+> 			rb[j]=p;
+> 			if(p<n)
+> 			{
+> 				lb[i]=p+1,rb[i]=n;
+> 				que[++til]=i;
+> 			}
+> 		}
+> 	}
+> 	printf(&quot;%lld\n&quot;,f[n]);
+> 	return 0;
+> }
+> ```
+>
+> </p></details>
+
+</p></details>
+
+### 2.2 优化 2D/1D dp
+
+#### 2.2.1 恰好 $k$ 段的区间划分形
+
+若 $w(l,r)$ 满足四边形不等式，则如下 2D/1D dp 存在决策单调性：
+$$
+f_{i,k}=\min\limits_{0\le j<i}\{f_{j,k-1}+w(j+1,i)\}
+$$
+即满足 $\text{opt}(i,k-1)\le\text{opt}(i,k)\le \text{opt}(i+1,k)$。
+
+<details><summary>证明</summary><p>
+
+>$\text{opt}(i,k)\le \text{opt}(i+1,k)$ 套用 1D/1D 的区间划分形 dp 的证明方法即可，仅需证明 $\text{opt}(i,k-1)\le \text{opt}(i,k)$。
+>
+>不会证，感性理解一下。
+
+</p></details>
+
+并且这类问题有个神奇的性质（同样不会证）：
+
+> $f_{i,k}$ 是关于 $k$ 的下凸函数。
+
+感性理解一下就是刚开始分的越多越好，超过一个临界点分多点反而不好了。
+
+也就是说，这类问题都可以 wqs 二分。
+
+#### 2.2.2 区间合并形
+
+若 $w(l,r)$ 满足四边形不等式和区间包含单调性，则如下 2D/1D dp 存在决策单调性：
+$$
+f_{l,r}=\min\limits_{l\le k< r}\{f_{l,k}+f_{k+1,r}\}+w(l,r)
+$$
+即满足 $\text{opt}(l,r-1)\le\text{opt}(l,r)\le \text{opt}(l+1,r)$，且 $f_{l,r}$ 也满足四边形不等式。
+
+并且若 $w(l,r)$ 和 $f_{l,r}$ 均非负，$f_{l,r}$ 也满足区间包含单调性。
+
+<details><summary>证明</summary><p>
+
+> 四边形不等式和区间包含单调性的证明：
+>
+> - 四边形不等式：
+>
+>   考虑归纳，$l\ge r-2$ 时显然成立。
+>
+>   仅需证明 $f_{l,r-1}+f_{l+1,r}\le f_{l,r}+f_{l+1,r-1}$。
+>
+>   不妨设 $\text{opt}(l,r)=k$。
+>
+>   - $k=l$ 或 $k=r-1$：
+>
+>     这里假设 $k=r-1$，另一种情况同理。
+>
+>     有：
+>     $$
+>     \begin{aligned}
+>     f_{l,r}+f_{l+1,r-1}&=f_{l,k}+f_{k+1,r}+w(l,r)+f_{l+1,r-1}\\
+>     &=f_{l,r-1}+f_{r,r}+w(l,r)+f_{l+1,r-1}\\
+>     \end{aligned}
+>     $$
+>
+>     由于 $w(l,r)$ 满足区间包含单调性，所以 $w(l,r-1)\le w(l,r)$，那么有：
+>     $$
+>     \begin{aligned}
+>     f_{l,r}+f_{l+1,r-1}&\ge f_{l,r-1}+f_{r,r}+w(l,r-1)+f_{l+1,r-1}\\
+>     &\ge f_{l,r-1}+f_{l+1,r}\\
+>     \end{aligned}
+>     $$
+>     最后一步是根据 dp 转移式得到的。
+>
+>   - $l<k<r-1$：
+>
+>     此时设 $\text{opt}(l+1,r-1)=p$，不妨假设 $k\le p$，$k>p$ 同理：
+>     $$
+>     \begin{aligned}
+>     f_{l,r}+f_{l+1,r-1}&=f_{l,k}+f_{k+1,r}+w(l,r)+f_{l+1,p}+f_{p+1,r-1}+w(l+1,r-1)\\
+>     &\ge f_{k+1,r-1}+f_{p+1,r}+f_{l,k}+f_{l+1,p}+w(l,r)+w(l+1,r-1)\\
+>     &\ge f_{k+1,r-1}+f_{p+1,r}+f_{l,k}+f_{l+1,p}+w(l,r-1)+w(l+1,r)\\
+>     &\ge f_{l,r-1}+f_{l+1,r}
+>     \end{aligned}
+>     $$
+>     其中：
+>
+>     - 第二个不等式是因为根据归纳假设，有 $f_{k+1,r-1}+f_{p+1,r}\le f_{k+1,r}+f_{p+1,r-1}$；
+>     - 第三个不等式是因为 $w(l,r)$ 满足四边形不等式；
+>     - 第四个不等式是根据 dp 转移式得到的；
+>
+> - 区间包含单调性：
+>
+>   证明起来比较简单，依旧考虑归纳，$l=r$ 时显然成立。
+>
+>   仅需证明 $f_{l,r-1}\le f_{l,r}$ 和 $f_{l+1,r}\le f_{l,r}$。
+>
+>   这里证明 $f_{l,r-1}\le f_{l,r}$，另一个的证明是一样的。
+>
+>   设 $\text{opt}(l,r)=k$。
+>
+>   - $l\le k<r-1$：
+>
+>     有：
+>     $$
+>     \begin{aligned}
+>     f_{l,r}&=f_{l,k}+f_{k+1,r}+w(l,r)\\
+>     &\ge f_{l,k}+f_{k+1,r-1}+w(l,r-1)\\
+>     &\ge f_{l,r-1}
+>     \end{aligned}
+>     $$
+>     其中：
+>
+>     - 第二个不等式是因为 $w(l,r)$ 满足区间包含单调性，并且根据归纳假设，有 $f_{k+1,r-1}\le f_{k,r}$；
+>     - 第三个不等式是根据 dp 转移式得到的；
+>
+>   - $k=r-1$：
+>
+>     设 $\text{opt}(l,r-1)=p$，有：
+>     $$
+>     \begin{aligned}
+>     f_{l,r}&=f_{l,r-1}+f_{r,r}+w(l,r)
+>     \end{aligned}
+>     $$
+>     由于 $w(l,r)$ 非负，$f_{r,r}$ 也非负，所以 $f_{l,r}\ge f_{l,r-1}$。
+>
+>
+> 决策单调性的证明：
+>
+> ![](../post-images/1703581345467.jpg)
+>
+
+</p></details>
+
+根据决策单调性，我们在 dp 的时候就可以记录 $\text{opt}(l,r)$，转移的时候先枚举区间长度，枚举 $k$ 只在 $\text{opt}(l,r-1)$ 和 $\text{opt}(l+1,r)$ 之间枚举。这样长度相同的区间的枚举 $k$ 的时间复杂度总和是 $O(n)$ 的，那么整体时间复杂度也就是 $O(n^2)$ 的了。
+
+例题：石子合并（加强版）
+
+> 有 n 堆石子排成一个环，第 $i$ 堆石子有 $a_i$ 个。
+>
+> 可以把相邻的两堆石子合并为一堆，合并的代价为两堆石子的个数之和，求把所有石子合并成一堆的最小代价和最大代价。
+>
+> $1\le n\le 2500$。
+
+<details><summary>题解</summary><p>
+
+> 先段环为链，设 $s_{i}=\sum\limits_{j=1}^i a_j$，$f_{l,r}$ 为把 $a_{[l,r]}$ 合并为一堆的最小代价，那么有转移：
+> $$
+> f_{l,r}=\min\limits_{l\le k<r}\{f_{l,k}+f_{k+1,r}\}+s_{r}-s_{l-1}
+> $$
+> 显然由于 $a_i$ 非负，所以 $w(l,r)=s_r-s_{l-1}$ 满足区间包含单调性和四边形不等式，那么 $f_{l,r}$ 满足决策单调性，所以可以直接优化到 $O(n^2)$。
+
+</p></details>
+
+### 2.3 更多练习
+
+- [P4767 [IOI2000] 邮局](https://www.luogu.com.cn/problem/P4767)
+- [CF321E Ciel and Gondolas](https://www.luogu.com.cn/problem/CF321E)
+- [SP33372 LARMY](https://www.luogu.com.cn/problem/SP33372)
+- [P6932 [ICPC2017 WF] Money for Nothing](https://www.luogu.com.cn/problem/P6932)
+
+## Upd 20250206 更具有启发性的严格定义
+
+### 关于单调性的定义
+
+启发：对于这种二维的事物，不妨考虑矩阵/二维平面。
+
+仅考虑最小化的情况，最大化情况同理。
+
+关于最小值的位置，若有多个则默认为第一个。
+
+- 单调矩阵 $A_{n\times m}$：设 $\min_i$ 为第 $i$ 行的最小值的位置，则 $\forall i_1< i_2$，有 $\min_{i_1}\le \min_{i_2}$；
+- 完全单调矩阵 $C_{n\times m}$：对于其所有子矩阵 $A$（不一定要连续），$A$ 都是单调矩阵；
+- 蒙日矩阵 $M_{n\times m}$：对于任意一个 $2\times 2$ 的子矩阵 $\begin{bmatrix}a&b\\c&d\end{bmatrix}$（不一定要连续），其满足 $a+d\le b+c$（相交小于包含）；
+
+### 一些性质
+
+- 蒙日矩阵一定是完全单调矩阵。
+
+单调矩阵一般都是完全单调矩阵，而大部分完全单调矩阵都是蒙日矩阵。
+
+- 根据定义，不难发现仅需 check $2\times 2$ 的子矩阵即可得知一个矩阵是否完全单调，相当于对于所有 $2\times 2$ 的子矩阵 $\begin{bmatrix}a&b\\c&d\end{bmatrix}$ 都需要满足 $[a\le b]+[c>d]>0$，即这两个条件至少满足一个；
+
+那么由此可以得出一个性质：
+
+- 对于一个完全单调矩阵 $C$ 的任意两列 $j_1$ 和 $j_2$，其对应位置的值的某个前缀满足 $\le $，剩下的后缀满足 $>$，如图：
+
+  ![](../post-images/1738811494386.png)
+
+并且也可以证明蒙日矩阵一定是完全单调矩阵，反证法：若 $a>b$ 且 $c\le d$，则一定有 $a+d>b+c$。
+
+- 根据蒙日矩阵的定义，check 一个矩阵 $M_{n\times m}$ 是否蒙日矩阵仅需 check $2\times 2$ 的**连续**子矩阵即可；
+
+  因为若 $a+d\le b+c$ 则 $a+d-b-c\le 0$，注意到这个是二维差分的形式，即 $M$ 可以看作一个非正矩阵的二维前缀和，而 $2\times 2$ 的子矩阵（不一定连续）的 $a+d-b-c$ 相当于该非正矩阵一个矩形中数的和，显然其也非正；
+
+  故证明四边形不等式时仅需考虑 $[l,r]$ 和 $[l+1,r+1]$；
+
+- 给蒙日矩阵中某一行整体加同一个数，矩阵仍是蒙日矩阵；
+
+### 关于应用的定义
+
+蒙日矩阵一般都是定义在区间上的，即 $M_{n\times n}$，其中 $M_{i,j}$ 是区间 $[i,j]$ 的代价。
+
+这样定义会带来一些问题，因为 $i>j$ 的区间不存在，若将其简单定义为 $\infin$ 则会导致形如 $\begin{bmatrix}\infin&a\\\infin&\infin\end{bmatrix}$ 的子矩阵会导出 $\infin+\infin\le \infin+a$ 的错误式子，且形如 $\begin{bmatrix}\infin&a\\\infin&b\end{bmatrix}$ 的子矩阵会导出 $b\le a$ 的不一定成立的式子（给某一行整体加同一个数不改变蒙日性，但此时可能有 $b>a$）。
+
+一个聪慧的构造是考虑令 $i<j$ 时 $M_{i,j}=(j-i)^2\times \infin$，不难验证该构造满足蒙日性。
+
+#### 分治优化
+
+本质其实是找到矩阵中第 $mid$ 行的最小值的位置，并分治处理左和右下矩阵：
+
+![](../post-images/1738813756881.png)
+
+所以该方法仅要求矩阵是单调矩阵。
+
+#### 二分队列优化
+
+本质上是从左往右扫每一列，对于每列维护出最小值在该列的行的区间，每次插入一列的时候干掉一个后缀的区间并插入一个新区间：
+
+![](../post-images/1738814520441.png)
+
+所以该方法仅要求矩阵是完全单调矩阵。
+
+#### 蒙日矩阵最短路——区间划分型 dp
+
+不难发现，若将区间 $(l,r]$ 的代价对应的蒙日矩阵看作 $n$ 个点的图 $G$ 的邻接矩阵，则序列的最小代价区间划分对应着由 $0$ 到 $n$ 的最短路。特别的，任意两点 $l,r$ 间的最短路对应着区间 $[l+1,r]$ 的最小代价区间划分。
+
+##### 一些性质
+
+- 设 $f(x,y,k)$ 为 $x\to y$ 的经过 $k$ 条边的的蒙日矩阵最短路的长度，则 $f(x,y,k)$ 关于 $k$ 是凸的；
+
+  > 考虑证 $f(x,y,k)-f(x,y,k-1)\le f(x,y,k+1)-f(x,y,k)$ 相当于证 $2f(x,y,k)\le f(x,y,k-1)+f(x,y,k+1)$。
+  >
+  > 将 $f(x,y,k-1)$ 和 $f(x,y,k+1)$ 对应的最短路径拿出来，考虑根据这两条路径构造两条长度为 $k$ 的路径使得它们的和不变大。按照编号若某个点来自 $k-1$ 则写下 $\text{a}$，否则写下 $\text b$，编号相同的顺序任意，得到序列 $p_{[1,2k]}$，那么 $\text a$ 一定比 $\text b$ 少两个。
+  >
+  > 考虑找到某个前缀 $p_{[1,i]}$ 满足 $\text a$ 比 $\text b$ 恰好少一个，且 $p_i=p_{i+1}=\text b$：
+  >
+  > ![](../post-images/1738840162672.png)
+  >
+  > 则此时 $p_{[i+1,2k]}$ 一定也满足 $\text a$ 比 $\text b$ 恰好少一个，那么可以这样构造两条长 $k$ 的路径：
+  >
+  > - $p_{[1,i]}$ 中的 $\text a$ 接上 $p_{[i+1,2k]}$ 中的 $\text b$；
+  > - $p_{[1,i]}$ 中的 $\text b$ 接上 $p_{[i+1,2k]}$ 中的 $\text a$；
+  >
+  > 注意到由于 $p_i=p_{i+1}=\text b$，所以中间部分实际上是将一个包含变为了相交，故路径代价总和不增。
+  >
+  > 故证明一定能找到这样的 $i$ 即可。
+  >
+  > 考虑折线图，将 $\text a$ 看作 $1$，$\text b$ 看作 $-1$，则该折线从 $0$ 出发，在 $-2$ 处终止。由于折线是连续的，故一定有某个时刻位于 $-1$，此时若下一个时刻位于 $0$，则后半部分递归了，否则就找到了连续的两个 $\text b$。
+
+##### 经典例题：环上划分问题
+
+- [QOJ2211 IOI Problem Revised](../QOJ2211 IOI Problem Revised 做题记录/)，【2025NOIP模拟赛44】网络规划
+
+## Upd 20260127 1D/1D dp 更具有通用性的算法
+
+普通分治要求离线，二分队列无法处理转移代价 $w(l,r)$ 要莫队算的情况。
+
+这里介绍一种可以 $O(n\log n)$ 处理半在线且代价需要莫队算的 1D/1D dp 的方法，要求 $w(l,r)$ 是完全单调矩阵。
+
+### 大体思想
+
+依旧考虑分治。我们希望设计一个函数 $\text{doit}(l,r)$，使得在计算完 $f_{[0,l-1]}$ 后调用它即可计算出 $f_{[l,r]}$。
+
+考虑充分利用完全单调矩阵的性质，即 $f_{[0,l]}$ 到 $f_{[l,r]}$ 的转移也满足决策单调性，设计如下函数：
+
+- $\text{doit}(l,r)$ 要求已经计算完 $f_{[0,l]}$ 和对应决策点 $p_{[0,l]}$，并且 $f_{[0,l]}$ 对 $f_r$ 的贡献和对应决策点 $p_r$（只考虑 $f_{[0,l]}$）也算完了；
+
+显然边界 $\text{doit}(l,l+1)$ 是对的。
+
+对于 $r>l+1$ 的 $\text{doit}(l,r)$ 的具体流程：
+
+1. 遍历决策点 $[p_l,p_r]$，计算 $f_{[0,l]}$ 对 $f_{mid}$ 的贡献和对应决策点 $p_{mid}$；
+2. 递归 $\text{doit}(l,mid)$；
+3. 遍历决策点 $[l+1,mid]$，计算 $f_{l+1,mid}$ 对 $f_r$ 的贡献，更新 $p_r$；
+4. 递归 $\text{doit}(mid,r)$；
+
+那么这样做正确性显然是对的，由于每层第一步和第三步的决策点区间分别拼起来可以得到整个序列，故时间复杂度是 $O(n\log n)$。
+
+并且若给第一步和第三步分别开一个莫队计算 $w(l,r)$，莫队的端点总移动次数也是 $O(n\log n)$ 的。证明可以考虑决策点区间 $[l,r]$ 对莫队端点移动次数的贡献是 $O(r-l+1)$ 的，而决策点区间总长度是 $O(n\log n)$。
+
+### 示例代码
+
+```cpp
+void doit(int l,int r)
+{
+	if(r-l+1<=2) return;
+	int mid=l+r>>1;
+    f[mid]=-inf;
+    for(int i=pos[l];i<=pos[r];i++)
+    {
+        int pre=get(i,mid);
+        if(pre>f[mid]) f[mid]=pre,pos[mid]=i;
+    }
+    doit(l,mid);
+    for(int i=l+1;i<=mid;i++)
+    {
+        int pre=get(i,r);
+        if(pre>f[r]) f[r]=pre,pos[r]=i;
+    }
+    doit(mid,r);
+}
+```
+"></div>
+					<div class="post-footer">
+	<ul class="post-copyright">
+		<li class="post-copyright-author">
+			<strong class="language" data-lan="author">本文作者：</strong>Exber
+		</li>
+		<li class="post-copyright-link">
+			<strong class="language" data-lan="link">本文链接：</strong>
+			<a href="https://exber.qzz.io/post/%E5%86%B3%E7%AD%96%E5%8D%95%E8%B0%83%E6%80%A7%E4%BC%98%E5%8C%96%20dp%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0" title="决策单调性优化 dp 学习笔记">https://exber.qzz.io/post/%E5%86%B3%E7%AD%96%E5%8D%95%E8%B0%83%E6%80%A7%E4%BC%98%E5%8C%96%20dp%20%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0</a>
+		</li>
+		<li class="post-copyright-license">
+			<strong class="language" data-lan="copyright">版权声明： </strong>
+			本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+		</li>
+	</ul>
+	<div class="tags">
+		
+			<a href="https://exber.qzz.io/tags"># 学习笔记</a>
+		
+			<a href="https://exber.qzz.io/tags"># DP</a>
+		
+			<a href="https://exber.qzz.io/tags"># 数学</a>
+		
+	</div>
+</div>
+				</div>
+			</div>
+			<script>
+	// 处理目录
+	function work_with_toc() {
+		let lastTop = 0, lList = [], hList = [], postBody, lastIndex = -1;
+		let active = 'active-show', activeClass = 'active-current';
+		let tocWrapper = document.querySelector('#toc_wrapper');
+		let tocContent = tocWrapper.children[0];
+		let autoNumber = tocWrapper && tocWrapper.classList.contains('auto-number');
+
+		function addTocNumber(elem, deep) {
+			if (!elem) {
+				return;
+			}
+			let prop = elem.__proto__;
+
+			if (prop === HTMLUListElement.prototype) {
+				for (let i = 0; i < elem.children.length; i++) {
+					addTocNumber(elem.children[i], deep + (i + 1) + '.');
+				}
+			} else if (prop === HTMLLIElement.prototype) {
+				// 保存li元素
+				if (elem.children[0] && elem.children[0].__proto__ === HTMLAnchorElement.prototype) {
+					lList.push(elem);
+				}
+				for (let i = 0; i < elem.children.length; i++) {
+					let cur = elem.children[i];
+					if (cur.__proto__ === HTMLAnchorElement.prototype) {
+						if (autoNumber) {
+							cur.text = deep + ' ' + cur.text;
+						}
+					} else if (cur.__proto__ === HTMLUListElement.prototype) {
+						addTocNumber(cur, deep);
+					}
+				}
+			}
+		}
+
+		function removeParentActiveClass() {
+			let parents = tocContent.querySelectorAll('.' + active)
+			parents.forEach(function (elem) {
+				elem.classList.remove(active);
+			});
+		}
+
+		function addActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.add(activeClass);
+			}
+		}
+
+		function removeActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.remove(activeClass);
+			}
+		}
+
+		function addActiveLiElemment(elem, parent) {
+			if (!elem || elem === parent) {
+				return;
+			} else {
+				if (elem.__proto__ === HTMLLIElement.prototype) {
+					elem.classList.add(active);
+				}
+				addActiveLiElemment(elem.parentElement, parent);
+			}
+		}
+
+		function showToc() {
+			if (tocWrapper) {
+				postBody = document.querySelector('#post_body');
+				for (let i = 0; i < postBody.children.length; i++) {
+					if (postBody.children[i].__proto__ === HTMLHeadingElement.prototype) {
+						hList.push(postBody.children[i]);
+					}
+				}
+				if (tocWrapper.classList.contains('compress')) {
+					tocContent.classList.add('closed');
+				} else if (tocWrapper.classList.contains('no_compress')) {
+					tocContent.classList.add('expanded');
+				} else {
+					if (hList.length > 10) {
+						active = 'active-hidden'
+						tocContent.classList.add('closed');
+					} else {
+						tocContent.classList.add('expanded');
+					}
+				}
+			}
+		}
+
+		(function () {
+			// 处理不是从一级标题开始目录
+			while (tocContent.children.length === 1 && tocContent.children[0].__proto__ === HTMLUListElement.prototype) {
+				let con = tocContent.children[0];
+				tocContent.innerHTML = con.innerHTML;
+			}
+			addTocNumber(tocContent, '');
+		})();
+
+		document.addEventListener('scroll', function (e) {
+			if (lList.length <= 0) {
+				return;
+			}
+			let scrollTop = document.scrollingElement.scrollTop + 10;
+			let dir;
+
+			if (lastTop - scrollTop > 0) {
+				dir = 'up';
+			} else {
+				dir = 'down';
+			}
+
+			lastTop = scrollTop;
+			if (scrollTop <= 0) {
+				if (lastIndex >= 0 && lastIndex < hList.length) {
+					lList[lastIndex].classList.remove(activeClass);
+				}
+				return;
+			}
+
+			let current = 0, hasFind = false;
+			for (let i = 0; i < hList.length; i++) {
+				if (hList[i].offsetTop > scrollTop) {
+					current = i;
+					hasFind = true;
+					break;
+				}
+			}
+			if (!hasFind && scrollTop > lList[lList.length - 1].offsetTop) {
+				current = hList.length - 1;
+			} else {
+				current--;
+			}
+			if (dir === 'down') {
+				if (current > lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex)
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			} else {
+				if (current < lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex);
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			}
+		});
+
+
+		window.addEventListener('load', function () {
+			showToc();
+			document.querySelector('#sidebar').style = 'display: block;';
+			tocWrapper.classList.add('toc-active');
+			setTimeout(function () {
+				if ("createEvent" in document) {
+					let evt = document.createEvent("HTMLEvents");
+					evt.initEvent("scroll", false, true);
+					document.dispatchEvent(evt);
+				}
+				else {
+					document.fireEvent("scroll");
+				}
+			}, 500)
+		})
+		
+		const SIDEBAR_TITLE_ACTIVE = 'sidebar-title-active';
+		const SIDEBAR_BODY_ACTIVE = 'sidebar-body-active';
+		const SLIDE_UP_IN = 'slide-up-in';
+
+		let tocSideBar = document.querySelector('#tocSideBar'),
+		metaSideBar = document.querySelector('#metaSideBar'),
+		postToc = document.querySelector('#post_toc'),
+		postSiteMeta = document.querySelector('#post_side_meta'),
+		sidebarTitle = document.querySelector('.sidebar-title'),
+		sidebarBody = document.querySelector('#sidebar_body');
+
+		tocSideBar && tocSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		metaSideBar && metaSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		function toggleSidebar(e) {
+			let currentTitle = document.querySelector("."+SIDEBAR_TITLE_ACTIVE);
+			if (currentTitle == e.srcElement) {
+				return ;
+			}
+			let current, showElement, hideElement;
+			if (e.srcElement == metaSideBar) {
+				showElement = postSiteMeta;
+				hideElement = postToc;
+			} else if (e.srcElement == tocSideBar){
+				showElement = postToc;
+				hideElement = postSiteMeta;
+			}
+			currentTitle.classList.remove(SIDEBAR_TITLE_ACTIVE);
+			e.srcElement.classList.add(SIDEBAR_TITLE_ACTIVE);
+
+			jQuery.Velocity(hideElement, 'stop');
+			jQuery.Velocity(hideElement, 'transition.slideUpOut', {
+				display: 'none',
+				duration: 200,
+				complete: function () {
+					jQuery.Velocity(showElement, 'transition.slideDownIn', {
+						duration: 200
+					});
+				}
+			})
+			hideElement.classList.remove(SIDEBAR_BODY_ACTIVE);
+			showElement.classList.add(SIDEBAR_BODY_ACTIVE);
+		}
+
+		postToc && postToc.addEventListener('transitionend', function() {
+			this.classList.remove(SLIDE_UP_IN);
+		});
+	}
+</script>
+<script>
+	// 没有目录时删除侧边栏目录相关
+	function remove_toc(){
+		document.querySelector('#sidebar-selector').remove();
+		document.querySelector('#post_toc').remove();
+		document.querySelector('#post_side_meta').classList.remove("post-side-meta");
+	}
+</script>
+<script>
+	// 渲染文章 markdown 并生成目录
+	function render_post_markdown(content)
+	{
+		let markdown = window.markdownit({ html: true })
+				.use(markdownItLinkEncodeFixed)
+				.use(window.markdownItAnchor, {
+					permalink: false,
+					permalinkBefore: false
+				})
+				.use(window.texmath, {
+					engine: katex,
+					delimiters: 'dollars'
+				});
+		// 处理图片路径
+		let temp_container = document.createElement('div');
+		temp_container.innerHTML = markdown.render(content);
+		{
+			let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		{
+			let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		return temp_container.innerHTML;
+	}
+	function generateToc() {
+		const contentElement = document.getElementById('post_body');
+		const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+		const tocElement = document.getElementById('toc_wrapper');
+		
+		if (headings.length === 0) {
+			return false;
+		}
+		let toc_ul = "<ul style='list-style: none;'>";
+		let toc_li = "<li style='list-style: none;'>";
+		let tocHtml = toc_ul;
+		let currentLevel = 1;
+		let stack = [0];
+		
+		headings.forEach((heading, index) => {
+			const level = parseInt(heading.tagName.substring(1));
+			const id = heading.id || `heading-${index}`;
+			heading.id = id;
+			
+			// 提取包含公式的 HTML 内容
+			let headingContent = heading.innerHTML;
+			
+			// 调整层级逻辑
+			if (level > currentLevel) {
+				for (let i = currentLevel; i < level; i++) {
+					tocHtml += toc_ul;
+					stack[i] = 0;
+				}
+			} else if (level < currentLevel) {
+				for (let i = currentLevel; i > level; i--) {
+					tocHtml += '</ul></li>';
+					stack.pop();
+				}
+			} else if (index > 0) {
+				tocHtml += '</li>';
+			}
+			
+			stack[level-1] = (stack[level-1] || 0) + 1;
+			for (let i = level; i < stack.length; i++) {
+				stack[i] = 0;
+			}
+			
+			// 使用渲染后的内容（包含已处理的公式）
+			tocHtml += toc_li+`<a href="#${id}">${headingContent}</a>`;
+			currentLevel = level;
+		});
+		
+		for (let i = 1; i < currentLevel; i++) {
+			tocHtml += '</ul></li>';
+		}
+		if (headings.length > 0) {
+			tocHtml += '</li>';
+		}
+		
+		tocHtml += '</ul>';
+		tocElement.innerHTML = tocHtml;
+		
+		return true;
+	}
+</script>
+<script>
+	!function () {
+		const post_body = document.querySelector('div[data-post-markdown]');
+		
+		try {
+			const markdownContent = post_body.getAttribute('data-post-markdown');
+			
+			if (markdownContent) {
+				const renderedHTML = render_post_markdown(markdownContent);
+				post_body.innerHTML = renderedHTML;
+				post_body.removeAttribute('data-post-markdown');
+				if(generateToc()) work_with_toc();
+				else remove_toc();
+			}
+		} catch (error) {
+			post_body.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+		}
+	}();
+</script>
+		</div>
+	</div>
+	
+
+
+
+
+
+
+<div class="footer-box">
+	<footer class="footer">
+		<center id="runTimeBox">
+			已运行: <span id="run_time"></span>
+		</center>
+		<script>
+			BirthDay = new Date('2023-03-01');
+			if (BirthDay.getTime()) {
+				function runTime() {
+					str = "";
+					today = new Date();
+					timeold = today.getTime() - BirthDay.getTime();
+					msPerDay = 24 * 60 * 60 * 1000;
+					e_daysold = timeold / msPerDay;
+					daysold = Math.floor(e_daysold);
+					str += daysold + " 天";
+					return str;
+				}
+				setInterval(function () {
+					$("#run_time").html(runTime());
+				}, 1000);
+			} else {
+				document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+			}
+		</script>
+		<div class="poweredby">
+			Powered by Exber
+		</div>
+	</footer>
+	<div class="pisces back-to-top" id="back_to_top">
+		<i class="fa fa-arrow-up"></i>
+		<span class="scrollpercent">
+			<span id="back_to_top_text">0</span>%
+		</span>
+	</div>
+</div>
+<script>
+	// back2top
+	let back2Top = document.querySelector("#back_to_top"),
+		back2TopText = document.querySelector("#back_to_top_text");
+
+	function scrollAnimation(currentY, targetY) {
+		let needScrollTop = targetY - currentY;
+		let _currentY = currentY;
+		setTimeout(() => {
+			const dist = Math.ceil(needScrollTop / 10);
+			_currentY += dist;
+			window.scrollTo(_currentY, currentY);
+			if (needScrollTop > 10 || needScrollTop < -10) {
+				scrollAnimation(_currentY, targetY);
+			} else {
+				window.scrollTo(_currentY, targetY);
+			}
+		}, 1);
+	}
+
+	back2Top.addEventListener("click", function(e) {
+		scrollAnimation(document.scrollingElement.scrollTop, 0);
+		e.stopPropagation();
+		return false;
+	});
+
+	window.addEventListener("scroll", function(e) {
+		let percent =
+			(document.scrollingElement.scrollTop /
+				(document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight)) *
+			100;
+		if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+			back2Top.classList.add("back-top-active");
+		}
+		if (percent == 0) {
+			back2Top.classList.remove("back-top-active");
+		}
+		if (back2TopText) {
+			back2TopText.textContent = Math.floor(percent);
+		}
+	});
+</script>
+	</div>
+</body>
+
+
+
+
+
+
+
+<input hidden id="copy" />
+<link rel="stylesheet" href="https://exber.qzz.io/media/css/jquery.fancybox.css" />
+<script src="https://exber.qzz.io/media/js/jquery.fancybox.js"></script>
+<script>
+	// 渲染所有带有 data-markdown 属性的 div 元素
+	!function () {
+		const markdownElements = document.querySelectorAll('div[data-markdown]');
+		
+		markdownElements.forEach((element, index) => {
+			try {
+				const markdownContent = element.getAttribute('data-markdown');
+				
+				if (markdownContent) {
+					const renderedHTML = render_markdown(markdownContent);
+					element.innerHTML = renderedHTML;
+					element.removeAttribute('data-markdown');
+				}
+			} catch (error) {
+				element.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+			}
+		});
+	}();
+</script>
+<script>
+	document.querySelectorAll(".section img").forEach((image) => {
+		var parent = image.parentElement;
+		var next = image.nextElementSibling;
+		parent.removeChild(image);
+		var aelem = document.createElement("a");
+		aelem.href = image.src;
+		aelem.dataset["fancybox"] = "images";
+		aelem.dataset["rel"] = "fancybox-button";
+		aelem.classList.add("fancybox");
+		aelem.appendChild(image);
+		parent.insertBefore(aelem, next);
+	});
+	
+	!function () {
+		let times = document.querySelectorAll('.publish-time');
+		for (let i = 0; i < times.length; i++) {
+			let date = times[i].dataset.t;
+			let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+			if (time < 60) {
+				str = time + '秒之前';
+			} else if (time < 3600) {
+				str = Math.floor(time / 60) + '分钟之前';
+			} else if (time >= 3600 && time < 86400) {
+				str = Math.floor(time / 3600) + '小时之前';
+			} else if (time >= 86400 && time < 259200) {
+				str = Math.floor(time / 86400) + '天之前';
+			} else {
+				str = times[i].textContent;
+			}
+			times[i].textContent = str;
+		}
+	}();
+	
+	let language = '';
+	if (language !== '') {
+		let map = new Map();
+		if (language === 'en') {
+			map.set('search', 'Search');
+			map.set('category', 'Categories');
+			map.set('article', 'Articles');
+			map.set('tag', 'Tags');
+			map.set('top', 'Top');
+			map.set('publish', 'published');
+			map.set('minute', ' minutes');
+			map.set('read-more', 'Read More');
+			map.set('view', 'View');
+			map.set('words', ' words');
+			map.set('category-in', 'category in');
+			map.set('preview', 'Meta');
+			map.set('index', 'Toc');
+			map.set('no-archives', "You haven't created yet");
+			map.set('archives', " articles in total");
+			map.set('cloud-tags', " tags in total");
+			map.set('copyright', "Copyright: ");
+			map.set('author', "Author: ");
+			map.set('link', "Link: ");
+			map.set('leave-message', "Leave a message");
+			map.set('format', "Links Format");
+			map.set('site-name', "Name: ");
+			map.set('site-link', "Link: ");
+			map.set('site-desc', "Desc: ");
+			map.set('stat', " related results, taking ");
+			map.set('stat-time', " ms");
+			map.set('site-img', "Image: ");
+			map.set('copy-markdown', "Copy Markdown");
+		}
+
+		if (map.size > 0) {
+			let lanElems = document.querySelectorAll('.language');
+			lanElems.forEach(elem => {
+				let lan = elem.dataset.lan, text = map.get(lan);
+				if (elem.__proto__ === HTMLInputElement.prototype) {
+					elem.placeholder = text
+				} else {
+					if (elem.dataset.count) {
+						text = elem.dataset.count + text;
+					}
+					elem.textContent = text;
+				}
+			})
+		}
+	}
+
+	function copyCode(e) {
+		if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+			let code = e.currentTarget.querySelector('code');
+			var text = code.innerText;
+			if (e.srcElement.textContent === '复制成功') {
+				return;
+			}
+			e.srcElement.textContent = '复制成功';
+			(function (elem) {
+				setTimeout(() => {
+					if (elem.textContent === '复制成功') {
+						elem.textContent = '复制代码'
+					}
+				}, 1000);
+			})(e.srcElement)
+			Clipboard.copy(text);
+		}
+	}
+
+	let pres = document.querySelectorAll('pre');
+	pres.forEach(pre => {
+		let code = pre.querySelector('code');
+		let copyElem = document.createElement('span');
+		copyElem.classList.add('copy-code');
+		copyElem.textContent = '复制代码';
+		pre.appendChild(copyElem);
+		pre.onclick = copyCode
+	})
+</script>
+<script src="https://exber.qzz.io/media/js/motion.js"></script>
+<script src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+<script>
+	var scroll = new SmoothScroll('a[href*="#"]', {
+		speed: 200
+	});
+</script>
+<script>
+	// 动态调整站点概览位置
+	let hasCacu = false;
+	window.addEventListener("resize", function(e) {
+		calcuHeight();
+	});
+
+	function calcuHeight() {
+		if (!hasCacu) {
+			let sideBar = document.querySelector(".sidebar");
+			let navUl = document.querySelector("#site_nav");
+			sideBar.style =
+				"margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+			hasCacu = true;
+		}
+	}
+	calcuHeight();
+	
+	// 侧边栏固定逻辑
+	let sidebar = document.querySelector('.sidebar');
+	let sidebarWrapper = document.querySelector('#sidebar');
+	if (sidebar) {
+		let hasFix = false;
+		document.addEventListener('scroll', function(e) {
+		  if (document.scrollingElement.scrollTop > parseInt(sidebar.style.marginTop) + 15) {
+			if (!hasFix) {
+				sidebarWrapper.classList.add('sidebar-fixed')
+				hasFix = true;
+			}
+		  } else {
+			if (hasFix) {
+				sidebarWrapper.classList.remove('sidebar-fixed')
+				hasFix = false;
+			}
+		  }
+		});
+	}
+</script>
+<script>
+	// 链接跳转
+	let newWindow = "true";
+	if (newWindow === "true") {
+		let links = document.querySelectorAll(".post-body a");
+		links.forEach((item) => {
+			if (!item.classList.contains("btn")) {
+				item.setAttribute("target", "_blank");
+			}
+		});
+	}
+
+	// 代码高亮
+	hljs.initHighlightingOnLoad();
+
+	// 离开当前页title变化
+	var leaveTitle = "";
+	var normal_title = document.title;
+	if (leaveTitle) {
+		document.addEventListener("visibilitychange", function() {
+			if (document.visibilityState == "hidden") {
+				normal_title = document.title;
+				document.title = leaveTitle;
+			} else {
+				document.title = normal_title;
+			}
+		});
+	}
+</script>
+</html>

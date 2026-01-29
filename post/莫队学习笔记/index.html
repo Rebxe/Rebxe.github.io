@@ -1,0 +1,3204 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	
+
+
+
+
+
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="静态个人博客">
+<meta name="description" content="Exber's Blog">
+<meta name="theme-color" content="#000">
+
+<title>莫队学习笔记|Exber's Blog</title>
+
+<link rel="shortcut icon" href="https://exber.qzz.io/favicon.ico?v=1769647447">
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/css/pisces.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/fonts/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/hljs/styles/default.css">
+
+<link
+  href="https://fonts.font.im/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet"
+  type="text/css"
+>
+
+<link rel="stylesheet/less" type="text/css" href="https://exber.qzz.io/styles/main.less">
+<script src="https://cdn.jsdmirror.com/npm/less@4"></script>
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/main.css">
+
+<script src="https://exber.qzz.io/media/js/jquery.js"></script>
+<script src="https://exber.qzz.io/media/hljs/highlight.js"></script>
+
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+<script src="https://cdn.jsdmirror.com/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-texmath/texmath.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-anchor/dist/markdownItAnchor.umd.js"></script>
+
+<script>
+// 处理带空格的链接
+function markdownItLinkEncodeFixed(md) {
+	// 1. 修复链接打开规则
+	const defaultLinkOpenRender = md.renderer.rules.link_open || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const hrefIndex = token.attrIndex('href');
+		
+		if (hrefIndex >= 0) {
+			const originalHref = token.attrs[hrefIndex][1];
+			// 更健壮的编码处理
+			const encodedHref = encodeURI(originalHref).replace(/%20/g, '%20');
+			token.attrs[hrefIndex][1] = encodedHref;
+		}
+		
+		return defaultLinkOpenRender(tokens, idx, options, env, self);
+	};
+
+	// 2. 修复图片规则
+	const defaultImageRender = md.renderer.rules.image || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.image = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const srcIndex = token.attrIndex('src');
+		
+		if (srcIndex >= 0) {
+			const originalSrc = token.attrs[srcIndex][1];
+			const encodedSrc = encodeURI(originalSrc).replace(/%20/g, '%20');
+			token.attrs[srcIndex][1] = encodedSrc;
+		}
+		
+		return defaultImageRender(tokens, idx, options, env, self);
+	};
+
+	// 3. 新增：处理可能被误解析为text的链接[1](@ref)
+	const defaultTextRender = md.renderer.rules.text || 
+		function(tokens, idx, options, env, self) {
+			const token = tokens[idx];
+			return token.content;
+		};
+
+	md.renderer.rules.text = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const content = token.content;
+		
+		// 检测类似链接模式的text token[1](@ref)
+		if (content.includes('[') && content.includes(']') && content.includes('(') && content.includes(')')) {
+			try {
+				// 尝试提取和编码链接
+				const linkMatch = content.match(/\[([^\]]+)\]\(([^)]+)\)/);
+				if (linkMatch) {
+					const linkText = linkMatch[1];
+					const linkUrl = encodeURI(linkMatch[2]).replace(/%20/g, '%20');
+					return `<a href="${linkUrl}">${linkText}</a>`;
+				}
+			} catch (e) {
+				console.warn('链接提取失败:', e);
+			}
+		}
+		
+		return defaultTextRender(tokens, idx, options, env, self);
+	};
+}
+function render_markdown(content)
+{
+	let markdown = window.markdownit({ html: true })
+			 .use(markdownItLinkEncodeFixed)
+			 .use(window.texmath, {
+				 engine: katex,
+				 delimiters: 'dollars'
+			 });
+	// 处理图片路径
+	let temp_container = document.createElement('div');
+	temp_container.innerHTML = markdown.render(content);
+	{
+		let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	{
+		let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	return temp_container.innerHTML;
+}
+</script>
+<script>
+	window.Clipboard = (function (window, document, navigator) {
+		var textArea,
+			copy;
+
+		// 判断是不是ios端
+		function isOS() {
+			return navigator.userAgent.match(/ipad|iphone/i);
+		}
+		//创建文本元素
+		function createTextArea(text) {
+			textArea = document.createElement('textArea');
+			textArea.value = text;
+			textArea.style.width = 0;
+			textArea.style.height = 0;
+			textArea.clientHeight = 0;
+			textArea.clientWidth = 0;
+			document.body.appendChild(textArea);
+		}
+		//选择内容
+		function selectText() {
+			var range,
+				selection;
+
+			if (isOS()) {
+				range = document.createRange();
+				range.selectNodeContents(textArea);
+				selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				textArea.setSelectionRange(0, 999999);
+			} else {
+				textArea.select();
+			}
+		}
+
+		//复制到剪贴板
+		function copyToClipboard() {
+			try {
+				document.execCommand("Copy")
+			} catch (err) {
+				alert("复制错误！请手动复制！")
+			}
+			document.body.removeChild(textArea);
+		}
+
+		copy = function (text) {
+			createTextArea(text);
+			selectText();
+			copyToClipboard();
+		};
+
+		return {
+			copy: copy
+		};
+	})(window, document, navigator);
+</script>
+	<meta name="description" content="莫队学习笔记" />
+</head>
+
+<body>
+	<div class="head-top-line"></div>
+	<div class="header-box">
+		
+		
+	<style> /* 搜索相关 */
+		.gridea-search-input{
+			height: 30px;
+			width: 200px;
+			box-sizing: border-box;
+			padding: 0 15px 0 30px;
+			border: 1px solid #e3e3e3;
+			border-radius: 15px;
+			color: #273849;
+			outline: none;
+			transition: border-color 0.2s ease;
+			background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+			background-size: 20px;
+			vertical-align: middle !important;
+		}
+		.gridea-search-input:focus {
+		  border-color: #666666;
+		  right: 0;
+		}
+		/* 自适应轨道 */
+		.slider-track {
+			--track-height: 0.4em; /* 轨道基础高度 */
+			width: 100%;
+			height: var(--track-height);
+			background: #e0e0e0;
+			border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+			position: relative;
+			cursor: default;
+			margin: 0.5em 0; /* 垂直间距自适应 */
+		}
+		
+		/* 进度填充 */
+		.slider-fill {
+			height: 100%;
+			background: #555;
+			border-radius: inherit; /* 继承父级圆角 */
+			width: 50%; /* 初始值 */
+		}
+		
+		/* 自适应滑块 */
+		.slider-thumb {
+			--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+			position: absolute;
+			width: var(--thumb-size);
+			height: var(--thumb-size);
+			background: #555;
+			border-radius: 50%;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: 
+				transform 0.2s ease,
+				box-shadow 0.2s ease;
+			border: 2px solid white; /* 增加辨识度 */
+		}
+		
+		/* 悬停效果 */
+		.slider-thumb:hover {
+			background: #333;
+			transform: translate(-50%, -50%) scale(1.1);
+			box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+		}
+		
+		/* 拖动效果 */
+		.slider-thumb:active {
+			cursor: grabbing;
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		}
+		
+		/* 数值显示 */
+		.value-display {
+			text-align: center;
+			font-family: Arial, sans-serif;
+			color: #555;
+			font-size: 1.2em; /* 基于容器字体大小 */
+			margin-top: 0.5em;
+		}
+	</style>
+
+<div class="pisces">
+  <header class="header">
+    <div class="blog-header box-shadow-wrapper" id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+            <a href="https://exber.qzz.io" class="brand">
+              <span>Exber's Blog</span>
+            </a>  
+        </div>
+        
+			<p class="subtitle">Can't go up</p>
+        
+      </div>
+      <nav class="site-nav bg-color" id="site_nav">
+        <ul id="nav_ul">
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io" target="">
+					首页
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io/tags" target="">
+					按标签筛选
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://csacademy.com/app/graph_editor/" target="_blank">
+					图论编辑器
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="http://yuantiji.ac/zh/" target="_blank">
+					原题机
+				</a>
+            </li>
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://exber.qzz.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.6</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script>
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+
+
+	<script>
+		// 获取DOM元素
+		const sliderTrack = document.getElementById('sliderTrack');
+		const sliderThumb = document.getElementById('sliderThumb');
+		const sliderFill = document.getElementById('sliderFill');
+		const sliderValue = document.getElementById('sliderValue');
+		
+		// 初始化变量
+		let isDragging = false;
+		let currentValue = 0.6;
+		
+		// 更新滑块位置和数值显示
+		function updateSlider(positionX) {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			let newPosition;
+
+			// 检查轨道宽度是否有效
+			if (trackRect.width <= 0) {
+				// 如果轨道宽度无效，则直接使用当前的 currentValue
+				newPosition = currentValue;
+			} else {
+				// 正常计算位置
+				newPosition = (positionX - trackRect.left) / trackRect.width;
+				newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+			}
+
+			// 更新UI
+			sliderThumb.style.left = `${newPosition * 100}%`;
+			sliderFill.style.width = `${newPosition * 100}%`;
+
+			// 更新当前值和表单隐藏域的值
+			currentValue = newPosition;
+			document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+
+			// 更新显示值（保留两位小数）
+			// 使用 Number.isNaN 进行严格检查，确保显示正常
+			const displayValue = Number.isNaN(newPosition) ? '0.60' : newPosition.toFixed(2);
+			sliderValue.textContent = displayValue;
+		}
+		
+		// 响应父容器大小变化
+		function handleResize() {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			const positionX = trackRect.left + trackRect.width * currentValue;
+			updateSlider(positionX);
+		}
+		
+		// 鼠标按下事件 - 仅在圆点上触发
+		sliderThumb.addEventListener('mousedown', (e) => {
+			isDragging = true;
+			sliderThumb.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		
+		// 鼠标移动事件
+		document.addEventListener('mousemove', (e) => {
+			if (!isDragging) return;
+			updateSlider(e.clientX);
+		});
+		
+		// 鼠标释放事件
+		document.addEventListener('mouseup', () => {
+			if (isDragging) {
+				isDragging = false;
+				sliderThumb.style.cursor = 'grab';
+			}
+		});
+		
+		// 监听父容器大小变化
+		const resizeObserver = new ResizeObserver(() => {
+			handleResize();
+		});
+		
+		// 开始观察相关元素
+		resizeObserver.observe(sliderTrack.parentElement);
+		resizeObserver.observe(sliderTrack);
+		
+		// 初始化
+		handleResize();
+	</script>
+
+	</div>
+	<div class="main-continer">
+	<div class="section-layout pisces">
+		<div class="section-layout-wrapper">
+			<div class="sidebar">
+	<div class="sidebar-box box-shadow-wrapper bg-color right-motion" id="sidebar">
+		<div class="post-list-sidebar" id="sidebar-selector">
+			<div class="sidebar-title">
+				<span id="tocSideBar" class="sidebar-title-item sidebar-title-active language" data-lan="index">文章目录</span>
+				<span id="metaSideBar" class="sidebar-title-item language" data-lan="preview">站点概览</span>
+			</div>
+		</div>
+		<div class="sidebar-body pisces" id="sidebar_body">
+			<div class="post-side-meta" id="post_side_meta">
+				
+
+
+
+
+
+
+<div class="sidebar-item">
+	<img class="site-author-image right-motion" src="https://exber.qzz.io/avatar.png"/>
+	<p class="site-author-name">Exber</p>
+	
+	<div class="site-description right-motion">
+		<p>洛谷 @Exber</p>
+<p>Codeforces @Rebex</p>
+
+	</div>
+	
+</div>
+<div class="sidebar-item side-item-stat right-motion">
+	<div class="sidebar-item-box">
+		<a href="https://exber.qzz.io/tags">
+			<span class="site-item-stat-count">26</span>
+			<span class="site-item-stat-name language" data-lan="tag">标签</span>
+		</a>
+	</div>
+	<div class="sidebar-item-box">
+		<a>
+			
+			<span class="site-item-stat-count">330</span>
+			<span class="site-item-stat-name language" data-lan="article">文章</span>
+		</a>
+	</div>
+</div>
+
+			</div>
+			<div class="post-toc sidebar-body-active" id="post_toc" style="opacity: 1;">
+				<div class="toc-box right-motion">
+					<div class="toc-wrapper  no_compress" id="toc_wrapper">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+			<div class="section-box box-shadow-wrapper">
+				<div class="section bg-color post post-page">
+					
+					<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/%E8%8E%AB%E9%98%9F%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0">莫队学习笔记</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-03-21 09:45:07">2023-03-21 09:45:07</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>分块</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>学习笔记</span>
+				</a>
+			
+		</span>
+		
+		
+		
+		<span class="meta-item pc-show">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-copy"></i>
+			<a class="language" data-lan="copy-markdown" data-src-markdown="
+![](../post-images/1679363235407.webp)
+
+练习题单：[dead_X 的莫队题单](https://www.luogu.com.cn/training/38213#information)
+
+众所周知，莫队是一种优雅的**暴力**……（两根小手指瞎跳）
+
+## Part.1 基础莫队
+### 详解
+
+莫队主要是用来求一段区间的**某种特征值**的，例如一段区间内**有多少种不同的元素**。
+
+**经典例题**
+
+```
+对于一段长度为 n 的数列，有 m 个询问，每次求一段区间 [l,r] 中有多少种不同的元素。
+
+第一行输入 n,m；
+
+接下来输入 n 个数 a[i]；
+
+接下来 m 行，每行两个数 l[i],r[i]。
+
+你需要输出 m 行，为每次询问的答案。
+
+1 <= n <= 10000
+
+1 <= m <= 100000
+
+1 <= a[i] <= 100000
+```
+
+考虑最朴素的做法，每次**暴力枚举来求答案**。可这样的做法是 $O(nm)$ 的，显然会 `T` 飞/fad。
+
+考虑优化，由于可以**从以前询问的答案通过移动左右端点来推出当前询问的答案**，所以可以这么做：
+
+```cpp
+int n,m,a[10005];
+int sum,cnt[100005];
+......
+inline void add(int x)
+{
+	cnt[a[x]]++;
+	if(cnt[a[x]]==1)
+	{
+		sum++;
+	}
+}
+
+inline void del(int x)
+{
+	cnt[a[x]]--;
+	if(cnt[a[x]]==0)
+	{
+		sum--;
+	}
+}
+
+int main()
+{
+	......
+	int lpos=1,rpos=0;
+	for(int i=1;i<=m;i++)
+	{
+		int l,r;
+		scanf(&quot;%d%d&quot;,&l,&r);
+		while(lpos>l) add(--lpos);
+		while(rpos<r) add(++rpos);
+		while(lpos<l) del(lpos++);
+		while(rpos>r) del(pos--);
+		printf(&quot;%d\n&quot;,sum);
+	}
+	return 0;
+}
+```
+
+但是，这么做有个缺点，如果遇到这样的询问：
+```
+1 1
+10000 10000
+1 1
+10000 10000
+```
+
+那这样做就无法起到优化效果了。
+
+但是由于**询问是离线的**（不必处理完第 $i-1$ 次询问才能处理第 $i$ 次），所以我们可以**按一定方法来给询问排序**，**排序方法便是莫队算法的核心思想**。
+
+考虑如何排序，我们可以**先把整个序列分成很多长度为 $\sqrt n$ 的小块**，因为这样做**可以分摊时间复杂度，令它大致为 $O(n\sqrt n)$**。在排序比较函数内判断一下两次询问的左端点的块编号，如果相同那么按右端点升序排序；否则按左端点升序排序。
+
+这样排序的代码是这样的：
+
+```cpp
+struct node
+{
+	int l,r,id;
+}que[100005];
+
+int n,m,blo;
+......
+inline bool cmp(node x,node y)
+{
+	int xlid=(x.l-1)/blo+1,ylid=(y.l-1)/blo+1;
+	if(xlid==ylid)
+	{
+		return x.r<y.r;
+	}
+	return x.l<y.l;
+}
+......
+int main()
+{
+	......
+	for(int i=1;i<=m;i++)
+	{
+		scanf(&quot;%d%d&quot;,&que[i].l,&que[i].r);
+		que[i].id=i;
+	}
+	blo=sqrt(n);
+	sort(que+1,que+m+1,cmp);
+	......
+	return 0;
+}
+
+```
+
+但是这样的排序还是能优化的。我们可以**让块编号为奇数的块左端点升序排序，块编号为偶数的块左端点降序排序**。这样其实**相当于让右端点移动得更少**，假设左端点块编号为 $i$ 的所有询问已经处理完了，现在开始处理左端点块编号为 $i+1$ 的块。如果按照之前的排序方法，右端点会**从最大值跳到最小值**。但是这样排序可以令右端点**从最大值跳到最大值或从最小值跳到最小值**，可以理解成下一块“接应”上一块 awa。
+
+这样排序的代码是这样的：（大家叫它“奇偶优化排序”）
+
+```cpp
+struct node
+{
+	int l,r,id;
+}que[100005];
+
+int n,m,blo;
+......
+inline bool cmp(node x,node y)
+{
+	int xlid=(x.l-1)/blo+1,ylid=(y.l-1)/blo+1;
+	if(xlid==ylid)
+	{
+		return (xlid&1)?x.r<y.r:x.r>y.r;
+	}
+	return x.l<y.l;
+}
+......
+int main()
+{
+	......
+	for(int i=1;i<=m;i++)
+	{
+		scanf(&quot;%d%d&quot;,&que[i].l,&que[i].r);
+		que[i].id=i;
+	}
+	blo=sqrt(n);
+	sort(que+1,que+m+1,cmp);
+	......
+	return 0;
+}
+```
+
+至此，这道例题的莫队解法便呼之欲出了。完整代码如下：
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cmath>
+
+using namespace std;
+
+struct node
+{
+	int l,r,id;
+}que[100005];
+
+int n,m,blo,a[10005];
+int sum,cnt[100005];
+int ans[100005];
+
+inline bool cmp(node x,node y)
+{
+	int xlid=(x.l-1)/blo+1,ylid=(y.l-1)/blo+1;
+	if(xlid==ylid)
+	{
+		return (xlid&1)?x.r<y.r:x.r>y.r;
+	}
+	return x.l<y.l;
+}
+
+inline void add(int x)
+{
+	cnt[a[x]]++;
+	if(cnt[a[x]]==1)
+	{
+		sum++;
+	}
+}
+
+inline void del(int x)
+{
+	cnt[a[x]]--;
+	if(cnt[a[x]]==0)
+	{
+		sum--;
+	}
+}
+
+int main()
+{
+	scanf(&quot;%d%d&quot;,&n,&m);
+	for(int i=1;i<=n;i++)
+	{
+		scanf(&quot;%d&quot;,&a[i]);
+	}
+	for(int i=1;i<=m;i++)
+	{
+		scanf(&quot;%d%d&quot;,&que[i].l,&que[i].r);
+		que[i].id=i;
+	}
+	blo=sqrt(n);
+	sort(que+1,que+m+1,cmp);
+	int lpos=1,rpos=0;
+	for(int i=1;i<=m;i++)
+	{
+		int l=que[i].l,r=que[i].r,id=que[i].id;
+		while(lpos>l) add(--lpos);
+		while(rpos<r) add(++rpos);
+		while(lpos<l) del(lpos++);
+		while(rpos>r) del(pos--);
+		ans[id]=sum;
+	}
+	for(int i=1;i<=m;i++)
+	{
+		printf(&quot;%d\n&quot;,ans[i]);
+	}
+	return 0;
+}
+```
+
+### 练习题目
+[P3901 数列找不同](https://www.luogu.com.cn/problem/P3901)
+
+[P1494 [国家集训队]小Z的袜子](https://www.luogu.com.cn/problem/P1494)
+
+[CF86D Powerful array](https://www.luogu.com.cn/problem/CF86D)
+
+[P2709 小B的询问](https://www.luogu.com.cn/problem/P2709)
+
+[P5355 [Ynoi2017] 由乃的玉米田](https://www.luogu.com.cn/problem/P5355)
+[双倍经验](https://www.luogu.com.cn/problem/P3674)
+
+[P5072 [Ynoi 2015] 盼君莫忘](https://www.luogu.com.cn/problem/P5072)
+
+## Part.2 带修莫队
+
+基础的莫队是不支持修改操作的，不过想要支持也不是不可以，只需要加上一条时间轴即可。
+
+[例题：P1903 [国家集训队]数颜色 / 维护队列](https://www.luogu.com.cn/problem/P1903)
+
+这题除了有修改操作外和普通莫队的例题差不多，所以可以直接把上一题的代码拿过来用。不过需要给询问结构体多加一个变量来存当前询问是第几次修改之后的，移动区间也要在时间轴上移动，而排序时也要根据时间轴排序。
+
+最后值得注意的一点是，带修莫队的块长是 $n^{2/3}$，具体讲解可以看[这一篇博客](https://blog.csdn.net/chenxiaoran666/article/details/82220385)。
+
+完整代码如下：
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cmath>
+
+#define S1 200005
+#define S2 1000005
+
+using namespace std;
+
+struct node
+{
+	int l,r,gsum,id;
+}que[S1];
+
+struct change
+{
+	int wh,lst,nxt;
+}cge[S1];
+
+int n,m,a[S1];
+int suma,sumc;
+int lpos=1,rpos,preans,cgecnt,cnt[S2];
+int blo;
+int ans[S1];
+
+inline bool cmp(node x,node y)
+{
+	int xlid=(x.l-1)/blo+1,ylid=(y.l-1)/blo+1;
+	int xrid=(x.r-1)/blo+1,yrid=(y.r-1)/blo+1;
+	if(xlid==ylid)
+	{
+		if(xrid==yrid)
+		{
+			return x.gsum<y.gsum;
+		}
+		return x.r<y.r;
+	}
+	return x.l<y.l;
+}
+
+inline void add(int x)
+{
+	cnt[a[x]]++;
+	if(cnt[a[x]]==1)
+	{
+		preans++;
+	}
+}
+
+inline void del(int x)
+{
+	cnt[a[x]]--;
+	if(cnt[a[x]]==0)
+	{
+		preans--;
+	}
+}
+
+inline void upd(int type)
+{
+	if(type==-1)
+	{
+		int pt=cge[cgecnt].wh;
+		if(pt>=lpos&&pt<=rpos)
+		{
+			del(pt);
+		}
+		a[pt]=cge[cgecnt].lst;
+		if(pt>=lpos&&pt<=rpos)
+		{
+			add(pt);
+		}
+	}
+	cgecnt+=type;
+	if(type==1)
+	{
+		int pt=cge[cgecnt].wh;
+		if(pt>=lpos&&pt<=rpos)
+		{
+			del(pt);
+		}
+		a[pt]=cge[cgecnt].nxt;
+		if(pt>=lpos&&pt<=rpos)
+		{
+			add(pt);
+		}
+	}
+}
+
+int main()
+{
+	scanf(&quot;%d%d&quot;,&n,&m);
+	for(int i=1;i<=n;i++)
+	{
+		scanf(&quot;%d&quot;,&a[i]);
+	}
+	for(int i=1;i<=m;i++)
+	{
+		char opt;
+		scanf(&quot; %c&quot;,&opt);
+		if(opt=='Q')
+		{
+			int l,r;
+			scanf(&quot;%d%d&quot;,&l,&r);
+			suma++;
+			que[suma]=(node){l,r,sumc,suma};
+		}
+		else
+		{
+			int p,x;
+			scanf(&quot;%d%d&quot;,&p,&x);
+			cge[++sumc]=(change){p,a[p],x};
+			a[p]=x;
+		}
+	}
+	for(int i=sumc;i>=1;i--)
+	{
+		a[cge[i].wh]=cge[i].lst;
+	}
+	blo=pow(n,0.66666);
+	sort(que+1,que+suma+1,cmp);
+	for(int i=1;i<=suma;i++)
+	{
+		int l=que[i].l,r=que[i].r,gsum=que[i].gsum,id=que[i].id;
+		while(lpos<l) del(lpos++);
+		while(rpos>r) del(rpos--);
+		while(lpos>l) add(--lpos);
+		while(rpos<r) add(++rpos);
+		while(gsum>cgecnt) upd(1);
+		while(gsum<cgecnt) upd(-1);
+		ans[id]=preans;
+	}
+	for(int i=1;i<=suma;i++)
+	{
+		printf(&quot;%d\n&quot;,ans[i]);
+	}
+	return 0;
+}
+```
+### 练习题目
+
+[CF940F Machine Learning](https://www.luogu.com.cn/problem/CF940F)
+
+## Part.3 回滚莫队
+
+~~顾名思义，回滚莫队就是滚来滚去的莫队。~~
+
+回滚莫队主要用来处理一些**方便扩区间但不方便缩区间的情况**，例如下面这道题：
+
+**经典例题**
+
+[AT1219 歴史の研究](https://www.luogu.com.cn/problem/AT1219)
+
+如果我们还用普通莫队的思路来解这道题，`add` 函数还很好写，可是到了 `del` 函数，我们就发现很难写了。因为**维护重要度最大，需要维护重要度次大；维护重要度次大，需要维护重要度第大**……这就是方便扩区间但不方便缩区间的情况。
+
+出现这种情况，我们可以**排序时先按左端点块编号升序排序，对于块编号一样的情况，按右端点升序排序**。这样就**能保证左端点块编号相同的询问右端点只需要扩展而不需要收缩了**。另外，**对于左端点和右端点在同一块内的情况，直接暴力处理即可**。
+
+考虑处理连续的一段左端点块编号相同的询问。可以**先把莫队区间右端点移到当前左端点所属块的右端点，左端点为右端点加一**，每次扩区间的时候右端点就可以保持只往右扩了。由于左端点不一定只往左扩，所以我们需要**先把右端点扩完，记录下当前的答案 `lstans`，再把左端点扩到适当的位置，求出当前的答案**。
+
+接下来就需要进行“回滚”操作了，具体就是**先把左端点移回 `R[l]+1`，但不改变答案，这时，答案可以直接赋值为之前保存的 `lstans`**，因为区间一样，答案自然也一样了。
+
+回滚莫队的精髓就体现在“回滚”操作上了。
+
+完整代码如下：
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+
+#define S 100005
+
+using namespace std;
+
+struct ask
+{
+    int l,r,id;
+}q[S];
+
+struct node
+{
+    int x,id;
+}temp[S];
+
+int n,m,a[S],bullet[S];
+long long pre,lst,ans[S],cnt[S],cntt[S];
+int blo,who[S],L[S],R[S];
+
+inline int read()
+{
+    int s=0,w=1,ch=getchar();
+    while(ch<'0'||ch>'9') ch=='-'?w=-1,ch=getchar():ch=getchar();
+    while(ch>='0'&&ch<='9') s=(s<<1)+(s<<3)+(ch^48),ch=getchar();
+    return s*w;
+}
+
+inline bool cmp(node &x,node &y)
+{
+    return x.x<y.x;
+}
+
+inline bool cmp1(node &x,node &y)
+{
+    return x.id<y.id;
+}
+
+inline bool cmp2(ask &x,ask &y)
+{
+    return (who[x.l]==who[y.l])?(x.r<y.r):(who[x.l]<who[y.l]);
+}
+
+inline void add(int x)
+{
+    pre=max(pre,++cnt[a[x]]*bullet[a[x]]);
+}
+
+inline void del(int x)
+{
+    --cnt[a[x]];
+}
+
+int main()
+{
+    n=read();
+    m=read();
+    blo=sqrt(n);
+    for(int i=1;i<=n;i++)
+    {
+        temp[i].x=read();
+        temp[i].id=i;
+        who[i]=(i-1)/blo+1;
+        L[who[i]]=(who[i]-1)*blo+1;
+        R[who[i]]=min(who[i]*blo,n);
+    }
+    for(int i=1;i<=m;i++)
+    {
+        q[i].l=read();
+        q[i].r=read();
+        q[i].id=i;
+    }
+    sort(temp+1,temp+n+1,cmp);
+    int tail=0;
+    for(int i=1;i<=n;i++)
+    {
+        if(temp[i].x!=bullet[tail])
+        {
+            bullet[++tail]=temp[i].x;
+        }
+        temp[i].x=tail;
+    }
+    sort(temp+1,temp+n+1,cmp1);
+    for(int i=1;i<=n;i++)
+    {
+        a[i]=temp[i].x;
+    }
+    sort(q+1,q+m+1,cmp2);
+    int lpos=1,rpos=0;
+    for(int i=1;i<=m;i++)
+    {
+        int l=q[i].l,r=q[i].r,id=q[i].id;
+        lpos=R[who[l]];
+        if(who[l]>who[q[i-1].l])
+        {
+            memset(cnt,0,sizeof(cnt));
+            pre=0;
+            lst=0;
+            rpos=lpos-1;
+        }
+        if(who[l]==who[r])
+        {
+            long long maxx=0;
+            for(int j=l;j<=r;j++)
+            {
+                maxx=max(maxx,++cntt[a[j]]*bullet[a[j]]);
+            }
+            ans[id]=maxx;
+            for(int j=l;j<=r;j++)
+            {
+            	cntt[a[j]]=0;
+            }
+            continue;
+        }
+        while(rpos<r) add(++rpos);
+        lst=pre;
+        while(lpos>l) add(--lpos);
+        ans[id]=pre;
+        while(lpos<R[who[l]]) del(lpos++);
+        pre=lst;
+    }
+    for(int i=1;i<=m;i++)
+    {
+        printf(&quot;%lld\n&quot;,ans[i]);
+    }
+    return 0;
+}
+```
+同理，**方便缩区间但不方便扩区间的情况**回滚莫队也可以做。
+
+**经典例题**
+
+[P8078 [WC2022] 秃子酋长](https://www.luogu.com.cn/problem/P8078)
+
+这道题显然莫队要维护一个有序的序列，支持插入、删除和求前驱后继。
+
+容易发现，如果**没有插入操作的话，前驱后继只要仿照双向链表删除的方法来维护就行了**。所以考虑不插入的回滚莫队。
+
+仿照不删除的回滚莫队：
+
+首先**把莫队区间设置为 $[1,n]$**。
+
+排序时先按左端点块编号升序排序，对于块编号一样的情况，按右端点**降序**排序。这样就能保证左端点块编号相同的询问右端点**只需要收缩而不需要扩展了**。需要注意的是，**对于左端点和右端点在同一块内的情况，不需要暴力处理**。
+
+考虑处理连续的一段左端点块编号相同的询问。可以**先把莫队区间右端点移到 $n$，左端点为当前块的左端点**，每次缩区间的时候右端点就可以保持只往左缩了。由于左端点不一定只往右边缩，所以我们需要**先把右端点缩完，再把左端点缩到适当的位置，求出当前的答案**。
+
+和不删除的回滚莫队不一样的是，**缩左端点和右端点时要把一路上更改的前驱后继用栈记录下来，这样执行“回滚”操作时就能成功恢复了，处理下一个块时右端点也能顺利恢复到 $n$**。
+
+求出当前答案后就需要进行“回滚”操作了，具体就是**按照栈中的值来更新答案并且扩展左端点**。
+
+注意**要特判没有前驱或者后继的节点**，然后就是**要开 `long long`**。
+
+完整代码如下：
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cmath>
+
+using namespace std;
+
+const long long MS=500005;
+
+struct pr
+{
+	int x,y;
+}b[MS];
+
+struct tr
+{
+	int x,y,z;
+}sta[MS];
+
+struct node
+{
+	int l,r,id;
+}que[MS];
+
+int n,m,blo;
+int L[MS],a[MS];
+int fir[MS],nxt[MS];
+long long preans,ans[MS];
+int top;
+
+inline bool cmp(node x,node y)
+{
+	int xid=(x.l-1)/blo+1,yid=(y.l-1)/blo+1;
+	return xid!=yid?x.l<y.l:x.r>y.r;
+}
+
+inline bool cmp2(pr x,pr y)
+{
+	return x.x<y.x;
+}
+
+inline void del(int x)
+{
+	int lb=fir[x],rb=nxt[x];
+	sta[++top]=(tr){lb,x,rb};
+	nxt[lb]=rb;
+	if(rb==x)
+	{
+		nxt[lb]=lb;
+	}
+	fir[rb]=lb;
+	if(lb==x)
+	{
+		fir[rb]=rb;
+	}
+	preans-=abs(x-lb)+abs(x-rb);
+	if(lb!=x&&rb!=x)
+	{
+		preans+=abs(lb-rb);
+	}
+}
+
+inline void bak()
+{
+	int lb=sta[top].x,x=sta[top].y,rb=sta[top].z;
+	top--;
+	fir[x]=lb;
+	if(lb!=x)
+	{
+		nxt[lb]=x;
+	}
+	nxt[x]=rb;
+	if(rb!=x)
+	{
+		fir[rb]=x;
+	}
+	if(lb!=x&&rb!=x)
+	{
+		preans-=abs(lb-rb);
+	}
+	preans+=abs(x-lb)+abs(x-rb);
+}
+
+int main()
+{
+	scanf(&quot;%d%d&quot;,&n,&m);
+	blo=sqrt(n);
+	for(int i=1;i<=n;i++)
+	{
+		scanf(&quot;%d&quot;,&a[i]);
+		b[i].x=a[i];
+		b[i].y=i;
+		L[i]=(i-1)/blo!=(i-2)/blo||i==1?i:L[i-1];
+	}
+	for(int i=1;i<=m;i++)
+	{
+		scanf(&quot;%d%d&quot;,&que[i].l,&que[i].r);
+		que[i].id=i;
+	}
+	sort(que+1,que+m+1,cmp);
+	int lpos=1,rpos=n;
+	sort(b+1,b+n+1,cmp2);
+	fir[b[1].y]=b[1].y;
+	nxt[b[n].y]=b[n].y;
+	for(int i=2;i<=n-1;i++)
+	{
+		fir[b[i].y]=b[i-1].y;
+		nxt[b[i-1].y]=b[i].y;
+		nxt[b[i].y]=b[i+1].y;
+		fir[b[i+1].y]=b[i].y;
+		preans+=abs(b[i].y-b[i-1].y);
+	}
+	preans+=abs(b[n].y-b[n-1].y);
+	for(int i=1;i<=m;i++)
+	{
+		int l=que[i].l,r=que[i].r,id=que[i].id;
+		int LL=L[l],lstL=L[que[i-1].l];
+		if(LL!=lstL)
+		{
+			while(top>0) bak();
+			lpos=max(1,lstL);
+			rpos=n;
+			while(lpos<LL) del(lpos++);
+			top=0;
+		}
+		while(rpos>r) del(rpos--);
+		while(lpos<l) del(lpos++);
+		ans[id]=preans;
+		while(lpos>LL) bak(),lpos--;
+	}
+	for(int i=1;i<=m;i++)
+	{
+		printf(&quot;%lld\n&quot;,ans[i]);
+	}
+	return 0;
+}
+```
+
+### 练习题目
+
+[P5906 【模板】回滚莫队&不删除莫队](https://www.luogu.com.cn/problem/P5906)
+
+## Part.4 树上莫队
+
+~~树上莫队，顾名思义，就是莫队上树了。~~
+
+树上莫队主要是用来求树上两点之间最短路径的**某种特征值**的，例如两点的最短路径上**有多少种不同的元素**。
+
+**经典例题**
+
+[SP10707 COT2 - Count on a tree II](https://www.luogu.com.cn/problem/SP10707)
+
+首先我们考虑如何把一棵树“拍扁”。`dfs` 序固然可以，但它**无法维护树上父子关系**。这时就需要介绍一种新的把树“拍扁”的方式了——欧拉序。
+
+欧拉序和 `dfs` 序基本上是一样的，但是**一个点在刚访问和访问结束的时候都会加进序列里，也就是说对于一个 $n$ 个节点的树，它的欧拉序长度为 $2n$，每个点都会在欧拉序中出现两次**。
+
+为了下文表述方便，我们**记 $in_i$ 表示点 $i$ 在欧拉序中第一次出现的位置，$out_i$ 表示点 $i$ 在欧拉序中最后一次出现的位置**。显然，**$i$ 的子树的欧拉序就是 $[in_i,out_i]$ 这段区间所对应的欧拉序**。
+
+这样，我们就实现了“拍扁”一颗树 awa。
+
+但这还没完，考虑如何处理询问。首先**记 $x$ 为一组询问中 $in$ 较小的那个点，$y$ 为一组询问中 $in$ 较大的那个点**。那么**如果询问的两个点在同一棵子树内，即 $lca(x,y)=x$，那么需要处理的区间即为 $[in_x,in_y]$。但是由于树可能会有分叉，所以区间中出现两次的点不能算贡献**。
+
+考虑 $lca(x,y)\ne x$ 的情况。对于这种情况，**我们需要处理的区间便变为了 $[out_x,in_y]$。同样的，区间中出现两次的点不能算贡献。但由于没有把 $lca(x,y)$ 算进去，所以还需要算上 $lca(x,y)$ 的贡献。**
+
+这是树上莫队最难懂的地方，我也是看了好多文章才理解的 /kk。
+
+梳理一下思路：
+
+- 先 `dfs` 一次预处理出欧拉序和倍增数组
+
+- 处理每一次询问，处理出询问对应的区间
+
+- 正常莫队处理
+
+例题完整代码：
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cmath>
+
+using namespace std;
+
+#define S 200005
+#define MS 100005
+
+struct node
+{
+	int l,r,lca,id;
+}que[MS];
+
+int n,m;
+int col[MS],b[MS];
+int esum,to[S],nxt[S],h[MS];
+int dep[MS],up[MS][30];
+int cnt,a[MS],in[MS],out[MS];
+int blo;
+bool vis[MS];
+int tot[MS],preans;
+int ans[MS];
+
+inline bool cmp(node x,node y)
+{
+	int xlid=(x.l-1)/blo+1,ylid=(y.l-1)/blo+1;
+	if(xlid==ylid)
+	{
+		return (xlid&1)?x.r<y.r:x.r>y.r;
+	}
+	return x.l<y.l;
+}
+
+inline void added(int x,int y)
+{
+	to[++esum]=y;
+	nxt[esum]=h[x];
+	h[x]=esum;
+}
+
+void dfs(int u,int fa)
+{
+	a[++cnt]=u;
+	in[u]=cnt;
+	dep[u]=dep[fa]+1;
+	up[u][0]=fa;
+	for(int i=1;i<=25;i++)
+	{
+		up[u][i]=up[up[u][i-1]][i-1];
+	}
+	for(int i=h[u];i;i=nxt[i])
+	{
+		int v=to[i];
+		if(v==fa)
+		{
+			continue;
+		}
+		dfs(v,u);
+	}
+	a[++cnt]=u;
+	out[u]=cnt;
+}
+
+inline int getlca(int x,int y)
+{
+	if(dep[x]<dep[y])
+	{
+		int t=x;
+		x=y;
+		y=t;
+	}
+	for(int i=25;i>=0;i--)
+	{
+		if(dep[up[x][i]]>=dep[y])
+		{
+			x=up[x][i];
+		}
+	}
+	if(x==y)
+	{
+		return x;
+	}
+	for(int i=25;i>=0;i--)
+	{
+		if(up[x][i]!=up[y][i])
+		{
+			x=up[x][i];
+			y=up[y][i];
+		}
+	}
+	return up[x][0];
+}
+
+inline void add(int x)
+{
+	if(!vis[x])
+	{
+		vis[x]=true;
+		tot[col[x]]++;
+		if(tot[col[x]]==1)
+		{
+			preans++;
+		}
+	}
+	else
+	{
+		vis[x]=false;
+		tot[col[x]]--;
+		if(tot[col[x]]==0)
+		{
+			preans--;
+		}
+	}
+}
+
+int main()
+{
+	scanf(&quot;%d%d&quot;,&n,&m);
+	for(int i=1;i<=n;i++)
+	{
+		scanf(&quot;%d&quot;,&col[i]);
+		b[i]=col[i];
+	}
+	sort(b+1,b+n+1);
+	for(int i=1;i<=n;i++)
+	{
+		col[i]=lower_bound(b+1,b+n+1,col[i])-b;
+	}
+	for(int i=1;i<=n-1;i++)
+	{
+		int x,y;
+		scanf(&quot;%d%d&quot;,&x,&y);
+		added(x,y);
+		added(y,x);
+	}
+	dfs(1,0);
+	blo=sqrt(n*2);
+	for(int i=1;i<=m;i++)
+	{
+		int x,y;
+		scanf(&quot;%d%d&quot;,&x,&y);
+		if(in[x]>in[y])
+		{
+			int t=x;
+			x=y;
+			y=t;
+		}
+		int lca=getlca(x,y);
+		if(lca==x)
+		{
+			que[i]=(node){in[x],in[y],0,i};
+		}
+		else
+		{
+			que[i]=(node){out[x],in[y],lca,i};
+		}
+	}
+	sort(que+1,que+m+1,cmp);
+	int lpos=1,rpos=0;
+	for(int i=1;i<=m;i++)
+	{
+		int l=que[i].l,r=que[i].r,lca=que[i].lca,id=que[i].id;
+		while(lpos>l) add(a[--lpos]);
+		while(rpos<r) add(a[++rpos]);
+		while(lpos<l) add(a[lpos++]);
+		while(rpos>r) add(a[rpos--]);
+		if(lca!=0)
+		{
+			add(lca);
+		}
+		ans[id]=preans;
+		if(lca!=0)
+		{
+			add(lca);
+		}
+	}
+	for(int i=1;i<=m;i++)
+	{
+		printf(&quot;%d\n&quot;,ans[i]);
+	}
+	return 0;
+}
+```
+
+### 练习题目
+
+[P4074 [WC2013] 糖果公园](https://www.luogu.com.cn/problem/P4074)
+
+## 小技巧
+
+- 莫队常配合其它数据结构，如莫队套树状数组、莫队套 `bitset` 等等
+
+- 强制在线的题莫队无法解决
+
+- 莫队一定要先扩区间再缩区间
+" onclick="copyMarkdown(this)">复制 Markdown</a>
+		</span>
+		
+	</div>
+</section>
+
+<script>
+	function copyMarkdown(e) {
+		let text = e.getAttribute('data-src-markdown');
+		if (e.innerHTML == '复制成功') {
+			return;
+		}
+		e.innerHTML = '复制成功';
+		(function (elem) {
+			setTimeout(() => {
+				if (elem.innerHTML == '复制成功') {
+					elem.innerHTML = '复制 Markdown'
+				}
+			}, 1000);
+		})(e)
+		Clipboard.copy(text);
+	}
+</script>
+
+					<div class="post-body next-md-body" id="post_body" data-post-markdown="
+![](../post-images/1679363235407.webp)
+
+练习题单：[dead_X 的莫队题单](https://www.luogu.com.cn/training/38213#information)
+
+众所周知，莫队是一种优雅的**暴力**……（两根小手指瞎跳）
+
+## Part.1 基础莫队
+### 详解
+
+莫队主要是用来求一段区间的**某种特征值**的，例如一段区间内**有多少种不同的元素**。
+
+**经典例题**
+
+```
+对于一段长度为 n 的数列，有 m 个询问，每次求一段区间 [l,r] 中有多少种不同的元素。
+
+第一行输入 n,m；
+
+接下来输入 n 个数 a[i]；
+
+接下来 m 行，每行两个数 l[i],r[i]。
+
+你需要输出 m 行，为每次询问的答案。
+
+1 <= n <= 10000
+
+1 <= m <= 100000
+
+1 <= a[i] <= 100000
+```
+
+考虑最朴素的做法，每次**暴力枚举来求答案**。可这样的做法是 $O(nm)$ 的，显然会 `T` 飞/fad。
+
+考虑优化，由于可以**从以前询问的答案通过移动左右端点来推出当前询问的答案**，所以可以这么做：
+
+```cpp
+int n,m,a[10005];
+int sum,cnt[100005];
+......
+inline void add(int x)
+{
+	cnt[a[x]]++;
+	if(cnt[a[x]]==1)
+	{
+		sum++;
+	}
+}
+
+inline void del(int x)
+{
+	cnt[a[x]]--;
+	if(cnt[a[x]]==0)
+	{
+		sum--;
+	}
+}
+
+int main()
+{
+	......
+	int lpos=1,rpos=0;
+	for(int i=1;i<=m;i++)
+	{
+		int l,r;
+		scanf(&quot;%d%d&quot;,&l,&r);
+		while(lpos>l) add(--lpos);
+		while(rpos<r) add(++rpos);
+		while(lpos<l) del(lpos++);
+		while(rpos>r) del(pos--);
+		printf(&quot;%d\n&quot;,sum);
+	}
+	return 0;
+}
+```
+
+但是，这么做有个缺点，如果遇到这样的询问：
+```
+1 1
+10000 10000
+1 1
+10000 10000
+```
+
+那这样做就无法起到优化效果了。
+
+但是由于**询问是离线的**（不必处理完第 $i-1$ 次询问才能处理第 $i$ 次），所以我们可以**按一定方法来给询问排序**，**排序方法便是莫队算法的核心思想**。
+
+考虑如何排序，我们可以**先把整个序列分成很多长度为 $\sqrt n$ 的小块**，因为这样做**可以分摊时间复杂度，令它大致为 $O(n\sqrt n)$**。在排序比较函数内判断一下两次询问的左端点的块编号，如果相同那么按右端点升序排序；否则按左端点升序排序。
+
+这样排序的代码是这样的：
+
+```cpp
+struct node
+{
+	int l,r,id;
+}que[100005];
+
+int n,m,blo;
+......
+inline bool cmp(node x,node y)
+{
+	int xlid=(x.l-1)/blo+1,ylid=(y.l-1)/blo+1;
+	if(xlid==ylid)
+	{
+		return x.r<y.r;
+	}
+	return x.l<y.l;
+}
+......
+int main()
+{
+	......
+	for(int i=1;i<=m;i++)
+	{
+		scanf(&quot;%d%d&quot;,&que[i].l,&que[i].r);
+		que[i].id=i;
+	}
+	blo=sqrt(n);
+	sort(que+1,que+m+1,cmp);
+	......
+	return 0;
+}
+
+```
+
+但是这样的排序还是能优化的。我们可以**让块编号为奇数的块左端点升序排序，块编号为偶数的块左端点降序排序**。这样其实**相当于让右端点移动得更少**，假设左端点块编号为 $i$ 的所有询问已经处理完了，现在开始处理左端点块编号为 $i+1$ 的块。如果按照之前的排序方法，右端点会**从最大值跳到最小值**。但是这样排序可以令右端点**从最大值跳到最大值或从最小值跳到最小值**，可以理解成下一块“接应”上一块 awa。
+
+这样排序的代码是这样的：（大家叫它“奇偶优化排序”）
+
+```cpp
+struct node
+{
+	int l,r,id;
+}que[100005];
+
+int n,m,blo;
+......
+inline bool cmp(node x,node y)
+{
+	int xlid=(x.l-1)/blo+1,ylid=(y.l-1)/blo+1;
+	if(xlid==ylid)
+	{
+		return (xlid&1)?x.r<y.r:x.r>y.r;
+	}
+	return x.l<y.l;
+}
+......
+int main()
+{
+	......
+	for(int i=1;i<=m;i++)
+	{
+		scanf(&quot;%d%d&quot;,&que[i].l,&que[i].r);
+		que[i].id=i;
+	}
+	blo=sqrt(n);
+	sort(que+1,que+m+1,cmp);
+	......
+	return 0;
+}
+```
+
+至此，这道例题的莫队解法便呼之欲出了。完整代码如下：
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cmath>
+
+using namespace std;
+
+struct node
+{
+	int l,r,id;
+}que[100005];
+
+int n,m,blo,a[10005];
+int sum,cnt[100005];
+int ans[100005];
+
+inline bool cmp(node x,node y)
+{
+	int xlid=(x.l-1)/blo+1,ylid=(y.l-1)/blo+1;
+	if(xlid==ylid)
+	{
+		return (xlid&1)?x.r<y.r:x.r>y.r;
+	}
+	return x.l<y.l;
+}
+
+inline void add(int x)
+{
+	cnt[a[x]]++;
+	if(cnt[a[x]]==1)
+	{
+		sum++;
+	}
+}
+
+inline void del(int x)
+{
+	cnt[a[x]]--;
+	if(cnt[a[x]]==0)
+	{
+		sum--;
+	}
+}
+
+int main()
+{
+	scanf(&quot;%d%d&quot;,&n,&m);
+	for(int i=1;i<=n;i++)
+	{
+		scanf(&quot;%d&quot;,&a[i]);
+	}
+	for(int i=1;i<=m;i++)
+	{
+		scanf(&quot;%d%d&quot;,&que[i].l,&que[i].r);
+		que[i].id=i;
+	}
+	blo=sqrt(n);
+	sort(que+1,que+m+1,cmp);
+	int lpos=1,rpos=0;
+	for(int i=1;i<=m;i++)
+	{
+		int l=que[i].l,r=que[i].r,id=que[i].id;
+		while(lpos>l) add(--lpos);
+		while(rpos<r) add(++rpos);
+		while(lpos<l) del(lpos++);
+		while(rpos>r) del(pos--);
+		ans[id]=sum;
+	}
+	for(int i=1;i<=m;i++)
+	{
+		printf(&quot;%d\n&quot;,ans[i]);
+	}
+	return 0;
+}
+```
+
+### 练习题目
+[P3901 数列找不同](https://www.luogu.com.cn/problem/P3901)
+
+[P1494 [国家集训队]小Z的袜子](https://www.luogu.com.cn/problem/P1494)
+
+[CF86D Powerful array](https://www.luogu.com.cn/problem/CF86D)
+
+[P2709 小B的询问](https://www.luogu.com.cn/problem/P2709)
+
+[P5355 [Ynoi2017] 由乃的玉米田](https://www.luogu.com.cn/problem/P5355)
+[双倍经验](https://www.luogu.com.cn/problem/P3674)
+
+[P5072 [Ynoi 2015] 盼君莫忘](https://www.luogu.com.cn/problem/P5072)
+
+## Part.2 带修莫队
+
+基础的莫队是不支持修改操作的，不过想要支持也不是不可以，只需要加上一条时间轴即可。
+
+[例题：P1903 [国家集训队]数颜色 / 维护队列](https://www.luogu.com.cn/problem/P1903)
+
+这题除了有修改操作外和普通莫队的例题差不多，所以可以直接把上一题的代码拿过来用。不过需要给询问结构体多加一个变量来存当前询问是第几次修改之后的，移动区间也要在时间轴上移动，而排序时也要根据时间轴排序。
+
+最后值得注意的一点是，带修莫队的块长是 $n^{2/3}$，具体讲解可以看[这一篇博客](https://blog.csdn.net/chenxiaoran666/article/details/82220385)。
+
+完整代码如下：
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cmath>
+
+#define S1 200005
+#define S2 1000005
+
+using namespace std;
+
+struct node
+{
+	int l,r,gsum,id;
+}que[S1];
+
+struct change
+{
+	int wh,lst,nxt;
+}cge[S1];
+
+int n,m,a[S1];
+int suma,sumc;
+int lpos=1,rpos,preans,cgecnt,cnt[S2];
+int blo;
+int ans[S1];
+
+inline bool cmp(node x,node y)
+{
+	int xlid=(x.l-1)/blo+1,ylid=(y.l-1)/blo+1;
+	int xrid=(x.r-1)/blo+1,yrid=(y.r-1)/blo+1;
+	if(xlid==ylid)
+	{
+		if(xrid==yrid)
+		{
+			return x.gsum<y.gsum;
+		}
+		return x.r<y.r;
+	}
+	return x.l<y.l;
+}
+
+inline void add(int x)
+{
+	cnt[a[x]]++;
+	if(cnt[a[x]]==1)
+	{
+		preans++;
+	}
+}
+
+inline void del(int x)
+{
+	cnt[a[x]]--;
+	if(cnt[a[x]]==0)
+	{
+		preans--;
+	}
+}
+
+inline void upd(int type)
+{
+	if(type==-1)
+	{
+		int pt=cge[cgecnt].wh;
+		if(pt>=lpos&&pt<=rpos)
+		{
+			del(pt);
+		}
+		a[pt]=cge[cgecnt].lst;
+		if(pt>=lpos&&pt<=rpos)
+		{
+			add(pt);
+		}
+	}
+	cgecnt+=type;
+	if(type==1)
+	{
+		int pt=cge[cgecnt].wh;
+		if(pt>=lpos&&pt<=rpos)
+		{
+			del(pt);
+		}
+		a[pt]=cge[cgecnt].nxt;
+		if(pt>=lpos&&pt<=rpos)
+		{
+			add(pt);
+		}
+	}
+}
+
+int main()
+{
+	scanf(&quot;%d%d&quot;,&n,&m);
+	for(int i=1;i<=n;i++)
+	{
+		scanf(&quot;%d&quot;,&a[i]);
+	}
+	for(int i=1;i<=m;i++)
+	{
+		char opt;
+		scanf(&quot; %c&quot;,&opt);
+		if(opt=='Q')
+		{
+			int l,r;
+			scanf(&quot;%d%d&quot;,&l,&r);
+			suma++;
+			que[suma]=(node){l,r,sumc,suma};
+		}
+		else
+		{
+			int p,x;
+			scanf(&quot;%d%d&quot;,&p,&x);
+			cge[++sumc]=(change){p,a[p],x};
+			a[p]=x;
+		}
+	}
+	for(int i=sumc;i>=1;i--)
+	{
+		a[cge[i].wh]=cge[i].lst;
+	}
+	blo=pow(n,0.66666);
+	sort(que+1,que+suma+1,cmp);
+	for(int i=1;i<=suma;i++)
+	{
+		int l=que[i].l,r=que[i].r,gsum=que[i].gsum,id=que[i].id;
+		while(lpos<l) del(lpos++);
+		while(rpos>r) del(rpos--);
+		while(lpos>l) add(--lpos);
+		while(rpos<r) add(++rpos);
+		while(gsum>cgecnt) upd(1);
+		while(gsum<cgecnt) upd(-1);
+		ans[id]=preans;
+	}
+	for(int i=1;i<=suma;i++)
+	{
+		printf(&quot;%d\n&quot;,ans[i]);
+	}
+	return 0;
+}
+```
+### 练习题目
+
+[CF940F Machine Learning](https://www.luogu.com.cn/problem/CF940F)
+
+## Part.3 回滚莫队
+
+~~顾名思义，回滚莫队就是滚来滚去的莫队。~~
+
+回滚莫队主要用来处理一些**方便扩区间但不方便缩区间的情况**，例如下面这道题：
+
+**经典例题**
+
+[AT1219 歴史の研究](https://www.luogu.com.cn/problem/AT1219)
+
+如果我们还用普通莫队的思路来解这道题，`add` 函数还很好写，可是到了 `del` 函数，我们就发现很难写了。因为**维护重要度最大，需要维护重要度次大；维护重要度次大，需要维护重要度第大**……这就是方便扩区间但不方便缩区间的情况。
+
+出现这种情况，我们可以**排序时先按左端点块编号升序排序，对于块编号一样的情况，按右端点升序排序**。这样就**能保证左端点块编号相同的询问右端点只需要扩展而不需要收缩了**。另外，**对于左端点和右端点在同一块内的情况，直接暴力处理即可**。
+
+考虑处理连续的一段左端点块编号相同的询问。可以**先把莫队区间右端点移到当前左端点所属块的右端点，左端点为右端点加一**，每次扩区间的时候右端点就可以保持只往右扩了。由于左端点不一定只往左扩，所以我们需要**先把右端点扩完，记录下当前的答案 `lstans`，再把左端点扩到适当的位置，求出当前的答案**。
+
+接下来就需要进行“回滚”操作了，具体就是**先把左端点移回 `R[l]+1`，但不改变答案，这时，答案可以直接赋值为之前保存的 `lstans`**，因为区间一样，答案自然也一样了。
+
+回滚莫队的精髓就体现在“回滚”操作上了。
+
+完整代码如下：
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+
+#define S 100005
+
+using namespace std;
+
+struct ask
+{
+    int l,r,id;
+}q[S];
+
+struct node
+{
+    int x,id;
+}temp[S];
+
+int n,m,a[S],bullet[S];
+long long pre,lst,ans[S],cnt[S],cntt[S];
+int blo,who[S],L[S],R[S];
+
+inline int read()
+{
+    int s=0,w=1,ch=getchar();
+    while(ch<'0'||ch>'9') ch=='-'?w=-1,ch=getchar():ch=getchar();
+    while(ch>='0'&&ch<='9') s=(s<<1)+(s<<3)+(ch^48),ch=getchar();
+    return s*w;
+}
+
+inline bool cmp(node &x,node &y)
+{
+    return x.x<y.x;
+}
+
+inline bool cmp1(node &x,node &y)
+{
+    return x.id<y.id;
+}
+
+inline bool cmp2(ask &x,ask &y)
+{
+    return (who[x.l]==who[y.l])?(x.r<y.r):(who[x.l]<who[y.l]);
+}
+
+inline void add(int x)
+{
+    pre=max(pre,++cnt[a[x]]*bullet[a[x]]);
+}
+
+inline void del(int x)
+{
+    --cnt[a[x]];
+}
+
+int main()
+{
+    n=read();
+    m=read();
+    blo=sqrt(n);
+    for(int i=1;i<=n;i++)
+    {
+        temp[i].x=read();
+        temp[i].id=i;
+        who[i]=(i-1)/blo+1;
+        L[who[i]]=(who[i]-1)*blo+1;
+        R[who[i]]=min(who[i]*blo,n);
+    }
+    for(int i=1;i<=m;i++)
+    {
+        q[i].l=read();
+        q[i].r=read();
+        q[i].id=i;
+    }
+    sort(temp+1,temp+n+1,cmp);
+    int tail=0;
+    for(int i=1;i<=n;i++)
+    {
+        if(temp[i].x!=bullet[tail])
+        {
+            bullet[++tail]=temp[i].x;
+        }
+        temp[i].x=tail;
+    }
+    sort(temp+1,temp+n+1,cmp1);
+    for(int i=1;i<=n;i++)
+    {
+        a[i]=temp[i].x;
+    }
+    sort(q+1,q+m+1,cmp2);
+    int lpos=1,rpos=0;
+    for(int i=1;i<=m;i++)
+    {
+        int l=q[i].l,r=q[i].r,id=q[i].id;
+        lpos=R[who[l]];
+        if(who[l]>who[q[i-1].l])
+        {
+            memset(cnt,0,sizeof(cnt));
+            pre=0;
+            lst=0;
+            rpos=lpos-1;
+        }
+        if(who[l]==who[r])
+        {
+            long long maxx=0;
+            for(int j=l;j<=r;j++)
+            {
+                maxx=max(maxx,++cntt[a[j]]*bullet[a[j]]);
+            }
+            ans[id]=maxx;
+            for(int j=l;j<=r;j++)
+            {
+            	cntt[a[j]]=0;
+            }
+            continue;
+        }
+        while(rpos<r) add(++rpos);
+        lst=pre;
+        while(lpos>l) add(--lpos);
+        ans[id]=pre;
+        while(lpos<R[who[l]]) del(lpos++);
+        pre=lst;
+    }
+    for(int i=1;i<=m;i++)
+    {
+        printf(&quot;%lld\n&quot;,ans[i]);
+    }
+    return 0;
+}
+```
+同理，**方便缩区间但不方便扩区间的情况**回滚莫队也可以做。
+
+**经典例题**
+
+[P8078 [WC2022] 秃子酋长](https://www.luogu.com.cn/problem/P8078)
+
+这道题显然莫队要维护一个有序的序列，支持插入、删除和求前驱后继。
+
+容易发现，如果**没有插入操作的话，前驱后继只要仿照双向链表删除的方法来维护就行了**。所以考虑不插入的回滚莫队。
+
+仿照不删除的回滚莫队：
+
+首先**把莫队区间设置为 $[1,n]$**。
+
+排序时先按左端点块编号升序排序，对于块编号一样的情况，按右端点**降序**排序。这样就能保证左端点块编号相同的询问右端点**只需要收缩而不需要扩展了**。需要注意的是，**对于左端点和右端点在同一块内的情况，不需要暴力处理**。
+
+考虑处理连续的一段左端点块编号相同的询问。可以**先把莫队区间右端点移到 $n$，左端点为当前块的左端点**，每次缩区间的时候右端点就可以保持只往左缩了。由于左端点不一定只往右边缩，所以我们需要**先把右端点缩完，再把左端点缩到适当的位置，求出当前的答案**。
+
+和不删除的回滚莫队不一样的是，**缩左端点和右端点时要把一路上更改的前驱后继用栈记录下来，这样执行“回滚”操作时就能成功恢复了，处理下一个块时右端点也能顺利恢复到 $n$**。
+
+求出当前答案后就需要进行“回滚”操作了，具体就是**按照栈中的值来更新答案并且扩展左端点**。
+
+注意**要特判没有前驱或者后继的节点**，然后就是**要开 `long long`**。
+
+完整代码如下：
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cmath>
+
+using namespace std;
+
+const long long MS=500005;
+
+struct pr
+{
+	int x,y;
+}b[MS];
+
+struct tr
+{
+	int x,y,z;
+}sta[MS];
+
+struct node
+{
+	int l,r,id;
+}que[MS];
+
+int n,m,blo;
+int L[MS],a[MS];
+int fir[MS],nxt[MS];
+long long preans,ans[MS];
+int top;
+
+inline bool cmp(node x,node y)
+{
+	int xid=(x.l-1)/blo+1,yid=(y.l-1)/blo+1;
+	return xid!=yid?x.l<y.l:x.r>y.r;
+}
+
+inline bool cmp2(pr x,pr y)
+{
+	return x.x<y.x;
+}
+
+inline void del(int x)
+{
+	int lb=fir[x],rb=nxt[x];
+	sta[++top]=(tr){lb,x,rb};
+	nxt[lb]=rb;
+	if(rb==x)
+	{
+		nxt[lb]=lb;
+	}
+	fir[rb]=lb;
+	if(lb==x)
+	{
+		fir[rb]=rb;
+	}
+	preans-=abs(x-lb)+abs(x-rb);
+	if(lb!=x&&rb!=x)
+	{
+		preans+=abs(lb-rb);
+	}
+}
+
+inline void bak()
+{
+	int lb=sta[top].x,x=sta[top].y,rb=sta[top].z;
+	top--;
+	fir[x]=lb;
+	if(lb!=x)
+	{
+		nxt[lb]=x;
+	}
+	nxt[x]=rb;
+	if(rb!=x)
+	{
+		fir[rb]=x;
+	}
+	if(lb!=x&&rb!=x)
+	{
+		preans-=abs(lb-rb);
+	}
+	preans+=abs(x-lb)+abs(x-rb);
+}
+
+int main()
+{
+	scanf(&quot;%d%d&quot;,&n,&m);
+	blo=sqrt(n);
+	for(int i=1;i<=n;i++)
+	{
+		scanf(&quot;%d&quot;,&a[i]);
+		b[i].x=a[i];
+		b[i].y=i;
+		L[i]=(i-1)/blo!=(i-2)/blo||i==1?i:L[i-1];
+	}
+	for(int i=1;i<=m;i++)
+	{
+		scanf(&quot;%d%d&quot;,&que[i].l,&que[i].r);
+		que[i].id=i;
+	}
+	sort(que+1,que+m+1,cmp);
+	int lpos=1,rpos=n;
+	sort(b+1,b+n+1,cmp2);
+	fir[b[1].y]=b[1].y;
+	nxt[b[n].y]=b[n].y;
+	for(int i=2;i<=n-1;i++)
+	{
+		fir[b[i].y]=b[i-1].y;
+		nxt[b[i-1].y]=b[i].y;
+		nxt[b[i].y]=b[i+1].y;
+		fir[b[i+1].y]=b[i].y;
+		preans+=abs(b[i].y-b[i-1].y);
+	}
+	preans+=abs(b[n].y-b[n-1].y);
+	for(int i=1;i<=m;i++)
+	{
+		int l=que[i].l,r=que[i].r,id=que[i].id;
+		int LL=L[l],lstL=L[que[i-1].l];
+		if(LL!=lstL)
+		{
+			while(top>0) bak();
+			lpos=max(1,lstL);
+			rpos=n;
+			while(lpos<LL) del(lpos++);
+			top=0;
+		}
+		while(rpos>r) del(rpos--);
+		while(lpos<l) del(lpos++);
+		ans[id]=preans;
+		while(lpos>LL) bak(),lpos--;
+	}
+	for(int i=1;i<=m;i++)
+	{
+		printf(&quot;%lld\n&quot;,ans[i]);
+	}
+	return 0;
+}
+```
+
+### 练习题目
+
+[P5906 【模板】回滚莫队&不删除莫队](https://www.luogu.com.cn/problem/P5906)
+
+## Part.4 树上莫队
+
+~~树上莫队，顾名思义，就是莫队上树了。~~
+
+树上莫队主要是用来求树上两点之间最短路径的**某种特征值**的，例如两点的最短路径上**有多少种不同的元素**。
+
+**经典例题**
+
+[SP10707 COT2 - Count on a tree II](https://www.luogu.com.cn/problem/SP10707)
+
+首先我们考虑如何把一棵树“拍扁”。`dfs` 序固然可以，但它**无法维护树上父子关系**。这时就需要介绍一种新的把树“拍扁”的方式了——欧拉序。
+
+欧拉序和 `dfs` 序基本上是一样的，但是**一个点在刚访问和访问结束的时候都会加进序列里，也就是说对于一个 $n$ 个节点的树，它的欧拉序长度为 $2n$，每个点都会在欧拉序中出现两次**。
+
+为了下文表述方便，我们**记 $in_i$ 表示点 $i$ 在欧拉序中第一次出现的位置，$out_i$ 表示点 $i$ 在欧拉序中最后一次出现的位置**。显然，**$i$ 的子树的欧拉序就是 $[in_i,out_i]$ 这段区间所对应的欧拉序**。
+
+这样，我们就实现了“拍扁”一颗树 awa。
+
+但这还没完，考虑如何处理询问。首先**记 $x$ 为一组询问中 $in$ 较小的那个点，$y$ 为一组询问中 $in$ 较大的那个点**。那么**如果询问的两个点在同一棵子树内，即 $lca(x,y)=x$，那么需要处理的区间即为 $[in_x,in_y]$。但是由于树可能会有分叉，所以区间中出现两次的点不能算贡献**。
+
+考虑 $lca(x,y)\ne x$ 的情况。对于这种情况，**我们需要处理的区间便变为了 $[out_x,in_y]$。同样的，区间中出现两次的点不能算贡献。但由于没有把 $lca(x,y)$ 算进去，所以还需要算上 $lca(x,y)$ 的贡献。**
+
+这是树上莫队最难懂的地方，我也是看了好多文章才理解的 /kk。
+
+梳理一下思路：
+
+- 先 `dfs` 一次预处理出欧拉序和倍增数组
+
+- 处理每一次询问，处理出询问对应的区间
+
+- 正常莫队处理
+
+例题完整代码：
+
+```cpp
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cmath>
+
+using namespace std;
+
+#define S 200005
+#define MS 100005
+
+struct node
+{
+	int l,r,lca,id;
+}que[MS];
+
+int n,m;
+int col[MS],b[MS];
+int esum,to[S],nxt[S],h[MS];
+int dep[MS],up[MS][30];
+int cnt,a[MS],in[MS],out[MS];
+int blo;
+bool vis[MS];
+int tot[MS],preans;
+int ans[MS];
+
+inline bool cmp(node x,node y)
+{
+	int xlid=(x.l-1)/blo+1,ylid=(y.l-1)/blo+1;
+	if(xlid==ylid)
+	{
+		return (xlid&1)?x.r<y.r:x.r>y.r;
+	}
+	return x.l<y.l;
+}
+
+inline void added(int x,int y)
+{
+	to[++esum]=y;
+	nxt[esum]=h[x];
+	h[x]=esum;
+}
+
+void dfs(int u,int fa)
+{
+	a[++cnt]=u;
+	in[u]=cnt;
+	dep[u]=dep[fa]+1;
+	up[u][0]=fa;
+	for(int i=1;i<=25;i++)
+	{
+		up[u][i]=up[up[u][i-1]][i-1];
+	}
+	for(int i=h[u];i;i=nxt[i])
+	{
+		int v=to[i];
+		if(v==fa)
+		{
+			continue;
+		}
+		dfs(v,u);
+	}
+	a[++cnt]=u;
+	out[u]=cnt;
+}
+
+inline int getlca(int x,int y)
+{
+	if(dep[x]<dep[y])
+	{
+		int t=x;
+		x=y;
+		y=t;
+	}
+	for(int i=25;i>=0;i--)
+	{
+		if(dep[up[x][i]]>=dep[y])
+		{
+			x=up[x][i];
+		}
+	}
+	if(x==y)
+	{
+		return x;
+	}
+	for(int i=25;i>=0;i--)
+	{
+		if(up[x][i]!=up[y][i])
+		{
+			x=up[x][i];
+			y=up[y][i];
+		}
+	}
+	return up[x][0];
+}
+
+inline void add(int x)
+{
+	if(!vis[x])
+	{
+		vis[x]=true;
+		tot[col[x]]++;
+		if(tot[col[x]]==1)
+		{
+			preans++;
+		}
+	}
+	else
+	{
+		vis[x]=false;
+		tot[col[x]]--;
+		if(tot[col[x]]==0)
+		{
+			preans--;
+		}
+	}
+}
+
+int main()
+{
+	scanf(&quot;%d%d&quot;,&n,&m);
+	for(int i=1;i<=n;i++)
+	{
+		scanf(&quot;%d&quot;,&col[i]);
+		b[i]=col[i];
+	}
+	sort(b+1,b+n+1);
+	for(int i=1;i<=n;i++)
+	{
+		col[i]=lower_bound(b+1,b+n+1,col[i])-b;
+	}
+	for(int i=1;i<=n-1;i++)
+	{
+		int x,y;
+		scanf(&quot;%d%d&quot;,&x,&y);
+		added(x,y);
+		added(y,x);
+	}
+	dfs(1,0);
+	blo=sqrt(n*2);
+	for(int i=1;i<=m;i++)
+	{
+		int x,y;
+		scanf(&quot;%d%d&quot;,&x,&y);
+		if(in[x]>in[y])
+		{
+			int t=x;
+			x=y;
+			y=t;
+		}
+		int lca=getlca(x,y);
+		if(lca==x)
+		{
+			que[i]=(node){in[x],in[y],0,i};
+		}
+		else
+		{
+			que[i]=(node){out[x],in[y],lca,i};
+		}
+	}
+	sort(que+1,que+m+1,cmp);
+	int lpos=1,rpos=0;
+	for(int i=1;i<=m;i++)
+	{
+		int l=que[i].l,r=que[i].r,lca=que[i].lca,id=que[i].id;
+		while(lpos>l) add(a[--lpos]);
+		while(rpos<r) add(a[++rpos]);
+		while(lpos<l) add(a[lpos++]);
+		while(rpos>r) add(a[rpos--]);
+		if(lca!=0)
+		{
+			add(lca);
+		}
+		ans[id]=preans;
+		if(lca!=0)
+		{
+			add(lca);
+		}
+	}
+	for(int i=1;i<=m;i++)
+	{
+		printf(&quot;%d\n&quot;,ans[i]);
+	}
+	return 0;
+}
+```
+
+### 练习题目
+
+[P4074 [WC2013] 糖果公园](https://www.luogu.com.cn/problem/P4074)
+
+## 小技巧
+
+- 莫队常配合其它数据结构，如莫队套树状数组、莫队套 `bitset` 等等
+
+- 强制在线的题莫队无法解决
+
+- 莫队一定要先扩区间再缩区间
+"></div>
+					<div class="post-footer">
+	<ul class="post-copyright">
+		<li class="post-copyright-author">
+			<strong class="language" data-lan="author">本文作者：</strong>Exber
+		</li>
+		<li class="post-copyright-link">
+			<strong class="language" data-lan="link">本文链接：</strong>
+			<a href="https://exber.qzz.io/post/%E8%8E%AB%E9%98%9F%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0" title="莫队学习笔记">https://exber.qzz.io/post/%E8%8E%AB%E9%98%9F%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0</a>
+		</li>
+		<li class="post-copyright-license">
+			<strong class="language" data-lan="copyright">版权声明： </strong>
+			本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+		</li>
+	</ul>
+	<div class="tags">
+		
+			<a href="https://exber.qzz.io/tags"># 分块</a>
+		
+			<a href="https://exber.qzz.io/tags"># 学习笔记</a>
+		
+	</div>
+</div>
+				</div>
+			</div>
+			<script>
+	// 处理目录
+	function work_with_toc() {
+		let lastTop = 0, lList = [], hList = [], postBody, lastIndex = -1;
+		let active = 'active-show', activeClass = 'active-current';
+		let tocWrapper = document.querySelector('#toc_wrapper');
+		let tocContent = tocWrapper.children[0];
+		let autoNumber = tocWrapper && tocWrapper.classList.contains('auto-number');
+
+		function addTocNumber(elem, deep) {
+			if (!elem) {
+				return;
+			}
+			let prop = elem.__proto__;
+
+			if (prop === HTMLUListElement.prototype) {
+				for (let i = 0; i < elem.children.length; i++) {
+					addTocNumber(elem.children[i], deep + (i + 1) + '.');
+				}
+			} else if (prop === HTMLLIElement.prototype) {
+				// 保存li元素
+				if (elem.children[0] && elem.children[0].__proto__ === HTMLAnchorElement.prototype) {
+					lList.push(elem);
+				}
+				for (let i = 0; i < elem.children.length; i++) {
+					let cur = elem.children[i];
+					if (cur.__proto__ === HTMLAnchorElement.prototype) {
+						if (autoNumber) {
+							cur.text = deep + ' ' + cur.text;
+						}
+					} else if (cur.__proto__ === HTMLUListElement.prototype) {
+						addTocNumber(cur, deep);
+					}
+				}
+			}
+		}
+
+		function removeParentActiveClass() {
+			let parents = tocContent.querySelectorAll('.' + active)
+			parents.forEach(function (elem) {
+				elem.classList.remove(active);
+			});
+		}
+
+		function addActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.add(activeClass);
+			}
+		}
+
+		function removeActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.remove(activeClass);
+			}
+		}
+
+		function addActiveLiElemment(elem, parent) {
+			if (!elem || elem === parent) {
+				return;
+			} else {
+				if (elem.__proto__ === HTMLLIElement.prototype) {
+					elem.classList.add(active);
+				}
+				addActiveLiElemment(elem.parentElement, parent);
+			}
+		}
+
+		function showToc() {
+			if (tocWrapper) {
+				postBody = document.querySelector('#post_body');
+				for (let i = 0; i < postBody.children.length; i++) {
+					if (postBody.children[i].__proto__ === HTMLHeadingElement.prototype) {
+						hList.push(postBody.children[i]);
+					}
+				}
+				if (tocWrapper.classList.contains('compress')) {
+					tocContent.classList.add('closed');
+				} else if (tocWrapper.classList.contains('no_compress')) {
+					tocContent.classList.add('expanded');
+				} else {
+					if (hList.length > 10) {
+						active = 'active-hidden'
+						tocContent.classList.add('closed');
+					} else {
+						tocContent.classList.add('expanded');
+					}
+				}
+			}
+		}
+
+		(function () {
+			// 处理不是从一级标题开始目录
+			while (tocContent.children.length === 1 && tocContent.children[0].__proto__ === HTMLUListElement.prototype) {
+				let con = tocContent.children[0];
+				tocContent.innerHTML = con.innerHTML;
+			}
+			addTocNumber(tocContent, '');
+		})();
+
+		document.addEventListener('scroll', function (e) {
+			if (lList.length <= 0) {
+				return;
+			}
+			let scrollTop = document.scrollingElement.scrollTop + 10;
+			let dir;
+
+			if (lastTop - scrollTop > 0) {
+				dir = 'up';
+			} else {
+				dir = 'down';
+			}
+
+			lastTop = scrollTop;
+			if (scrollTop <= 0) {
+				if (lastIndex >= 0 && lastIndex < hList.length) {
+					lList[lastIndex].classList.remove(activeClass);
+				}
+				return;
+			}
+
+			let current = 0, hasFind = false;
+			for (let i = 0; i < hList.length; i++) {
+				if (hList[i].offsetTop > scrollTop) {
+					current = i;
+					hasFind = true;
+					break;
+				}
+			}
+			if (!hasFind && scrollTop > lList[lList.length - 1].offsetTop) {
+				current = hList.length - 1;
+			} else {
+				current--;
+			}
+			if (dir === 'down') {
+				if (current > lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex)
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			} else {
+				if (current < lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex);
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			}
+		});
+
+
+		window.addEventListener('load', function () {
+			showToc();
+			document.querySelector('#sidebar').style = 'display: block;';
+			tocWrapper.classList.add('toc-active');
+			setTimeout(function () {
+				if ("createEvent" in document) {
+					let evt = document.createEvent("HTMLEvents");
+					evt.initEvent("scroll", false, true);
+					document.dispatchEvent(evt);
+				}
+				else {
+					document.fireEvent("scroll");
+				}
+			}, 500)
+		})
+		
+		const SIDEBAR_TITLE_ACTIVE = 'sidebar-title-active';
+		const SIDEBAR_BODY_ACTIVE = 'sidebar-body-active';
+		const SLIDE_UP_IN = 'slide-up-in';
+
+		let tocSideBar = document.querySelector('#tocSideBar'),
+		metaSideBar = document.querySelector('#metaSideBar'),
+		postToc = document.querySelector('#post_toc'),
+		postSiteMeta = document.querySelector('#post_side_meta'),
+		sidebarTitle = document.querySelector('.sidebar-title'),
+		sidebarBody = document.querySelector('#sidebar_body');
+
+		tocSideBar && tocSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		metaSideBar && metaSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		function toggleSidebar(e) {
+			let currentTitle = document.querySelector("."+SIDEBAR_TITLE_ACTIVE);
+			if (currentTitle == e.srcElement) {
+				return ;
+			}
+			let current, showElement, hideElement;
+			if (e.srcElement == metaSideBar) {
+				showElement = postSiteMeta;
+				hideElement = postToc;
+			} else if (e.srcElement == tocSideBar){
+				showElement = postToc;
+				hideElement = postSiteMeta;
+			}
+			currentTitle.classList.remove(SIDEBAR_TITLE_ACTIVE);
+			e.srcElement.classList.add(SIDEBAR_TITLE_ACTIVE);
+
+			jQuery.Velocity(hideElement, 'stop');
+			jQuery.Velocity(hideElement, 'transition.slideUpOut', {
+				display: 'none',
+				duration: 200,
+				complete: function () {
+					jQuery.Velocity(showElement, 'transition.slideDownIn', {
+						duration: 200
+					});
+				}
+			})
+			hideElement.classList.remove(SIDEBAR_BODY_ACTIVE);
+			showElement.classList.add(SIDEBAR_BODY_ACTIVE);
+		}
+
+		postToc && postToc.addEventListener('transitionend', function() {
+			this.classList.remove(SLIDE_UP_IN);
+		});
+	}
+</script>
+<script>
+	// 没有目录时删除侧边栏目录相关
+	function remove_toc(){
+		document.querySelector('#sidebar-selector').remove();
+		document.querySelector('#post_toc').remove();
+		document.querySelector('#post_side_meta').classList.remove("post-side-meta");
+	}
+</script>
+<script>
+	// 渲染文章 markdown 并生成目录
+	function render_post_markdown(content)
+	{
+		let markdown = window.markdownit({ html: true })
+				.use(markdownItLinkEncodeFixed)
+				.use(window.markdownItAnchor, {
+					permalink: false,
+					permalinkBefore: false
+				})
+				.use(window.texmath, {
+					engine: katex,
+					delimiters: 'dollars'
+				});
+		// 处理图片路径
+		let temp_container = document.createElement('div');
+		temp_container.innerHTML = markdown.render(content);
+		{
+			let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		{
+			let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		return temp_container.innerHTML;
+	}
+	function generateToc() {
+		const contentElement = document.getElementById('post_body');
+		const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+		const tocElement = document.getElementById('toc_wrapper');
+		
+		if (headings.length === 0) {
+			return false;
+		}
+		let toc_ul = "<ul style='list-style: none;'>";
+		let toc_li = "<li style='list-style: none;'>";
+		let tocHtml = toc_ul;
+		let currentLevel = 1;
+		let stack = [0];
+		
+		headings.forEach((heading, index) => {
+			const level = parseInt(heading.tagName.substring(1));
+			const id = heading.id || `heading-${index}`;
+			heading.id = id;
+			
+			// 提取包含公式的 HTML 内容
+			let headingContent = heading.innerHTML;
+			
+			// 调整层级逻辑
+			if (level > currentLevel) {
+				for (let i = currentLevel; i < level; i++) {
+					tocHtml += toc_ul;
+					stack[i] = 0;
+				}
+			} else if (level < currentLevel) {
+				for (let i = currentLevel; i > level; i--) {
+					tocHtml += '</ul></li>';
+					stack.pop();
+				}
+			} else if (index > 0) {
+				tocHtml += '</li>';
+			}
+			
+			stack[level-1] = (stack[level-1] || 0) + 1;
+			for (let i = level; i < stack.length; i++) {
+				stack[i] = 0;
+			}
+			
+			// 使用渲染后的内容（包含已处理的公式）
+			tocHtml += toc_li+`<a href="#${id}">${headingContent}</a>`;
+			currentLevel = level;
+		});
+		
+		for (let i = 1; i < currentLevel; i++) {
+			tocHtml += '</ul></li>';
+		}
+		if (headings.length > 0) {
+			tocHtml += '</li>';
+		}
+		
+		tocHtml += '</ul>';
+		tocElement.innerHTML = tocHtml;
+		
+		return true;
+	}
+</script>
+<script>
+	!function () {
+		const post_body = document.querySelector('div[data-post-markdown]');
+		
+		try {
+			const markdownContent = post_body.getAttribute('data-post-markdown');
+			
+			if (markdownContent) {
+				const renderedHTML = render_post_markdown(markdownContent);
+				post_body.innerHTML = renderedHTML;
+				post_body.removeAttribute('data-post-markdown');
+				if(generateToc()) work_with_toc();
+				else remove_toc();
+			}
+		} catch (error) {
+			post_body.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+		}
+	}();
+</script>
+		</div>
+	</div>
+	
+
+
+
+
+
+
+<div class="footer-box">
+	<footer class="footer">
+		<center id="runTimeBox">
+			已运行: <span id="run_time"></span>
+		</center>
+		<script>
+			BirthDay = new Date('2023-03-01');
+			if (BirthDay.getTime()) {
+				function runTime() {
+					str = "";
+					today = new Date();
+					timeold = today.getTime() - BirthDay.getTime();
+					msPerDay = 24 * 60 * 60 * 1000;
+					e_daysold = timeold / msPerDay;
+					daysold = Math.floor(e_daysold);
+					str += daysold + " 天";
+					return str;
+				}
+				setInterval(function () {
+					$("#run_time").html(runTime());
+				}, 1000);
+			} else {
+				document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+			}
+		</script>
+		<div class="poweredby">
+			Powered by Exber
+		</div>
+	</footer>
+	<div class="pisces back-to-top" id="back_to_top">
+		<i class="fa fa-arrow-up"></i>
+		<span class="scrollpercent">
+			<span id="back_to_top_text">0</span>%
+		</span>
+	</div>
+</div>
+<script>
+	// back2top
+	let back2Top = document.querySelector("#back_to_top"),
+		back2TopText = document.querySelector("#back_to_top_text");
+
+	function scrollAnimation(currentY, targetY) {
+		let needScrollTop = targetY - currentY;
+		let _currentY = currentY;
+		setTimeout(() => {
+			const dist = Math.ceil(needScrollTop / 10);
+			_currentY += dist;
+			window.scrollTo(_currentY, currentY);
+			if (needScrollTop > 10 || needScrollTop < -10) {
+				scrollAnimation(_currentY, targetY);
+			} else {
+				window.scrollTo(_currentY, targetY);
+			}
+		}, 1);
+	}
+
+	back2Top.addEventListener("click", function(e) {
+		scrollAnimation(document.scrollingElement.scrollTop, 0);
+		e.stopPropagation();
+		return false;
+	});
+
+	window.addEventListener("scroll", function(e) {
+		let percent =
+			(document.scrollingElement.scrollTop /
+				(document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight)) *
+			100;
+		if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+			back2Top.classList.add("back-top-active");
+		}
+		if (percent == 0) {
+			back2Top.classList.remove("back-top-active");
+		}
+		if (back2TopText) {
+			back2TopText.textContent = Math.floor(percent);
+		}
+	});
+</script>
+	</div>
+</body>
+
+
+
+
+
+
+
+<input hidden id="copy" />
+<link rel="stylesheet" href="https://exber.qzz.io/media/css/jquery.fancybox.css" />
+<script src="https://exber.qzz.io/media/js/jquery.fancybox.js"></script>
+<script>
+	// 渲染所有带有 data-markdown 属性的 div 元素
+	!function () {
+		const markdownElements = document.querySelectorAll('div[data-markdown]');
+		
+		markdownElements.forEach((element, index) => {
+			try {
+				const markdownContent = element.getAttribute('data-markdown');
+				
+				if (markdownContent) {
+					const renderedHTML = render_markdown(markdownContent);
+					element.innerHTML = renderedHTML;
+					element.removeAttribute('data-markdown');
+				}
+			} catch (error) {
+				element.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+			}
+		});
+	}();
+</script>
+<script>
+	document.querySelectorAll(".section img").forEach((image) => {
+		var parent = image.parentElement;
+		var next = image.nextElementSibling;
+		parent.removeChild(image);
+		var aelem = document.createElement("a");
+		aelem.href = image.src;
+		aelem.dataset["fancybox"] = "images";
+		aelem.dataset["rel"] = "fancybox-button";
+		aelem.classList.add("fancybox");
+		aelem.appendChild(image);
+		parent.insertBefore(aelem, next);
+	});
+	
+	!function () {
+		let times = document.querySelectorAll('.publish-time');
+		for (let i = 0; i < times.length; i++) {
+			let date = times[i].dataset.t;
+			let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+			if (time < 60) {
+				str = time + '秒之前';
+			} else if (time < 3600) {
+				str = Math.floor(time / 60) + '分钟之前';
+			} else if (time >= 3600 && time < 86400) {
+				str = Math.floor(time / 3600) + '小时之前';
+			} else if (time >= 86400 && time < 259200) {
+				str = Math.floor(time / 86400) + '天之前';
+			} else {
+				str = times[i].textContent;
+			}
+			times[i].textContent = str;
+		}
+	}();
+	
+	let language = '';
+	if (language !== '') {
+		let map = new Map();
+		if (language === 'en') {
+			map.set('search', 'Search');
+			map.set('category', 'Categories');
+			map.set('article', 'Articles');
+			map.set('tag', 'Tags');
+			map.set('top', 'Top');
+			map.set('publish', 'published');
+			map.set('minute', ' minutes');
+			map.set('read-more', 'Read More');
+			map.set('view', 'View');
+			map.set('words', ' words');
+			map.set('category-in', 'category in');
+			map.set('preview', 'Meta');
+			map.set('index', 'Toc');
+			map.set('no-archives', "You haven't created yet");
+			map.set('archives', " articles in total");
+			map.set('cloud-tags', " tags in total");
+			map.set('copyright', "Copyright: ");
+			map.set('author', "Author: ");
+			map.set('link', "Link: ");
+			map.set('leave-message', "Leave a message");
+			map.set('format', "Links Format");
+			map.set('site-name', "Name: ");
+			map.set('site-link', "Link: ");
+			map.set('site-desc', "Desc: ");
+			map.set('stat', " related results, taking ");
+			map.set('stat-time', " ms");
+			map.set('site-img', "Image: ");
+			map.set('copy-markdown', "Copy Markdown");
+		}
+
+		if (map.size > 0) {
+			let lanElems = document.querySelectorAll('.language');
+			lanElems.forEach(elem => {
+				let lan = elem.dataset.lan, text = map.get(lan);
+				if (elem.__proto__ === HTMLInputElement.prototype) {
+					elem.placeholder = text
+				} else {
+					if (elem.dataset.count) {
+						text = elem.dataset.count + text;
+					}
+					elem.textContent = text;
+				}
+			})
+		}
+	}
+
+	function copyCode(e) {
+		if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+			let code = e.currentTarget.querySelector('code');
+			var text = code.innerText;
+			if (e.srcElement.textContent === '复制成功') {
+				return;
+			}
+			e.srcElement.textContent = '复制成功';
+			(function (elem) {
+				setTimeout(() => {
+					if (elem.textContent === '复制成功') {
+						elem.textContent = '复制代码'
+					}
+				}, 1000);
+			})(e.srcElement)
+			Clipboard.copy(text);
+		}
+	}
+
+	let pres = document.querySelectorAll('pre');
+	pres.forEach(pre => {
+		let code = pre.querySelector('code');
+		let copyElem = document.createElement('span');
+		copyElem.classList.add('copy-code');
+		copyElem.textContent = '复制代码';
+		pre.appendChild(copyElem);
+		pre.onclick = copyCode
+	})
+</script>
+<script src="https://exber.qzz.io/media/js/motion.js"></script>
+<script src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+<script>
+	var scroll = new SmoothScroll('a[href*="#"]', {
+		speed: 200
+	});
+</script>
+<script>
+	// 动态调整站点概览位置
+	let hasCacu = false;
+	window.addEventListener("resize", function(e) {
+		calcuHeight();
+	});
+
+	function calcuHeight() {
+		if (!hasCacu) {
+			let sideBar = document.querySelector(".sidebar");
+			let navUl = document.querySelector("#site_nav");
+			sideBar.style =
+				"margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+			hasCacu = true;
+		}
+	}
+	calcuHeight();
+	
+	// 侧边栏固定逻辑
+	let sidebar = document.querySelector('.sidebar');
+	let sidebarWrapper = document.querySelector('#sidebar');
+	if (sidebar) {
+		let hasFix = false;
+		document.addEventListener('scroll', function(e) {
+		  if (document.scrollingElement.scrollTop > parseInt(sidebar.style.marginTop) + 15) {
+			if (!hasFix) {
+				sidebarWrapper.classList.add('sidebar-fixed')
+				hasFix = true;
+			}
+		  } else {
+			if (hasFix) {
+				sidebarWrapper.classList.remove('sidebar-fixed')
+				hasFix = false;
+			}
+		  }
+		});
+	}
+</script>
+<script>
+	// 链接跳转
+	let newWindow = "true";
+	if (newWindow === "true") {
+		let links = document.querySelectorAll(".post-body a");
+		links.forEach((item) => {
+			if (!item.classList.contains("btn")) {
+				item.setAttribute("target", "_blank");
+			}
+		});
+	}
+
+	// 代码高亮
+	hljs.initHighlightingOnLoad();
+
+	// 离开当前页title变化
+	var leaveTitle = "";
+	var normal_title = document.title;
+	if (leaveTitle) {
+		document.addEventListener("visibilitychange", function() {
+			if (document.visibilityState == "hidden") {
+				normal_title = document.title;
+				document.title = leaveTitle;
+			} else {
+				document.title = normal_title;
+			}
+		});
+	}
+</script>
+</html>

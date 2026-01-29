@@ -1,0 +1,3116 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	
+	
+
+
+
+
+
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="keywords" content="静态个人博客">
+<meta name="description" content="Exber's Blog">
+<meta name="theme-color" content="#000">
+
+<title>多项式全家桶学习笔记|Exber's Blog</title>
+
+<link rel="shortcut icon" href="https://exber.qzz.io/favicon.ico?v=1769647447">
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/css/pisces.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/fonts/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/media/hljs/styles/default.css">
+
+<link
+  href="https://fonts.font.im/css?family=Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Rosario:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext"
+  rel="stylesheet"
+  type="text/css"
+>
+
+<link rel="stylesheet/less" type="text/css" href="https://exber.qzz.io/styles/main.less">
+<script src="https://cdn.jsdmirror.com/npm/less@4"></script>
+
+<link rel="stylesheet" type="text/css" href="https://exber.qzz.io/main.css">
+
+<script src="https://exber.qzz.io/media/js/jquery.js"></script>
+<script src="https://exber.qzz.io/media/hljs/highlight.js"></script>
+
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/velocity-animate@1.5.0/velocity.ui.min.js"></script>
+
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.css">
+<script src="https://cdn.jsdmirror.com/npm/markdown-it/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/katex/dist/katex.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-texmath/texmath.min.js"></script>
+<script src="https://cdn.jsdmirror.com/npm/markdown-it-anchor/dist/markdownItAnchor.umd.js"></script>
+
+<script>
+// 处理带空格的链接
+function markdownItLinkEncodeFixed(md) {
+	// 1. 修复链接打开规则
+	const defaultLinkOpenRender = md.renderer.rules.link_open || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.link_open = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const hrefIndex = token.attrIndex('href');
+		
+		if (hrefIndex >= 0) {
+			const originalHref = token.attrs[hrefIndex][1];
+			// 更健壮的编码处理
+			const encodedHref = encodeURI(originalHref).replace(/%20/g, '%20');
+			token.attrs[hrefIndex][1] = encodedHref;
+		}
+		
+		return defaultLinkOpenRender(tokens, idx, options, env, self);
+	};
+
+	// 2. 修复图片规则
+	const defaultImageRender = md.renderer.rules.image || 
+		function(tokens, idx, options, env, self) {
+			return self.renderToken(tokens, idx, options);
+		};
+
+	md.renderer.rules.image = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const srcIndex = token.attrIndex('src');
+		
+		if (srcIndex >= 0) {
+			const originalSrc = token.attrs[srcIndex][1];
+			const encodedSrc = encodeURI(originalSrc).replace(/%20/g, '%20');
+			token.attrs[srcIndex][1] = encodedSrc;
+		}
+		
+		return defaultImageRender(tokens, idx, options, env, self);
+	};
+
+	// 3. 新增：处理可能被误解析为text的链接[1](@ref)
+	const defaultTextRender = md.renderer.rules.text || 
+		function(tokens, idx, options, env, self) {
+			const token = tokens[idx];
+			return token.content;
+		};
+
+	md.renderer.rules.text = function(tokens, idx, options, env, self) {
+		const token = tokens[idx];
+		const content = token.content;
+		
+		// 检测类似链接模式的text token[1](@ref)
+		if (content.includes('[') && content.includes(']') && content.includes('(') && content.includes(')')) {
+			try {
+				// 尝试提取和编码链接
+				const linkMatch = content.match(/\[([^\]]+)\]\(([^)]+)\)/);
+				if (linkMatch) {
+					const linkText = linkMatch[1];
+					const linkUrl = encodeURI(linkMatch[2]).replace(/%20/g, '%20');
+					return `<a href="${linkUrl}">${linkText}</a>`;
+				}
+			} catch (e) {
+				console.warn('链接提取失败:', e);
+			}
+		}
+		
+		return defaultTextRender(tokens, idx, options, env, self);
+	};
+}
+function render_markdown(content)
+{
+	let markdown = window.markdownit({ html: true })
+			 .use(markdownItLinkEncodeFixed)
+			 .use(window.texmath, {
+				 engine: katex,
+				 delimiters: 'dollars'
+			 });
+	// 处理图片路径
+	let temp_container = document.createElement('div');
+	temp_container.innerHTML = markdown.render(content);
+	{
+		let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	{
+		let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+		images.forEach(img => {
+			img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+		});
+	}
+	return temp_container.innerHTML;
+}
+</script>
+<script>
+	window.Clipboard = (function (window, document, navigator) {
+		var textArea,
+			copy;
+
+		// 判断是不是ios端
+		function isOS() {
+			return navigator.userAgent.match(/ipad|iphone/i);
+		}
+		//创建文本元素
+		function createTextArea(text) {
+			textArea = document.createElement('textArea');
+			textArea.value = text;
+			textArea.style.width = 0;
+			textArea.style.height = 0;
+			textArea.clientHeight = 0;
+			textArea.clientWidth = 0;
+			document.body.appendChild(textArea);
+		}
+		//选择内容
+		function selectText() {
+			var range,
+				selection;
+
+			if (isOS()) {
+				range = document.createRange();
+				range.selectNodeContents(textArea);
+				selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				textArea.setSelectionRange(0, 999999);
+			} else {
+				textArea.select();
+			}
+		}
+
+		//复制到剪贴板
+		function copyToClipboard() {
+			try {
+				document.execCommand("Copy")
+			} catch (err) {
+				alert("复制错误！请手动复制！")
+			}
+			document.body.removeChild(textArea);
+		}
+
+		copy = function (text) {
+			createTextArea(text);
+			selectText();
+			copyToClipboard();
+		};
+
+		return {
+			copy: copy
+		};
+	})(window, document, navigator);
+</script>
+	<meta name="description" content="多项式全家桶学习笔记" />
+</head>
+
+<body>
+	<div class="head-top-line"></div>
+	<div class="header-box">
+		
+		
+	<style> /* 搜索相关 */
+		.gridea-search-input{
+			height: 30px;
+			width: 200px;
+			box-sizing: border-box;
+			padding: 0 15px 0 30px;
+			border: 1px solid #e3e3e3;
+			border-radius: 15px;
+			color: #273849;
+			outline: none;
+			transition: border-color 0.2s ease;
+			background: #fff url("data:image/svg+xml,%3Csvg class='icon' viewBox='0 0 1024 1024' xmlns='http://www.w3.org/2000/svg' width='80' height='65'%3E%3Cpath d='M936.265 854.34L757.43 675.52c46.499-63.168 74.02-141.125 74.02-225.398 0-210.1-170.945-381.039-381.055-381.039S69.346 240.023 69.346 450.122c0 210.105 170.94 381.043 381.049 381.043 84.275 0 162.235-27.52 225.405-74.019l178.833 178.819c11.27 11.265 26.036 16.903 40.813 16.903 14.777 0 29.543-5.638 40.819-16.903 22.536-22.546 22.536-59.09 0-81.625zM163.14 450.122C163.14 291.733 292 162.87 450.396 162.87s287.261 128.862 287.261 287.252c0 158.39-128.867 287.252-287.261 287.252S163.14 608.512 163.14 450.122z' fill='%23C4C4C4'/%3E%3C/svg%3E") 8px 7px no-repeat;
+			background-size: 20px;
+			vertical-align: middle !important;
+		}
+		.gridea-search-input:focus {
+		  border-color: #666666;
+		  right: 0;
+		}
+		/* 自适应轨道 */
+		.slider-track {
+			--track-height: 0.4em; /* 轨道基础高度 */
+			width: 100%;
+			height: var(--track-height);
+			background: #e0e0e0;
+			border-radius: calc(var(--track-height) / 2); /* 圆角随高度变化[5](@ref) */
+			position: relative;
+			cursor: default;
+			margin: 0.5em 0; /* 垂直间距自适应 */
+		}
+		
+		/* 进度填充 */
+		.slider-fill {
+			height: 100%;
+			background: #555;
+			border-radius: inherit; /* 继承父级圆角 */
+			width: 50%; /* 初始值 */
+		}
+		
+		/* 自适应滑块 */
+		.slider-thumb {
+			--thumb-size: calc(var(--track-height) * 2); /* 滑块大小基于轨道高度[5](@ref) */
+			position: absolute;
+			width: var(--thumb-size);
+			height: var(--thumb-size);
+			background: #555;
+			border-radius: 50%;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			cursor: grab;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: 
+				transform 0.2s ease,
+				box-shadow 0.2s ease;
+			border: 2px solid white; /* 增加辨识度 */
+		}
+		
+		/* 悬停效果 */
+		.slider-thumb:hover {
+			background: #333;
+			transform: translate(-50%, -50%) scale(1.1);
+			box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+		}
+		
+		/* 拖动效果 */
+		.slider-thumb:active {
+			cursor: grabbing;
+			transform: translate(-50%, -50%) scale(1.2);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+		}
+		
+		/* 数值显示 */
+		.value-display {
+			text-align: center;
+			font-family: Arial, sans-serif;
+			color: #555;
+			font-size: 1.2em; /* 基于容器字体大小 */
+			margin-top: 0.5em;
+		}
+	</style>
+
+<div class="pisces">
+  <header class="header">
+    <div class="blog-header box-shadow-wrapper" id="header">
+      <div class="nav-toggle" id="nav_toggle">
+        <div class="toggle-box">
+          <div class="line line-top"></div>
+          <div class="line line-center"></div>
+          <div class="line line-bottom"></div>
+        </div>
+      </div>
+      <div class="site-meta">       
+        <div class="site-title">
+            <a href="https://exber.qzz.io" class="brand">
+              <span>Exber's Blog</span>
+            </a>  
+        </div>
+        
+			<p class="subtitle">Can't go up</p>
+        
+      </div>
+      <nav class="site-nav bg-color" id="site_nav">
+        <ul id="nav_ul">
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io" target="">
+					首页
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://exber.qzz.io/tags" target="">
+					按标签筛选
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="https://csacademy.com/app/graph_editor/" target="_blank">
+					图论编辑器
+				</a>
+            </li>
+          
+            <li class="nav-item">
+				<a href="http://yuantiji.ac/zh/" target="_blank">
+					原题机
+				</a>
+            </li>
+          
+          
+            <li id="fa_search" class="nav-item">
+				<a>
+					<span class="language" data-lan="search">
+						<div class="gridea-search-div">
+							<form id="gridea-search-form" action="https://exber.qzz.io/search/">
+								<input class="gridea-search-input" autocomplete="off" spellcheck="false" name="q"/>
+								<input style="display:none" name="acc" value="0.6"/>
+								<button style="display:none" type="submit">搜索</button>
+							</form>
+							<div class="value-display">搜索模糊度: <span id="sliderValue">0.6</span></div>
+							<div class="slider-track" id="sliderTrack">
+								<div class="slider-fill" id="sliderFill"></div>
+								<div class="slider-thumb" id="sliderThumb"></div>
+							</div>
+						</div>
+					</span>
+				</a>
+			</li>
+          
+        </ul>
+      </nav>
+    </div>
+  </header>
+</div>
+
+<script>
+  let showNav = true;
+
+  let navToggle = document.querySelector('#nav_toggle'),
+  siteNav = document.querySelector('#site_nav');
+  
+  function navClick() {
+    let sideBar = document.querySelector('.sidebar');
+    let navUl = document.querySelector('#nav_ul');
+    navToggle.classList.toggle('nav-toggle-active');
+    siteNav.classList.toggle('nav-menu-active');
+    if (siteNav.classList.contains('nav-menu-active')) {
+      siteNav.style = "height: " + (navUl.children.length * 42) +"px !important";
+    } else {
+      siteNav.style = "";
+    }
+  }
+
+  navToggle.addEventListener('click',navClick);  
+</script>
+
+
+	<script>
+		// 获取DOM元素
+		const sliderTrack = document.getElementById('sliderTrack');
+		const sliderThumb = document.getElementById('sliderThumb');
+		const sliderFill = document.getElementById('sliderFill');
+		const sliderValue = document.getElementById('sliderValue');
+		
+		// 初始化变量
+		let isDragging = false;
+		let currentValue = 0.6;
+		
+		// 更新滑块位置和数值显示
+		function updateSlider(positionX) {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			let newPosition;
+
+			// 检查轨道宽度是否有效
+			if (trackRect.width <= 0) {
+				// 如果轨道宽度无效，则直接使用当前的 currentValue
+				newPosition = currentValue;
+			} else {
+				// 正常计算位置
+				newPosition = (positionX - trackRect.left) / trackRect.width;
+				newPosition = Math.max(0, Math.min(1, newPosition)); // 限制在0-1范围
+			}
+
+			// 更新UI
+			sliderThumb.style.left = `${newPosition * 100}%`;
+			sliderFill.style.width = `${newPosition * 100}%`;
+
+			// 更新当前值和表单隐藏域的值
+			currentValue = newPosition;
+			document.getElementById('gridea-search-form').elements['acc'].value = newPosition;
+
+			// 更新显示值（保留两位小数）
+			// 使用 Number.isNaN 进行严格检查，确保显示正常
+			const displayValue = Number.isNaN(newPosition) ? '0.60' : newPosition.toFixed(2);
+			sliderValue.textContent = displayValue;
+		}
+		
+		// 响应父容器大小变化
+		function handleResize() {
+			const trackRect = sliderTrack.getBoundingClientRect();
+			const positionX = trackRect.left + trackRect.width * currentValue;
+			updateSlider(positionX);
+		}
+		
+		// 鼠标按下事件 - 仅在圆点上触发
+		sliderThumb.addEventListener('mousedown', (e) => {
+			isDragging = true;
+			sliderThumb.style.cursor = 'grabbing';
+			e.preventDefault();
+		});
+		
+		// 鼠标移动事件
+		document.addEventListener('mousemove', (e) => {
+			if (!isDragging) return;
+			updateSlider(e.clientX);
+		});
+		
+		// 鼠标释放事件
+		document.addEventListener('mouseup', () => {
+			if (isDragging) {
+				isDragging = false;
+				sliderThumb.style.cursor = 'grab';
+			}
+		});
+		
+		// 监听父容器大小变化
+		const resizeObserver = new ResizeObserver(() => {
+			handleResize();
+		});
+		
+		// 开始观察相关元素
+		resizeObserver.observe(sliderTrack.parentElement);
+		resizeObserver.observe(sliderTrack);
+		
+		// 初始化
+		handleResize();
+	</script>
+
+	</div>
+	<div class="main-continer">
+	<div class="section-layout pisces">
+		<div class="section-layout-wrapper">
+			<div class="sidebar">
+	<div class="sidebar-box box-shadow-wrapper bg-color right-motion" id="sidebar">
+		<div class="post-list-sidebar" id="sidebar-selector">
+			<div class="sidebar-title">
+				<span id="tocSideBar" class="sidebar-title-item sidebar-title-active language" data-lan="index">文章目录</span>
+				<span id="metaSideBar" class="sidebar-title-item language" data-lan="preview">站点概览</span>
+			</div>
+		</div>
+		<div class="sidebar-body pisces" id="sidebar_body">
+			<div class="post-side-meta" id="post_side_meta">
+				
+
+
+
+
+
+
+<div class="sidebar-item">
+	<img class="site-author-image right-motion" src="https://exber.qzz.io/avatar.png"/>
+	<p class="site-author-name">Exber</p>
+	
+	<div class="site-description right-motion">
+		<p>洛谷 @Exber</p>
+<p>Codeforces @Rebex</p>
+
+	</div>
+	
+</div>
+<div class="sidebar-item side-item-stat right-motion">
+	<div class="sidebar-item-box">
+		<a href="https://exber.qzz.io/tags">
+			<span class="site-item-stat-count">26</span>
+			<span class="site-item-stat-name language" data-lan="tag">标签</span>
+		</a>
+	</div>
+	<div class="sidebar-item-box">
+		<a>
+			
+			<span class="site-item-stat-count">330</span>
+			<span class="site-item-stat-name language" data-lan="article">文章</span>
+		</a>
+	</div>
+</div>
+
+			</div>
+			<div class="post-toc sidebar-body-active" id="post_toc" style="opacity: 1;">
+				<div class="toc-box right-motion">
+					<div class="toc-wrapper  no_compress" id="toc_wrapper">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+			<div class="section-box box-shadow-wrapper">
+				<div class="section bg-color post post-page">
+					
+					<section class="post-header">
+	<h1 class="post-title">
+		<a class="post-title-link" href="https://exber.qzz.io/post/%E5%A4%9A%E9%A1%B9%E5%BC%8F%E5%85%A8%E5%AE%B6%E6%A1%B6%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0">多项式全家桶学习笔记</a>
+	</h1>
+	<div class="post-meta">
+		
+		
+		<span class="meta-item pc-show">
+			<i class="fa fa-calendar-o"></i>
+			<span class="language" data-lan="publish">发布于</span>
+			<span class="publish-time" data-t="2023-03-23 16:32:09">2023-03-23 16:32:09</span>
+		</span>
+		
+		
+		<span class="meta-item">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-folder-o"></i>
+			<span class="pc-show language" data-lan="category-in">标签:</span>
+			
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>学习笔记</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>数学</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>组合计数</span>
+				</a>、
+			
+				<a href="https://exber.qzz.io/tags">
+					<span>多项式、生成函数</span>
+				</a>
+			
+		</span>
+		
+		
+		
+		<span class="meta-item pc-show">
+			<span class="post-meta-divider pc-show">|</span>
+			<i class="fa fa-copy"></i>
+			<a class="language" data-lan="copy-markdown" data-src-markdown="有了 NTT，就有了多项式全家桶……
+
+首先要感谢 @[command_block](https://www.luogu.com.cn/user/58705) 的文章[《NTT 与多项式全家桶》](https://www.luogu.com.cn/blog/command-block/ntt-yu-duo-xiang-shi-quan-jia-tong)以及 @[Epsilon_Cube](https://www.luogu.com.cn/user/372983)、@[MoYuFang](https://www.luogu.com.cn/user/474113) 和 @[_Diu_](https://www.luogu.com.cn/user/310802) 给予我的许多帮助。
+
+因为板子在不断修 bug，所以代码最后统一放。
+
+### 前置芝士
+
+- **多项式的各种运算是怎么定义的**
+
+由于我们只知道多项式加法和多项式乘法，但是这已经够了。所以**所有的多项式运算都是用多项式加法和乘法定义的**。
+
+- **次数界**
+
+很多时候我们只对多项式 $f$ 的前 $n$ 项感兴趣（这时往往 $f$ 会有无限项），所以需要在 $\pmod{x^n}$ 的意义下运算。
+
+由于多项式加法和多项式乘法的结果只会从低次项向高次项贡献，所以有：
+
+$$
+\begin{aligned}
+F(x)\operatorname{mod}{x^n}+G(x)\operatorname{mod}{x^n}&\equiv F(x)+G(x)&\pmod{x^n}\\
+F(x)\operatorname{mod}{x^n}\cdot G(x)\operatorname{mod}{x^n}&\equiv F(x)G(x)&\pmod{x^n}\\
+\end{aligned}
+$$
+
+即我们**可以在有次数界的情况下定义所有多项式运算**。
+
+- [简单微积分](https://zhuanlan.zhihu.com/p/94592123)
+
+### 一些记号
+
+- $[x^i]F(x)$：多项式 $F(x)$ 的 $i$ 次项的系数，**即 $x^i$ 的系数**；
+- $F_R(x)$：$n$ 次多项式的翻转 $F_R(x)=x^nF(\frac{1}{x})$，**显然 $F_R(x)$ 的系数是 $F(x)$ 的系数的翻转**；
+- $F^{(n)}(x)$：**多项式 $F(x)$ 的 $n$ 阶导数**，即对 $F(x)$ 求导 $n$ 次的结果；
+
+### 多项式求导和积分
+
+定义多项式的求导：
+$$
+F^\prime(x)=\sum\limits_{i=0}^{n-1} a_{i+1}(i+1)x^{i}
+$$
+
+定义多项式的积分（不定积分）：
+
+$$
+\int F(x)\,dx=C+\sum\limits_{i=1}^{n} \dfrac{a_{i-1}x^{i}}{i}
+$$
+
+同样的，**多项式求导和积分也是互为逆操作**。
+
+### 多项式牛顿迭代
+
+这是一个比较重要的知识，有了它，就可以无脑推多项式各种操作的递推式了。
+
+> **形式：已知函数 $G$ 满足 $G(F(x))=0$，求 $F(x)\operatorname{mod} x^n$。**
+
+实践中 $G$ 一般较为手动构造的简单函数。 
+
+> **结论：$F(x)\equiv F_*(x)-\dfrac{G(F_*(x))}{G'(F_*(x))}\pmod{x^n}$，其中 $F_*(x)\equiv F(x)\pmod{x^{\frac{n}{2}}}$，注意 $[x^0]G(F(x))=0$ 的解要单独求出。**
+
+和一般的牛迭十分相似，但是次数每次翻倍。证明如下：
+
+> 假设目前已经求出了 $F_*(x)$，考虑 $G(F(x))$在 $F_*(x)$ 处的泰勒展开：
+> $$
+> \sum\limits_{i=0}^{\infin} \frac{G^{(i)}(F_*(x))}{i!}(F(x)-F_*(x))^i\equiv0\pmod{x^n}
+> $$
+> 注意到 $F(x)-F_*(x)$ 的最低系数非 $0$ 项至少是 $x^{\frac{n}{2}}$，那么对于所有 $i\ge2$ 的 $i$ 都有 $(F(x)-F_*(x))^i\equiv 0\pmod{x^n}$，所以：
+> $$
+> \begin{aligned}
+> G(F_*(x))+G'(F_*(x))(F(x)-F_*(x))&\equiv0&\pmod{x^n}\\
+> F(x)&\equiv F_*(x)-\frac{G(F_*(x))}{G'(F_*(x))}&\pmod{x^n}\\
+> \end{aligned}
+> $$
+> 证毕。
+
+### 多项式乘法逆
+
+[P4238 【模板】多项式乘法逆](https://www.luogu.com.cn/problem/P4238)
+
+假设已经求出了 $B_*(x)F(x)\equiv 1\pmod{x^{\frac{n}{2}}}$，现在要求 $B(x)F(x)\equiv1\pmod{x^n}$，那么有：
+
+$$
+\begin{aligned}
+G(B(x))=\frac{1}{B(x)}-F(x)\equiv 0\pmod{x^n}
+\end{aligned}
+$$
+
+则可以直接套牛顿迭代：
+$$
+\begin{aligned}
+B(x)&\equiv B_*(x)-\frac{G(B_*(x))}{G'(B_*(x))}&\pmod{x^n}\\
+B(x)&\equiv B_*(x)-\frac{\frac{1}{B_*(x)}-F(x)}{-\frac{1}{B_*^2(x)}}&\pmod{x^n}\\
+B(x)&\equiv B_*(x)+B_*(x)-B_*^2F(x)&\pmod{x^n}\\
+B(x)&\equiv 2B_*(x)-B_*^2F(x)&\pmod{x^n}\\
+\end{aligned}
+$$
+那么就可以做了，$[x^0]B(x)$ 需要求一次乘法逆元，时间复杂度为 $T(n)=T(\frac{n}{2})+O(n\log n)=O(n\log n)$。
+
+不过还有个优化，注意到 NTT 的过程代入的是单位根，所以求的实际上是循环卷积：
+
+$$
+F(x)G(x)=\sum\limits_{k=0}^mx^k\sum\limits_{i+j\mod m=k} f_ig_j
+$$
+观察倍增式子：
+
+$$
+B(x)\equiv 2B_*(x)-B_*^2(x)F(x)\pmod{x^n}
+$$
+
+需要用到乘法的只有 $B_*^2(x)F(x)$。
+
+先计算 $B_*(x)F(x)$，它们的次数分别是 $\dfrac{len}{2}$ 和 $len$。
+
+**由于结果的第一项为 $1$，这个 $1$ 后面的 $\dfrac{len}{2}-1$ 项都为 $0$，所以长度为 $len$ 的循环卷积只会破坏前面的 $1$ 和 $0$**。
+
+最后乘上一个 $B_*(x)$ 即可，此时循环卷积只会破坏前 $\dfrac{len}{2}$ 项。
+
+### 多项式开根
+
+[P5205 【模板】多项式开根](https://www.luogu.com.cn/problem/P5205)
+
+[P5277 【模板】多项式开根（加强版）](https://www.luogu.com.cn/problem/P5277)
+
+假设已经求出了 $B_*^2(x)\equiv F(x)\pmod{x^{\frac{n}{2}}}$，现在要求 $B(x)^2\equiv F(x)\pmod{x^n}$，那么有：
+
+$$
+G(B(x))=B^2(x)-F(x)\equiv 0\pmod{x^n}
+$$
+
+直接套牛迭：
+$$
+\begin{aligned}
+B(x)&\equiv B_*(x)-\frac{G(B_*(x))}{G'(B_*(x))}&\pmod{2^n}\\
+B(x)&\equiv B_*(x)-\frac{B_*^2(x)-F(x)}{2B_*(x)}&\pmod{2^n}\\
+B(x)&\equiv \frac{2B_*(x)^2-B_*^2(x)+F(x)}{2B_*(x)}&\pmod{2^n}\\
+B(x)&\equiv \frac{B_*^2(x)+F(x)}{2B_*(x)}&\pmod{2^n}\\
+\end{aligned}
+$$
+
+
+最后 $[x^0]B(x)$ 需要求一次二次剩余，可以用 BSGS/exBSGS 求单位根的高次同余方程来求解，再加上一个求逆，一个乘法，一个加法就做完了。
+
+时间复杂度为 $T(n)=T(\frac{n}{2})+O(n\log n)=O(n\log n)$。
+
+### 多项式 $\ln$
+
+[P4725 【模板】多项式对数函数（多项式 ln）](https://www.luogu.com.cn/problem/P4725)
+$$
+\ln(A(x))\equiv B(x)\pmod{x^n}
+$$
+
+两边同时求导，得：
+
+$$
+\ln'(A(x))A'(x)\equiv B'(x)\pmod{x^n}
+$$
+
+注意到 $\ln'(x)=\dfrac{1}{x}$，所以：
+
+$$
+\dfrac{A'(x)}{A(x)}\equiv B'(x)\pmod{x^n}
+$$
+
+再积分回来：
+
+$$
+B(x)\equiv \int \dfrac{A'(x)}{A(x)}dx\pmod{x^n}
+$$
+
+所以一个求导，一个逆元，一个乘法，一个积分即可。
+
+注意由于 $[x^0]A(x)=1$，所以有 $[x^0]B(x)=0$。并且若 $[x^0]A(x)\not=1$ 则无法求 $\ln$ 因为求不出模意义下的 $\ln([x^0]A(x))$。
+
+时间复杂度 $O(n\log n)$。
+
+### 多项式 $\exp$
+
+[P4726 【模板】多项式指数函数（多项式 exp）](https://www.luogu.com.cn/problem/P4726)
+
+$$
+B(x)\equiv \exp(A(x))\pmod{x^n}
+$$
+
+我们设 $G(F(x))=\ln(F(x))-A(x)$，那么显然 $G(B(x))\equiv0\pmod{x^n}$，可以使用牛顿迭代了。
+
+回忆牛迭式子：$F(x)\equiv F_*(x)-\dfrac{G(F_*(x))}{G'(F_*(x))}\pmod{x^n}$
+
+显然，这里的 $G'(F(x))=\dfrac{1}{F(X)}$，那么假设我们已经求出了 $B_*(x)\equiv \exp(A(x))\pmod{x^{\frac{n}{2}}}$，有：
+
+$$
+\begin{aligned}
+B(x)&\equiv B_*(x)-G(B_*(x))B_*(x)&\pmod{x^n}\\
+B(x)&\equiv B_*(x)-(\ln(B_*(x))-A(x))B_*(x)&\pmod{x^n}\\
+B(x)&\equiv (1-\ln(B_*(x))+A(x))B_*(x)&\pmod{x^n}\\
+\end{aligned}
+$$
+
+所以倍增求即可。
+
+注意由于 $[x^0]A(x)=0$，所以有 $[x^0]B(x)=1$。并且若 $[x^0]A(x)\not=0$ 则无法求 $\exp$ 因为求不出模意义下的 $\exp([x^0]A(x))$。
+
+时间复杂度为 $T(n)=T(\frac{n}{2})+O(n\log n)=O(n\log n)$。
+
+### 多项式快速幂
+
+[P5245 【模板】多项式快速幂](https://www.luogu.com.cn/problem/P5245)
+
+观察到 $(A(x))^k=\exp(k\ln(A(x)))$，所以一个 $\ln$，一个逐项乘法，一个 $\exp$ 就做完了。
+
+[P5273 【模板】多项式幂函数（加强版）](https://www.luogu.com.cn/problem/P5273)
+
+这题和上一题的区别在于有 $A_0\not=1$ 的情况，这时我们就没办法求 $\ln$ 和 $\exp$ 了。
+
+但是 $A_0\not=1$ 没关系，我们可以**让所有项都乘上 $\dfrac{1}{A_0}$，最后再都乘上 $A_0^k$** 即可。
+
+遇到 $A_0=0$ 的情况也没关系，把系数往前移，求出答案后再移回去即可。不过**要注意原来前面 $cnt$ 个 $0$ 在做幂运算后会变成 $cnt\times k$ 个 $0$**。
+
+### 多项式带余除法
+
+[P4512 【模板】多项式除法](https://www.luogu.com.cn/problem/P4512)
+
+发现余数很烦，所以我们想办法去掉它。
+
+舍弃多项式的项的方法是一般是加上次数界，但注意到次数界只能舍弃高次，所以**考虑把多项式的系数反过来搞**。
+
+那么回到题目的式子：
+
+$$
+F(x)=Q(x)G(x)+R(x)
+$$
+
+其中 $F$ 是 $n$ 次多项式（已知），$G$ 是 $m$ 次多项式（已知），$Q$ 是 $n-m$ 次多项式（未知），$R$ 是 $m-1$ 次多项式（未知）。
+
+换元，有：
+
+$$
+F(\frac{1}{x})=Q(\frac{1}{x})G(\frac{1}{x})+R(\frac{1}{x})
+$$
+
+同乘 $x^n$，有:
+
+$$
+x^nF(\frac{1}{x})=x^nQ(\frac{1}{x})G(\frac{1}{x})+x^nR(\frac{1}{x})
+$$
+
+发现 $x^nF(\frac{1}{x})=F_R(x)$，$x^nQ(\frac{1}{x})G(\frac{1}{x})=Q_R(x)G_R(x)$，$x^nR(\frac{1}{x})=x^{n-m+1}R_R(x)$，所以有：
+
+$$
+F_R(x)=Q_R(x)G_R(x)+x^{n-m+1}R_R(x)
+$$
+
+那么我们机智地加上次数界，$\operatorname{mod}$ 上 $x^{n-m+1}$，就有：
+
+$$
+F_R(x)\equiv Q_R(x)G_R(x)\pmod{x^{n-m+1}}
+$$
+
+那么就可以求出 $Q_R(x)$ 了，系数反过来就是 $Q(x)$，然后即可用乘法和减法求出 $R(x)$，时间复杂度 $O(n\log n)$。
+
+### 完整模板
+
+包括多项式多点求值、多项式快速插值。
+
+<details><summary>展开</summary><p>
+
+```cpp
+const int p=998244353,ginv=332748118;
+
+inline void add(int &x,int y)
+{
+	x+=y;
+	if(x>=p) x-=p;
+}
+inline int gcd(int a,int b)
+{
+	int t=a%b;
+	while(t!=0) a=b,b=t,t=a%b;
+	return b;
+}
+inline int qpow(int x,int y)
+{
+	int res=1;
+	for(;y>0;y>>=1) res=((y&1)?1ll*res*x%p:res),x=1ll*x*x%p;
+	return res;
+}
+inline int exBSGS(int a,int b,int p)
+{
+	a%=p,b%=p;
+	if(b==1||p==1) return 0;
+	int cnt=0,val=1;
+	while(1)
+	{
+		int d=gcd(a,p);
+		if(d==1) break;
+		if(b%d!=0) return -1;
+		p/=d;
+		b/=d;
+		val=1ll*val*(a/d)%p;
+		cnt++;
+		if(val==b) return cnt;
+	}
+	map<int,int> mp;
+	int val2=1,t=sqrt(p)+1;
+	for(int B=1;B<=t;B++)
+	{
+		val2=1ll*val2*a%p;
+		mp[1ll*b*val2%p]=B;
+	}
+	int cur=val;
+	for(int A=1;A<=t;A++)
+	{
+		cur=1ll*cur*val2%p;
+		if(mp.find(cur)!=mp.end()) return A*t-mp[cur]+cnt;
+	}
+	return -1;
+}
+inline int mosqrt(int x)
+{
+	int bse=exBSGS(3,x,p);
+	if(bse==-1||(bse&1)) return -1;
+	return qpow(3,bse/2);
+}
+namespace PLOY
+{
+	const int MS=5000005;
+
+	typedef vector<int> ploy;
+	
+	inline ploy operator+(ploy a,ploy b);
+	inline ploy operator+(ploy a,int b);
+	inline ploy operator+(int a,ploy b);
+	
+	inline ploy operator-(ploy a,ploy b);
+	inline ploy operator-(ploy a,int b);
+	inline ploy operator-(int a,ploy b);
+	
+	inline ploy operator*(int b,ploy a);
+	inline ploy operator*(ploy a,int b);
+	inline ploy operator*(int b,ploy a);
+	
+	inline ploy inv(ploy a);
+	inline ploy dao(ploy a);
+	inline ploy jif(ploy a);
+	inline ploy ln(ploy a);
+	inline ploy exp(ploy a);
+	inline ploy pow(ploy a,int b);
+	inline ploy pow2(ploy a,int b,int b2); // b%p b2%(p-1)
+	
+	inline void divi(ploy a,ploy b,ploy &res,ploy &r);
+	inline ploy operator%(ploy a,ploy b);
+	
+	inline vector<int> getval(ploy a,vector<int> x);
+	inline ploy getploy(vector<int> x,vector<int> y);
+	
+	int p_rev[MS],p_rev_lstn;
+	int p_tmpinv[MS];
+	inline int getlen(int n)
+	{
+		int res=1;
+		while(res<n) res<<=1;
+		return res;
+	}
+	inline void NTT(ploy &a,int tpe)
+	{
+		int n=a.size();
+		if(p_rev_lstn!=n)
+		{
+			p_rev_lstn=n;
+			for(int i=0;i<n;i++) p_rev[i]=(p_rev[i>>1]>>1)|((i&1)?n>>1:0);
+		}
+		for(int i=0;i<n;i++) if(p_rev[i]<i) swap(a[p_rev[i]],a[i]);
+		int g=tpe==1?3:ginv;
+		for(int mid=1;mid<n;mid<<=1)
+		{
+			int len=mid<<1,Wn=qpow(g,(p-1)/len);
+			for(int l=0;l<n-len+1;l+=len)
+			{
+				for(int k=0,Wk=1;k<mid;k++,Wk=1ll*Wk*Wn%p)
+				{
+					int x=a[l+k],y=1ll*Wk*a[l+mid+k]%p;
+					a[l+k]=(x+y)%p,a[l+mid+k]=(x-y+p)%p;
+				}
+			}
+		}
+	}
+	inline void DFT(ploy &a){NTT(a,1);}
+	inline void IDFT(ploy &a)
+	{
+		int n=a.size();
+		NTT(a,-1);
+		int inv=qpow(n,p-2);
+		for(int i=0;i<n;i++) a[i]=1ll*a[i]*inv%p;
+	}
+	inline ploy operator+(ploy a,ploy b)
+	{
+		if(a.size()<b.size()) swap(a,b);
+		for(int i=0;i<b.size();i++) add(a[i],b[i]);
+		return a;
+	}
+	inline ploy operator+(ploy a,int b){return add(a[0],b),a;}
+	inline ploy operator+(int a,ploy b){return add(b[0],a),b;}
+	inline ploy operator-(ploy a,ploy b)
+	{
+		if(a.size()<b.size()) a.resize(b.size(),0);
+		for(int i=0;i<b.size();i++) add(a[i],p-b[i]);
+		return a;
+	}
+	inline ploy operator-(ploy a,int b){return add(a[0],p-b),a;}
+	inline ploy operator-(int a,ploy b)
+	{
+		add(b[0],p-a);
+		for(int i=0;i<b.size();i++) b[i]=p-b[i];
+		return b;
+	}
+	inline ploy operator*(ploy a,int b)
+	{
+		for(int i=0;i<a.size();i++) a[i]=1ll*a[i]*b%p;
+		return a;
+	}
+	inline ploy operator*(int b,ploy a)
+	{
+		for(int i=0;i<a.size();i++) a[i]=1ll*a[i]*b%p;
+		return a;
+	}
+	inline ploy operator*(ploy a,ploy b)
+	{
+		int n=a.size()+b.size()-1,m=getlen(n);
+		a.resize(m,0),b.resize(m,0);
+		DFT(a),DFT(b);
+		for(int i=0;i<m;i++) a[i]=1ll*a[i]*b[i]%p;
+		IDFT(a);
+		a.resize(n,0);
+		return a;
+	}
+	inline ploy inv(ploy a)
+	{
+		int n=a.size(),m=getlen(n);
+	    ploy res={qpow(a[0],p-2)};
+	    for(int len=2;len<=m;len<<=1)
+	    {
+	    	ploy tmp=a;
+	    	tmp.resize(len,0);
+	    	res=res*2-res*res*tmp;
+	    	res.resize(len,0);
+	    }
+	    res.resize(n,0);
+	    return res;
+	}
+	inline ploy sqrt(ploy a)
+	{
+		ploy res={mosqrt(a[0])};
+	    if(res[0]==-1) return ploy();
+	    int n=a.size(),m=getlen(n)*2; // 不知道为什么要乘二
+	    for(int len=2;len<=m;len<<=1)
+	    {
+	    	ploy tmp=a;
+	    	tmp.resize(len,0);
+	    	res=(res*res+tmp)*inv(res*2);
+	    	res.resize(len,0);
+	    }
+	    res.resize(n,0);
+	    return res;
+	}
+	inline ploy dao(ploy a)
+	{
+		int n=a.size();ploy res=a;
+		res[n-1]=0;for(int i=1;i<n;i++) res[i-1]=1ll*a[i]*i%p;
+		return res;
+	}
+	inline ploy jif(ploy a)
+	{
+		int n=a.size();ploy res=a;
+		for(int i=1;i<n;i++) if(p_tmpinv[i]==0) p_tmpinv[i]=(i==1?1:1ll*p_tmpinv[p%i]*(p-p/i)%p);
+		res[0]=0;for(int i=1;i<n;i++) res[i]=1ll*a[i-1]*p_tmpinv[i]%p;
+		return res;
+	}
+	inline ploy ln(ploy a)
+	{
+		int n=a.size();
+		ploy res=jif(dao(a)*inv(a));
+		res.resize(n,0);
+		return res;
+	}
+	inline ploy exp(ploy a)
+	{
+		int n=a.size(),m=getlen(n)*2;
+		ploy res={1};
+		for(int len=2;len<=m;len<<=1)
+		{
+			ploy tmp=a;
+			tmp.resize(len,0);
+			res=(1-ln(res)+tmp)*res;
+			res.resize(len,0);
+		}
+		res.resize(n,0);
+		return res;
+	}
+	inline ploy pow(ploy a,int b)
+	{
+		ploy tmp=ln(a);
+		for(int i=0;i<a.size();i++) tmp[i]=1ll*tmp[i]*b%p;
+		return exp(tmp);
+	}
+	inline ploy pow2(ploy a,int b,int b2)
+	{
+		int n=a.size(),cnt=0;
+		for(int i=0;i<n&&a[i]==0;i++) cnt++;
+		if(1ll*cnt*b2>=n) return ploy(n,0);
+		int pos=cnt*b2,m=n-pos;
+		ploy tmp;
+		for(int i=cnt;i<cnt+m;i++) tmp.push_back(a[i]);
+		int inv=qpow(tmp[0],p-2),ml=qpow(tmp[0],b2);
+		for(int i=0;i<m;i++) tmp[i]=1ll*tmp[i]*inv%p;
+		tmp=pow(tmp,b);
+		for(int i=0;i<m;i++) tmp[i]=1ll*tmp[i]*ml%p;
+		ploy res(pos,0);
+		for(int i=0;i<m;i++) res.push_back(tmp[i]);
+		return res;
+	}
+	inline void divi(ploy a,ploy b,ploy &res,ploy &r)
+	{
+		int n=a.size(),m=b.size();
+		if(n<m) return res={0},r=a,void();
+		int rl=n-m+1;
+		ploy ta=a,tb=b;
+		reverse(ta.begin(),ta.end()),reverse(tb.begin(),tb.end());
+		ta.resize(rl,0),tb.resize(rl,0);
+		res=ta*inv(tb);
+		res.resize(rl,0);
+		reverse(res.begin(),res.end());
+		r=a-b*res;
+		r.resize(m-1,0);
+	}
+	inline ploy operator%(ploy a,ploy b)
+	{
+		ploy res,r;
+		divi(a,b,res,r);
+		return r;
+	}
+	inline vector<int> getval(ploy a,vector<int> x)
+	{
+		int n=x.size();
+		vector<ploy> ml(n<<2|1),res(n<<2|1);
+		vector<pair<pair<int,int>,pair<int,int> > > sta;
+		vector<int> ans(n);
+		sta.emplace_back(make_pair(1,0),make_pair(0,n-1));
+		while(!sta.empty())
+		{
+			auto t=*sta.rbegin();
+			sta.pop_back();
+			int u=t.first.first,stp=t.first.second,l=t.second.first,r=t.second.second;
+			if(l==r)
+			{
+				ml[u]={p-x[l],1};
+				continue;
+			}
+			int mid=l+r>>1;
+			if(stp==0)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1,0),make_pair(l,mid));
+			}
+			else if(stp==1)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1|1,0),make_pair(mid+1,r));
+			}
+			else ml[u]=ml[u<<1]*ml[u<<1|1];
+		}
+		res[1]=a%ml[1];
+		sta.emplace_back(make_pair(1,0),make_pair(0,n-1));
+		while(!sta.empty())
+		{
+			auto t=*sta.rbegin();
+			sta.pop_back();
+			int u=t.first.first,l=t.second.first,r=t.second.second;
+			if(l==r)
+			{
+				ans[l]=res[u][0];
+				continue;
+			}
+			int mid=l+r>>1;
+			res[u<<1]=res[u]%ml[u<<1];
+			res[u<<1|1]=res[u]%ml[u<<1|1];
+			sta.emplace_back(make_pair(u<<1,0),make_pair(l,mid));
+			sta.emplace_back(make_pair(u<<1|1,0),make_pair(mid+1,r));
+		}
+		return ans;
+	}
+	inline ploy getploy(vector<int> x,vector<int> y)
+	{
+		int n=x.size();
+		vector<ploy> ml(n<<2|1),res(n<<2|1);
+		vector<pair<pair<int,int>,pair<int,int> > > sta;
+		vector<int> ans(n);
+		sta.emplace_back(make_pair(1,0),make_pair(0,n-1));
+		while(!sta.empty())
+		{
+			auto t=*sta.rbegin();
+			sta.pop_back();
+			int u=t.first.first,stp=t.first.second,l=t.second.first,r=t.second.second;
+			if(l==r)
+			{
+				ml[u]={p-x[l],1};
+				continue;
+			}
+			int mid=l+r>>1;
+			if(stp==0)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1,0),make_pair(l,mid));
+			}
+			else if(stp==1)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1|1,0),make_pair(mid+1,r));
+			}
+			else ml[u]=ml[u<<1]*ml[u<<1|1];
+		}
+		ploy M=dao(ml[1]);
+		vector<int> val=getval(M,x);
+		for(int i=0;i<n;i++) val[i]=1ll*qpow(val[i],p-2)*y[i]%p;
+		sta.emplace_back(make_pair(1,0),make_pair(0,n-1));
+		while(!sta.empty())
+		{
+			auto t=*sta.rbegin();
+			sta.pop_back();
+			int u=t.first.first,stp=t.first.second,l=t.second.first,r=t.second.second;
+			if(l==r)
+			{
+				res[u]={val[l]};
+				continue;
+			}
+			int mid=l+r>>1;
+			if(stp==0)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1,0),make_pair(l,mid));
+			}
+			else if(stp==1)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1|1,0),make_pair(mid+1,r));
+			}
+			else res[u]=res[u<<1]*ml[u<<1|1]+ml[u<<1]*res[u<<1|1];
+		}
+		return res[1];
+	}
+}
+```
+
+</p></details>
+
+### 更快的板子
+
+<details><summary>展开</summary><p>
+
+```cpp
+#include <bits/stdc++.h>
+
+using ull = unsigned long long;
+
+const int N = 280000;
+const int Mod = 998244353;
+
+typedef std::vector<int> Poly;
+
+namespace Pol {
+	int pow(int a, int b, int ans = 1);
+	int add(int a, int b) {
+		return (a += b) >= Mod ? a -= Mod : a;
+	}
+	int sub(int a, int b) {
+		return (a -= b) < 0 ? a += Mod : a;
+	}
+	void inc(int &a, int b) {
+		(a += b) >= Mod ? a -= Mod : a;
+	}
+	void dec(int &a, int b) {
+		(a -= b) < 0 ? a += Mod : a;
+	}
+	void init_Poly(int n = N);
+	void DIT(int *A, int lim);
+	void DIF(int *A, int lim);
+	Poly inv(Poly A, int n);
+	Poly mult(const Poly &A, int n, const Poly &B, int m);
+	Poly operator*(const Poly &A, const Poly &B) {
+		return mult(A, A.size(), B, B.size());
+	}
+	Poly Tmul(const Poly &A, int n, const Poly &B, int m);
+	Poly getv(Poly A, int n, const std::vector<int> &f, int m);
+	Poly drv(const Poly &A, int n);
+	Poly itg(const Poly &A, int n);
+	Poly ln(const Poly &A, int n);
+	Poly exp(Poly A, int n);
+	int fac[N], ifac[N], iv[N];
+	Poly G[N << 1];
+	ull tmp[N];
+	int gw[N];
+}  // namespace Pol
+
+int main() {
+	Pol::init_Poly();
+	int n, m;
+	scanf(&quot;%d %d&quot;, &n, &m);
+	Poly F(n);
+	for (int i = 0; i < n; ++i) scanf(&quot;%d&quot;, &F[i]);
+	Poly G = Pol::ln(Pol::inv(Pol::exp(F, n), n), n);
+	for (int i = 0; i < n; ++i) printf(&quot;%d%c&quot;, G[i], &quot; \n&quot;[i == n - 1]);
+	std::vector<int> f(m);
+	for (int i = 0; i < m; ++i) scanf(&quot;%d&quot;, &f[i]);
+	G = Pol::getv(F, n, f, m);
+	for (int i = 0; i < m; ++i) printf(&quot;%d%c&quot;, G[i], &quot; \n&quot;[i == m - 1]);
+	return 0;
+}
+
+namespace Pol {
+	void DIT(int *A, int lim) {
+		for (int i = 0; i < lim; ++i) tmp[i] = A[i];
+		for (int l = 1; l < lim; l <<= 1) {
+			ull *k = tmp;
+			for (int *g = gw; k < tmp + lim; k += (l << 1), ++g) {
+				for (ull *x = k; x < k + l; ++x) {
+					int o = x[l] % Mod;
+					x[l] = 1ll * (*x + Mod - o) **g % Mod, *x += o;
+				}
+			}
+		}
+		int iv = pow(lim, Mod - 2);
+		for (int i = 0; i < lim; ++i) A[i] = 1ll * tmp[i] % Mod * iv % Mod;
+		std::reverse(A + 1, A + lim);
+	}
+	void DIF(int *A, int lim) {
+		for (int i = 0; i < lim; ++i) tmp[i] = A[i];
+		for (int l = lim / 2; l >= 1; l >>= 1) {
+			ull *k = tmp;
+			for (int *g = gw; k < tmp + lim; k += (l << 1), ++g) {
+				for (ull *x = k; x < k + l; ++x) {
+					int o = 1ll * x[l] **g % Mod;
+					x[l] = *x + Mod - o, *x += o;
+				}
+			}
+		}
+		for (int i = 0; i < lim; ++i) A[i] = tmp[i] % Mod;
+	}
+	Poly mult(const Poly &A, int n, const Poly &B, int m) {
+		if (n + m < 255) {
+			Poly ans(n + m - 1);
+			std::fill(tmp, tmp + n + m, 0);
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < m; ++j) tmp[i + j] += 1ll * A[i] * B[j] % Mod;
+			for (int i = 0; i < n + m - 1; ++i) ans[i] = tmp[i] % Mod;
+			return ans;
+		}
+		int lim = 1;
+		while (lim < (n + m - 1)) lim <<= 1;
+		static int tA[N], tB[N];
+		std::copy_n(A.begin(), n, tA), std::fill(tA + n, tA + lim, 0);
+		std::copy_n(B.begin(), m, tB), std::fill(tB + m, tB + lim, 0);
+		DIF(tA, lim), DIF(tB, lim);
+		for (int i = 0; i < lim; ++i) tA[i] = 1ll * tA[i] * tB[i] % Mod;
+		DIT(tA, lim);
+		Poly ans(n + m - 1);
+		std::copy_n(tA, n + m - 1, ans.begin());
+		return ans;
+	}
+	Poly Tmul(const Poly &A, int n, const Poly &B, int m) {
+		if (n + m < 255) {
+			Poly ans(m - n + 1);
+			std::fill(tmp, tmp + m - n + 2, 0);
+			for (int i = 0; i < m; ++i)
+				for (int j = i; j < n; ++j) tmp[j - i] += 1ll * B[i] * A[j] % Mod;
+			for (int i = 0; i < m - n + 1; ++i) ans[i] = tmp[i] % Mod;
+		}
+		int lim = 1;
+		while (lim < m) lim <<= 1;
+		static int tA[N], tB[N];
+		std::reverse_copy(A.begin(), A.begin() + n, tA), std::fill(tA + n, tA + lim, 0);
+		std::copy_n(B.begin(), m, tB), std::fill(tB + m, tB + lim, 0);
+		DIF(tA, lim), DIF(tB, lim);
+		for (int i = 0; i < lim; ++i) tA[i] = 1ll * tA[i] * tB[i] % Mod;
+		DIT(tA, lim);
+		Poly ans(m - n + 1);
+		std::copy_n(tA + n - 1, m - n + 1, ans.begin());
+		return ans;
+	}
+	Poly inv(Poly A, int n) {
+		int lim = 1;
+		while (lim < (n << 1)) lim <<= 1;
+		Poly F(lim), G(lim);
+		A.resize(lim);
+		G[0] = pow(A[0], Mod - 2);
+		int now = 1;
+		static int tA[N], tB[N];
+		while (now < n) {
+			std::copy_n(A.begin(), now << 1, F.begin());
+			int lim = now << 2;
+			std::copy_n(G.begin(), lim, tA);
+			std::copy_n(F.begin(), lim, tB);
+			DIF(tA, lim), DIF(tB, lim);
+			for (int i = 0; i < lim; ++i) tA[i] = 1ll * sub(2, 1ll * tA[i] * tB[i] % Mod) * tA[i] % Mod;
+			DIT(tA, lim);
+			std::copy_n(tA, now << 1, G.begin());
+			now <<= 1;
+		}
+		G.resize(n);
+		return G;
+	}
+	Poly drv(const Poly &A, int n) {
+		Poly ans(n - 1);
+		for (int i = 0; i < n - 1; ++i) ans[i] = 1ll * A[i + 1] * (i + 1) % Mod;
+		return ans;
+	}
+	Poly itg(const Poly &A, int n) {
+		Poly ans(n + 1);
+		for (int i = 0; i < n; ++i) ans[i + 1] = 1ll * A[i] * iv[i + 1] % Mod;
+		return ans;
+	}
+	Poly ln(const Poly &A, int n) {
+		Poly F = drv(A, n), G = inv(A, n);
+		F = mult(F, n - 1, G, n);
+		F.resize(n - 1);
+		F = itg(F, n - 1);
+		return F;
+	}
+	Poly exp(Poly A, int n) {
+		int lim = 1;
+		while (lim < (n << 1)) lim <<= 1;
+		A.resize(lim);
+		Poly L(lim);
+		int now = 1;
+		static int tF[N], tG[N], tL[N];
+		std::fill(tG, tG + lim, 0), std::fill(tF, tF + lim, 0);
+		tG[0] = 1;
+		while (now < n) {
+			int lim = now << 2;
+			std::copy_n(tG, now, L.begin());
+			L = ln(L, std::min(now << 1, n));
+			L.resize(lim);
+			std::copy_n(A.begin(), now << 1, tF);
+			std::copy_n(L.begin(), lim, tL);
+			DIF(tF, lim), DIF(tG, lim), DIF(tL, lim);
+			for (int i = 0; i < lim; ++i) tG[i] = 1ll * tG[i] * sub(add(1, tF[i]), tL[i]) % Mod;
+			DIT(tG, lim);
+			std::fill(tG + (now << 1), tG + lim, 0);
+			now <<= 1;
+		}
+		Poly G(n);
+		std::copy_n(tG, n, G.begin());
+		return G;
+	}
+	void getg(int x, int xl, int xr, const Poly &f, int m) {
+		if (xl == xr) {
+			G[x].resize(2);
+			G[x][0] = 1;
+			if (xl >= m)
+				G[x][1] = 0;
+			else
+				G[x][1] = Mod - f[xl];
+			return;
+		}
+		int xm = (xl + xr) >> 1;
+		getg(x << 1, xl, xm, f, m), getg(x << 1 | 1, xm + 1, xr, f, m);
+		G[x] = mult(G[x << 1], xm - xl + 2, G[x << 1 | 1], xr - xm + 1);
+	}
+	void getans(int x, int xl, int xr, Poly &ans, int m, const Poly &h) {
+		if (xl >= m) return;
+		if (xl == xr) return void(ans[xl] = h[0]);
+		int xm = (xl + xr) >> 1;
+		Poly hl = Tmul(G[x << 1 | 1], xr - xm + 1, h, xr - xl + 1);
+		getans(x << 1, xl, xm, ans, m, hl);
+		Poly hr = Tmul(G[x << 1], xm - xl + 2, h, xr - xl + 1);
+		getans(x << 1 | 1, xm + 1, xr, ans, m, hr);
+	}
+	Poly getv(Poly A, int n, const std::vector<int> &f, int m) {
+		n = std::max(n, m);
+		A.resize(n);
+		getg(1, 0, n - 1, f, m);
+		Poly now = inv(G[1], n);
+		std::reverse(now.begin(), now.begin() + n);
+		Poly h = mult(now, n, A, n);
+		for (int i = 0; i < n; ++i) h[i] = h[i + n - 1];
+		h.resize(n);
+		Poly ans(m);
+		getans(1, 0, n - 1, ans, m, h);
+		return ans;
+	}
+	void init_Poly(int n) {
+		int t = 1;
+		while ((1 << t) < n) ++t;
+		t = std::min(t - 1, 21);
+		gw[0] = 1, gw[1 << t] = pow(31, 1 << (21 - t));
+		for (int i = t; i; --i) gw[1 << (i - 1)] = 1ll * gw[1 << i] * gw[1 << i] % Mod;
+		for (int i = 1; i < (1 << t); ++i) gw[i] = 1ll * gw[i & (i - 1)] * gw[i & -i] % Mod;
+		--n;
+		fac[0] = 1;
+		for (int i = 1; i <= n; ++i) fac[i] = 1ll * fac[i - 1] * i % Mod;
+		ifac[n] = Pol::pow(fac[n], Mod - 2);
+		for (int i = n - 1; i >= 0; --i) ifac[i] = 1ll * ifac[i + 1] * (i + 1) % Mod;
+		for (int i = 1; i <= n; ++i) iv[i] = 1ll * ifac[i] * fac[i - 1] % Mod;
+	}
+	int pow(int a, int b, int ans) {
+		while (b) {
+			if (b & 1) ans = 1ll * ans * a % Mod;
+			a = 1ll * a * a % Mod;
+			b >>= 1;
+		}
+		return ans;
+	}
+}  // namespace Pol
+```
+
+</p></details>
+" onclick="copyMarkdown(this)">复制 Markdown</a>
+		</span>
+		
+	</div>
+</section>
+
+<script>
+	function copyMarkdown(e) {
+		let text = e.getAttribute('data-src-markdown');
+		if (e.innerHTML == '复制成功') {
+			return;
+		}
+		e.innerHTML = '复制成功';
+		(function (elem) {
+			setTimeout(() => {
+				if (elem.innerHTML == '复制成功') {
+					elem.innerHTML = '复制 Markdown'
+				}
+			}, 1000);
+		})(e)
+		Clipboard.copy(text);
+	}
+</script>
+
+					<div class="post-body next-md-body" id="post_body" data-post-markdown="有了 NTT，就有了多项式全家桶……
+
+首先要感谢 @[command_block](https://www.luogu.com.cn/user/58705) 的文章[《NTT 与多项式全家桶》](https://www.luogu.com.cn/blog/command-block/ntt-yu-duo-xiang-shi-quan-jia-tong)以及 @[Epsilon_Cube](https://www.luogu.com.cn/user/372983)、@[MoYuFang](https://www.luogu.com.cn/user/474113) 和 @[_Diu_](https://www.luogu.com.cn/user/310802) 给予我的许多帮助。
+
+因为板子在不断修 bug，所以代码最后统一放。
+
+### 前置芝士
+
+- **多项式的各种运算是怎么定义的**
+
+由于我们只知道多项式加法和多项式乘法，但是这已经够了。所以**所有的多项式运算都是用多项式加法和乘法定义的**。
+
+- **次数界**
+
+很多时候我们只对多项式 $f$ 的前 $n$ 项感兴趣（这时往往 $f$ 会有无限项），所以需要在 $\pmod{x^n}$ 的意义下运算。
+
+由于多项式加法和多项式乘法的结果只会从低次项向高次项贡献，所以有：
+
+$$
+\begin{aligned}
+F(x)\operatorname{mod}{x^n}+G(x)\operatorname{mod}{x^n}&\equiv F(x)+G(x)&\pmod{x^n}\\
+F(x)\operatorname{mod}{x^n}\cdot G(x)\operatorname{mod}{x^n}&\equiv F(x)G(x)&\pmod{x^n}\\
+\end{aligned}
+$$
+
+即我们**可以在有次数界的情况下定义所有多项式运算**。
+
+- [简单微积分](https://zhuanlan.zhihu.com/p/94592123)
+
+### 一些记号
+
+- $[x^i]F(x)$：多项式 $F(x)$ 的 $i$ 次项的系数，**即 $x^i$ 的系数**；
+- $F_R(x)$：$n$ 次多项式的翻转 $F_R(x)=x^nF(\frac{1}{x})$，**显然 $F_R(x)$ 的系数是 $F(x)$ 的系数的翻转**；
+- $F^{(n)}(x)$：**多项式 $F(x)$ 的 $n$ 阶导数**，即对 $F(x)$ 求导 $n$ 次的结果；
+
+### 多项式求导和积分
+
+定义多项式的求导：
+$$
+F^\prime(x)=\sum\limits_{i=0}^{n-1} a_{i+1}(i+1)x^{i}
+$$
+
+定义多项式的积分（不定积分）：
+
+$$
+\int F(x)\,dx=C+\sum\limits_{i=1}^{n} \dfrac{a_{i-1}x^{i}}{i}
+$$
+
+同样的，**多项式求导和积分也是互为逆操作**。
+
+### 多项式牛顿迭代
+
+这是一个比较重要的知识，有了它，就可以无脑推多项式各种操作的递推式了。
+
+> **形式：已知函数 $G$ 满足 $G(F(x))=0$，求 $F(x)\operatorname{mod} x^n$。**
+
+实践中 $G$ 一般较为手动构造的简单函数。 
+
+> **结论：$F(x)\equiv F_*(x)-\dfrac{G(F_*(x))}{G'(F_*(x))}\pmod{x^n}$，其中 $F_*(x)\equiv F(x)\pmod{x^{\frac{n}{2}}}$，注意 $[x^0]G(F(x))=0$ 的解要单独求出。**
+
+和一般的牛迭十分相似，但是次数每次翻倍。证明如下：
+
+> 假设目前已经求出了 $F_*(x)$，考虑 $G(F(x))$在 $F_*(x)$ 处的泰勒展开：
+> $$
+> \sum\limits_{i=0}^{\infin} \frac{G^{(i)}(F_*(x))}{i!}(F(x)-F_*(x))^i\equiv0\pmod{x^n}
+> $$
+> 注意到 $F(x)-F_*(x)$ 的最低系数非 $0$ 项至少是 $x^{\frac{n}{2}}$，那么对于所有 $i\ge2$ 的 $i$ 都有 $(F(x)-F_*(x))^i\equiv 0\pmod{x^n}$，所以：
+> $$
+> \begin{aligned}
+> G(F_*(x))+G'(F_*(x))(F(x)-F_*(x))&\equiv0&\pmod{x^n}\\
+> F(x)&\equiv F_*(x)-\frac{G(F_*(x))}{G'(F_*(x))}&\pmod{x^n}\\
+> \end{aligned}
+> $$
+> 证毕。
+
+### 多项式乘法逆
+
+[P4238 【模板】多项式乘法逆](https://www.luogu.com.cn/problem/P4238)
+
+假设已经求出了 $B_*(x)F(x)\equiv 1\pmod{x^{\frac{n}{2}}}$，现在要求 $B(x)F(x)\equiv1\pmod{x^n}$，那么有：
+
+$$
+\begin{aligned}
+G(B(x))=\frac{1}{B(x)}-F(x)\equiv 0\pmod{x^n}
+\end{aligned}
+$$
+
+则可以直接套牛顿迭代：
+$$
+\begin{aligned}
+B(x)&\equiv B_*(x)-\frac{G(B_*(x))}{G'(B_*(x))}&\pmod{x^n}\\
+B(x)&\equiv B_*(x)-\frac{\frac{1}{B_*(x)}-F(x)}{-\frac{1}{B_*^2(x)}}&\pmod{x^n}\\
+B(x)&\equiv B_*(x)+B_*(x)-B_*^2F(x)&\pmod{x^n}\\
+B(x)&\equiv 2B_*(x)-B_*^2F(x)&\pmod{x^n}\\
+\end{aligned}
+$$
+那么就可以做了，$[x^0]B(x)$ 需要求一次乘法逆元，时间复杂度为 $T(n)=T(\frac{n}{2})+O(n\log n)=O(n\log n)$。
+
+不过还有个优化，注意到 NTT 的过程代入的是单位根，所以求的实际上是循环卷积：
+
+$$
+F(x)G(x)=\sum\limits_{k=0}^mx^k\sum\limits_{i+j\mod m=k} f_ig_j
+$$
+观察倍增式子：
+
+$$
+B(x)\equiv 2B_*(x)-B_*^2(x)F(x)\pmod{x^n}
+$$
+
+需要用到乘法的只有 $B_*^2(x)F(x)$。
+
+先计算 $B_*(x)F(x)$，它们的次数分别是 $\dfrac{len}{2}$ 和 $len$。
+
+**由于结果的第一项为 $1$，这个 $1$ 后面的 $\dfrac{len}{2}-1$ 项都为 $0$，所以长度为 $len$ 的循环卷积只会破坏前面的 $1$ 和 $0$**。
+
+最后乘上一个 $B_*(x)$ 即可，此时循环卷积只会破坏前 $\dfrac{len}{2}$ 项。
+
+### 多项式开根
+
+[P5205 【模板】多项式开根](https://www.luogu.com.cn/problem/P5205)
+
+[P5277 【模板】多项式开根（加强版）](https://www.luogu.com.cn/problem/P5277)
+
+假设已经求出了 $B_*^2(x)\equiv F(x)\pmod{x^{\frac{n}{2}}}$，现在要求 $B(x)^2\equiv F(x)\pmod{x^n}$，那么有：
+
+$$
+G(B(x))=B^2(x)-F(x)\equiv 0\pmod{x^n}
+$$
+
+直接套牛迭：
+$$
+\begin{aligned}
+B(x)&\equiv B_*(x)-\frac{G(B_*(x))}{G'(B_*(x))}&\pmod{2^n}\\
+B(x)&\equiv B_*(x)-\frac{B_*^2(x)-F(x)}{2B_*(x)}&\pmod{2^n}\\
+B(x)&\equiv \frac{2B_*(x)^2-B_*^2(x)+F(x)}{2B_*(x)}&\pmod{2^n}\\
+B(x)&\equiv \frac{B_*^2(x)+F(x)}{2B_*(x)}&\pmod{2^n}\\
+\end{aligned}
+$$
+
+
+最后 $[x^0]B(x)$ 需要求一次二次剩余，可以用 BSGS/exBSGS 求单位根的高次同余方程来求解，再加上一个求逆，一个乘法，一个加法就做完了。
+
+时间复杂度为 $T(n)=T(\frac{n}{2})+O(n\log n)=O(n\log n)$。
+
+### 多项式 $\ln$
+
+[P4725 【模板】多项式对数函数（多项式 ln）](https://www.luogu.com.cn/problem/P4725)
+$$
+\ln(A(x))\equiv B(x)\pmod{x^n}
+$$
+
+两边同时求导，得：
+
+$$
+\ln'(A(x))A'(x)\equiv B'(x)\pmod{x^n}
+$$
+
+注意到 $\ln'(x)=\dfrac{1}{x}$，所以：
+
+$$
+\dfrac{A'(x)}{A(x)}\equiv B'(x)\pmod{x^n}
+$$
+
+再积分回来：
+
+$$
+B(x)\equiv \int \dfrac{A'(x)}{A(x)}dx\pmod{x^n}
+$$
+
+所以一个求导，一个逆元，一个乘法，一个积分即可。
+
+注意由于 $[x^0]A(x)=1$，所以有 $[x^0]B(x)=0$。并且若 $[x^0]A(x)\not=1$ 则无法求 $\ln$ 因为求不出模意义下的 $\ln([x^0]A(x))$。
+
+时间复杂度 $O(n\log n)$。
+
+### 多项式 $\exp$
+
+[P4726 【模板】多项式指数函数（多项式 exp）](https://www.luogu.com.cn/problem/P4726)
+
+$$
+B(x)\equiv \exp(A(x))\pmod{x^n}
+$$
+
+我们设 $G(F(x))=\ln(F(x))-A(x)$，那么显然 $G(B(x))\equiv0\pmod{x^n}$，可以使用牛顿迭代了。
+
+回忆牛迭式子：$F(x)\equiv F_*(x)-\dfrac{G(F_*(x))}{G'(F_*(x))}\pmod{x^n}$
+
+显然，这里的 $G'(F(x))=\dfrac{1}{F(X)}$，那么假设我们已经求出了 $B_*(x)\equiv \exp(A(x))\pmod{x^{\frac{n}{2}}}$，有：
+
+$$
+\begin{aligned}
+B(x)&\equiv B_*(x)-G(B_*(x))B_*(x)&\pmod{x^n}\\
+B(x)&\equiv B_*(x)-(\ln(B_*(x))-A(x))B_*(x)&\pmod{x^n}\\
+B(x)&\equiv (1-\ln(B_*(x))+A(x))B_*(x)&\pmod{x^n}\\
+\end{aligned}
+$$
+
+所以倍增求即可。
+
+注意由于 $[x^0]A(x)=0$，所以有 $[x^0]B(x)=1$。并且若 $[x^0]A(x)\not=0$ 则无法求 $\exp$ 因为求不出模意义下的 $\exp([x^0]A(x))$。
+
+时间复杂度为 $T(n)=T(\frac{n}{2})+O(n\log n)=O(n\log n)$。
+
+### 多项式快速幂
+
+[P5245 【模板】多项式快速幂](https://www.luogu.com.cn/problem/P5245)
+
+观察到 $(A(x))^k=\exp(k\ln(A(x)))$，所以一个 $\ln$，一个逐项乘法，一个 $\exp$ 就做完了。
+
+[P5273 【模板】多项式幂函数（加强版）](https://www.luogu.com.cn/problem/P5273)
+
+这题和上一题的区别在于有 $A_0\not=1$ 的情况，这时我们就没办法求 $\ln$ 和 $\exp$ 了。
+
+但是 $A_0\not=1$ 没关系，我们可以**让所有项都乘上 $\dfrac{1}{A_0}$，最后再都乘上 $A_0^k$** 即可。
+
+遇到 $A_0=0$ 的情况也没关系，把系数往前移，求出答案后再移回去即可。不过**要注意原来前面 $cnt$ 个 $0$ 在做幂运算后会变成 $cnt\times k$ 个 $0$**。
+
+### 多项式带余除法
+
+[P4512 【模板】多项式除法](https://www.luogu.com.cn/problem/P4512)
+
+发现余数很烦，所以我们想办法去掉它。
+
+舍弃多项式的项的方法是一般是加上次数界，但注意到次数界只能舍弃高次，所以**考虑把多项式的系数反过来搞**。
+
+那么回到题目的式子：
+
+$$
+F(x)=Q(x)G(x)+R(x)
+$$
+
+其中 $F$ 是 $n$ 次多项式（已知），$G$ 是 $m$ 次多项式（已知），$Q$ 是 $n-m$ 次多项式（未知），$R$ 是 $m-1$ 次多项式（未知）。
+
+换元，有：
+
+$$
+F(\frac{1}{x})=Q(\frac{1}{x})G(\frac{1}{x})+R(\frac{1}{x})
+$$
+
+同乘 $x^n$，有:
+
+$$
+x^nF(\frac{1}{x})=x^nQ(\frac{1}{x})G(\frac{1}{x})+x^nR(\frac{1}{x})
+$$
+
+发现 $x^nF(\frac{1}{x})=F_R(x)$，$x^nQ(\frac{1}{x})G(\frac{1}{x})=Q_R(x)G_R(x)$，$x^nR(\frac{1}{x})=x^{n-m+1}R_R(x)$，所以有：
+
+$$
+F_R(x)=Q_R(x)G_R(x)+x^{n-m+1}R_R(x)
+$$
+
+那么我们机智地加上次数界，$\operatorname{mod}$ 上 $x^{n-m+1}$，就有：
+
+$$
+F_R(x)\equiv Q_R(x)G_R(x)\pmod{x^{n-m+1}}
+$$
+
+那么就可以求出 $Q_R(x)$ 了，系数反过来就是 $Q(x)$，然后即可用乘法和减法求出 $R(x)$，时间复杂度 $O(n\log n)$。
+
+### 完整模板
+
+包括多项式多点求值、多项式快速插值。
+
+<details><summary>展开</summary><p>
+
+```cpp
+const int p=998244353,ginv=332748118;
+
+inline void add(int &x,int y)
+{
+	x+=y;
+	if(x>=p) x-=p;
+}
+inline int gcd(int a,int b)
+{
+	int t=a%b;
+	while(t!=0) a=b,b=t,t=a%b;
+	return b;
+}
+inline int qpow(int x,int y)
+{
+	int res=1;
+	for(;y>0;y>>=1) res=((y&1)?1ll*res*x%p:res),x=1ll*x*x%p;
+	return res;
+}
+inline int exBSGS(int a,int b,int p)
+{
+	a%=p,b%=p;
+	if(b==1||p==1) return 0;
+	int cnt=0,val=1;
+	while(1)
+	{
+		int d=gcd(a,p);
+		if(d==1) break;
+		if(b%d!=0) return -1;
+		p/=d;
+		b/=d;
+		val=1ll*val*(a/d)%p;
+		cnt++;
+		if(val==b) return cnt;
+	}
+	map<int,int> mp;
+	int val2=1,t=sqrt(p)+1;
+	for(int B=1;B<=t;B++)
+	{
+		val2=1ll*val2*a%p;
+		mp[1ll*b*val2%p]=B;
+	}
+	int cur=val;
+	for(int A=1;A<=t;A++)
+	{
+		cur=1ll*cur*val2%p;
+		if(mp.find(cur)!=mp.end()) return A*t-mp[cur]+cnt;
+	}
+	return -1;
+}
+inline int mosqrt(int x)
+{
+	int bse=exBSGS(3,x,p);
+	if(bse==-1||(bse&1)) return -1;
+	return qpow(3,bse/2);
+}
+namespace PLOY
+{
+	const int MS=5000005;
+
+	typedef vector<int> ploy;
+	
+	inline ploy operator+(ploy a,ploy b);
+	inline ploy operator+(ploy a,int b);
+	inline ploy operator+(int a,ploy b);
+	
+	inline ploy operator-(ploy a,ploy b);
+	inline ploy operator-(ploy a,int b);
+	inline ploy operator-(int a,ploy b);
+	
+	inline ploy operator*(int b,ploy a);
+	inline ploy operator*(ploy a,int b);
+	inline ploy operator*(int b,ploy a);
+	
+	inline ploy inv(ploy a);
+	inline ploy dao(ploy a);
+	inline ploy jif(ploy a);
+	inline ploy ln(ploy a);
+	inline ploy exp(ploy a);
+	inline ploy pow(ploy a,int b);
+	inline ploy pow2(ploy a,int b,int b2); // b%p b2%(p-1)
+	
+	inline void divi(ploy a,ploy b,ploy &res,ploy &r);
+	inline ploy operator%(ploy a,ploy b);
+	
+	inline vector<int> getval(ploy a,vector<int> x);
+	inline ploy getploy(vector<int> x,vector<int> y);
+	
+	int p_rev[MS],p_rev_lstn;
+	int p_tmpinv[MS];
+	inline int getlen(int n)
+	{
+		int res=1;
+		while(res<n) res<<=1;
+		return res;
+	}
+	inline void NTT(ploy &a,int tpe)
+	{
+		int n=a.size();
+		if(p_rev_lstn!=n)
+		{
+			p_rev_lstn=n;
+			for(int i=0;i<n;i++) p_rev[i]=(p_rev[i>>1]>>1)|((i&1)?n>>1:0);
+		}
+		for(int i=0;i<n;i++) if(p_rev[i]<i) swap(a[p_rev[i]],a[i]);
+		int g=tpe==1?3:ginv;
+		for(int mid=1;mid<n;mid<<=1)
+		{
+			int len=mid<<1,Wn=qpow(g,(p-1)/len);
+			for(int l=0;l<n-len+1;l+=len)
+			{
+				for(int k=0,Wk=1;k<mid;k++,Wk=1ll*Wk*Wn%p)
+				{
+					int x=a[l+k],y=1ll*Wk*a[l+mid+k]%p;
+					a[l+k]=(x+y)%p,a[l+mid+k]=(x-y+p)%p;
+				}
+			}
+		}
+	}
+	inline void DFT(ploy &a){NTT(a,1);}
+	inline void IDFT(ploy &a)
+	{
+		int n=a.size();
+		NTT(a,-1);
+		int inv=qpow(n,p-2);
+		for(int i=0;i<n;i++) a[i]=1ll*a[i]*inv%p;
+	}
+	inline ploy operator+(ploy a,ploy b)
+	{
+		if(a.size()<b.size()) swap(a,b);
+		for(int i=0;i<b.size();i++) add(a[i],b[i]);
+		return a;
+	}
+	inline ploy operator+(ploy a,int b){return add(a[0],b),a;}
+	inline ploy operator+(int a,ploy b){return add(b[0],a),b;}
+	inline ploy operator-(ploy a,ploy b)
+	{
+		if(a.size()<b.size()) a.resize(b.size(),0);
+		for(int i=0;i<b.size();i++) add(a[i],p-b[i]);
+		return a;
+	}
+	inline ploy operator-(ploy a,int b){return add(a[0],p-b),a;}
+	inline ploy operator-(int a,ploy b)
+	{
+		add(b[0],p-a);
+		for(int i=0;i<b.size();i++) b[i]=p-b[i];
+		return b;
+	}
+	inline ploy operator*(ploy a,int b)
+	{
+		for(int i=0;i<a.size();i++) a[i]=1ll*a[i]*b%p;
+		return a;
+	}
+	inline ploy operator*(int b,ploy a)
+	{
+		for(int i=0;i<a.size();i++) a[i]=1ll*a[i]*b%p;
+		return a;
+	}
+	inline ploy operator*(ploy a,ploy b)
+	{
+		int n=a.size()+b.size()-1,m=getlen(n);
+		a.resize(m,0),b.resize(m,0);
+		DFT(a),DFT(b);
+		for(int i=0;i<m;i++) a[i]=1ll*a[i]*b[i]%p;
+		IDFT(a);
+		a.resize(n,0);
+		return a;
+	}
+	inline ploy inv(ploy a)
+	{
+		int n=a.size(),m=getlen(n);
+	    ploy res={qpow(a[0],p-2)};
+	    for(int len=2;len<=m;len<<=1)
+	    {
+	    	ploy tmp=a;
+	    	tmp.resize(len,0);
+	    	res=res*2-res*res*tmp;
+	    	res.resize(len,0);
+	    }
+	    res.resize(n,0);
+	    return res;
+	}
+	inline ploy sqrt(ploy a)
+	{
+		ploy res={mosqrt(a[0])};
+	    if(res[0]==-1) return ploy();
+	    int n=a.size(),m=getlen(n)*2; // 不知道为什么要乘二
+	    for(int len=2;len<=m;len<<=1)
+	    {
+	    	ploy tmp=a;
+	    	tmp.resize(len,0);
+	    	res=(res*res+tmp)*inv(res*2);
+	    	res.resize(len,0);
+	    }
+	    res.resize(n,0);
+	    return res;
+	}
+	inline ploy dao(ploy a)
+	{
+		int n=a.size();ploy res=a;
+		res[n-1]=0;for(int i=1;i<n;i++) res[i-1]=1ll*a[i]*i%p;
+		return res;
+	}
+	inline ploy jif(ploy a)
+	{
+		int n=a.size();ploy res=a;
+		for(int i=1;i<n;i++) if(p_tmpinv[i]==0) p_tmpinv[i]=(i==1?1:1ll*p_tmpinv[p%i]*(p-p/i)%p);
+		res[0]=0;for(int i=1;i<n;i++) res[i]=1ll*a[i-1]*p_tmpinv[i]%p;
+		return res;
+	}
+	inline ploy ln(ploy a)
+	{
+		int n=a.size();
+		ploy res=jif(dao(a)*inv(a));
+		res.resize(n,0);
+		return res;
+	}
+	inline ploy exp(ploy a)
+	{
+		int n=a.size(),m=getlen(n)*2;
+		ploy res={1};
+		for(int len=2;len<=m;len<<=1)
+		{
+			ploy tmp=a;
+			tmp.resize(len,0);
+			res=(1-ln(res)+tmp)*res;
+			res.resize(len,0);
+		}
+		res.resize(n,0);
+		return res;
+	}
+	inline ploy pow(ploy a,int b)
+	{
+		ploy tmp=ln(a);
+		for(int i=0;i<a.size();i++) tmp[i]=1ll*tmp[i]*b%p;
+		return exp(tmp);
+	}
+	inline ploy pow2(ploy a,int b,int b2)
+	{
+		int n=a.size(),cnt=0;
+		for(int i=0;i<n&&a[i]==0;i++) cnt++;
+		if(1ll*cnt*b2>=n) return ploy(n,0);
+		int pos=cnt*b2,m=n-pos;
+		ploy tmp;
+		for(int i=cnt;i<cnt+m;i++) tmp.push_back(a[i]);
+		int inv=qpow(tmp[0],p-2),ml=qpow(tmp[0],b2);
+		for(int i=0;i<m;i++) tmp[i]=1ll*tmp[i]*inv%p;
+		tmp=pow(tmp,b);
+		for(int i=0;i<m;i++) tmp[i]=1ll*tmp[i]*ml%p;
+		ploy res(pos,0);
+		for(int i=0;i<m;i++) res.push_back(tmp[i]);
+		return res;
+	}
+	inline void divi(ploy a,ploy b,ploy &res,ploy &r)
+	{
+		int n=a.size(),m=b.size();
+		if(n<m) return res={0},r=a,void();
+		int rl=n-m+1;
+		ploy ta=a,tb=b;
+		reverse(ta.begin(),ta.end()),reverse(tb.begin(),tb.end());
+		ta.resize(rl,0),tb.resize(rl,0);
+		res=ta*inv(tb);
+		res.resize(rl,0);
+		reverse(res.begin(),res.end());
+		r=a-b*res;
+		r.resize(m-1,0);
+	}
+	inline ploy operator%(ploy a,ploy b)
+	{
+		ploy res,r;
+		divi(a,b,res,r);
+		return r;
+	}
+	inline vector<int> getval(ploy a,vector<int> x)
+	{
+		int n=x.size();
+		vector<ploy> ml(n<<2|1),res(n<<2|1);
+		vector<pair<pair<int,int>,pair<int,int> > > sta;
+		vector<int> ans(n);
+		sta.emplace_back(make_pair(1,0),make_pair(0,n-1));
+		while(!sta.empty())
+		{
+			auto t=*sta.rbegin();
+			sta.pop_back();
+			int u=t.first.first,stp=t.first.second,l=t.second.first,r=t.second.second;
+			if(l==r)
+			{
+				ml[u]={p-x[l],1};
+				continue;
+			}
+			int mid=l+r>>1;
+			if(stp==0)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1,0),make_pair(l,mid));
+			}
+			else if(stp==1)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1|1,0),make_pair(mid+1,r));
+			}
+			else ml[u]=ml[u<<1]*ml[u<<1|1];
+		}
+		res[1]=a%ml[1];
+		sta.emplace_back(make_pair(1,0),make_pair(0,n-1));
+		while(!sta.empty())
+		{
+			auto t=*sta.rbegin();
+			sta.pop_back();
+			int u=t.first.first,l=t.second.first,r=t.second.second;
+			if(l==r)
+			{
+				ans[l]=res[u][0];
+				continue;
+			}
+			int mid=l+r>>1;
+			res[u<<1]=res[u]%ml[u<<1];
+			res[u<<1|1]=res[u]%ml[u<<1|1];
+			sta.emplace_back(make_pair(u<<1,0),make_pair(l,mid));
+			sta.emplace_back(make_pair(u<<1|1,0),make_pair(mid+1,r));
+		}
+		return ans;
+	}
+	inline ploy getploy(vector<int> x,vector<int> y)
+	{
+		int n=x.size();
+		vector<ploy> ml(n<<2|1),res(n<<2|1);
+		vector<pair<pair<int,int>,pair<int,int> > > sta;
+		vector<int> ans(n);
+		sta.emplace_back(make_pair(1,0),make_pair(0,n-1));
+		while(!sta.empty())
+		{
+			auto t=*sta.rbegin();
+			sta.pop_back();
+			int u=t.first.first,stp=t.first.second,l=t.second.first,r=t.second.second;
+			if(l==r)
+			{
+				ml[u]={p-x[l],1};
+				continue;
+			}
+			int mid=l+r>>1;
+			if(stp==0)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1,0),make_pair(l,mid));
+			}
+			else if(stp==1)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1|1,0),make_pair(mid+1,r));
+			}
+			else ml[u]=ml[u<<1]*ml[u<<1|1];
+		}
+		ploy M=dao(ml[1]);
+		vector<int> val=getval(M,x);
+		for(int i=0;i<n;i++) val[i]=1ll*qpow(val[i],p-2)*y[i]%p;
+		sta.emplace_back(make_pair(1,0),make_pair(0,n-1));
+		while(!sta.empty())
+		{
+			auto t=*sta.rbegin();
+			sta.pop_back();
+			int u=t.first.first,stp=t.first.second,l=t.second.first,r=t.second.second;
+			if(l==r)
+			{
+				res[u]={val[l]};
+				continue;
+			}
+			int mid=l+r>>1;
+			if(stp==0)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1,0),make_pair(l,mid));
+			}
+			else if(stp==1)
+			{
+				t.first.second++;
+				sta.push_back(t);
+				sta.emplace_back(make_pair(u<<1|1,0),make_pair(mid+1,r));
+			}
+			else res[u]=res[u<<1]*ml[u<<1|1]+ml[u<<1]*res[u<<1|1];
+		}
+		return res[1];
+	}
+}
+```
+
+</p></details>
+
+### 更快的板子
+
+<details><summary>展开</summary><p>
+
+```cpp
+#include <bits/stdc++.h>
+
+using ull = unsigned long long;
+
+const int N = 280000;
+const int Mod = 998244353;
+
+typedef std::vector<int> Poly;
+
+namespace Pol {
+	int pow(int a, int b, int ans = 1);
+	int add(int a, int b) {
+		return (a += b) >= Mod ? a -= Mod : a;
+	}
+	int sub(int a, int b) {
+		return (a -= b) < 0 ? a += Mod : a;
+	}
+	void inc(int &a, int b) {
+		(a += b) >= Mod ? a -= Mod : a;
+	}
+	void dec(int &a, int b) {
+		(a -= b) < 0 ? a += Mod : a;
+	}
+	void init_Poly(int n = N);
+	void DIT(int *A, int lim);
+	void DIF(int *A, int lim);
+	Poly inv(Poly A, int n);
+	Poly mult(const Poly &A, int n, const Poly &B, int m);
+	Poly operator*(const Poly &A, const Poly &B) {
+		return mult(A, A.size(), B, B.size());
+	}
+	Poly Tmul(const Poly &A, int n, const Poly &B, int m);
+	Poly getv(Poly A, int n, const std::vector<int> &f, int m);
+	Poly drv(const Poly &A, int n);
+	Poly itg(const Poly &A, int n);
+	Poly ln(const Poly &A, int n);
+	Poly exp(Poly A, int n);
+	int fac[N], ifac[N], iv[N];
+	Poly G[N << 1];
+	ull tmp[N];
+	int gw[N];
+}  // namespace Pol
+
+int main() {
+	Pol::init_Poly();
+	int n, m;
+	scanf(&quot;%d %d&quot;, &n, &m);
+	Poly F(n);
+	for (int i = 0; i < n; ++i) scanf(&quot;%d&quot;, &F[i]);
+	Poly G = Pol::ln(Pol::inv(Pol::exp(F, n), n), n);
+	for (int i = 0; i < n; ++i) printf(&quot;%d%c&quot;, G[i], &quot; \n&quot;[i == n - 1]);
+	std::vector<int> f(m);
+	for (int i = 0; i < m; ++i) scanf(&quot;%d&quot;, &f[i]);
+	G = Pol::getv(F, n, f, m);
+	for (int i = 0; i < m; ++i) printf(&quot;%d%c&quot;, G[i], &quot; \n&quot;[i == m - 1]);
+	return 0;
+}
+
+namespace Pol {
+	void DIT(int *A, int lim) {
+		for (int i = 0; i < lim; ++i) tmp[i] = A[i];
+		for (int l = 1; l < lim; l <<= 1) {
+			ull *k = tmp;
+			for (int *g = gw; k < tmp + lim; k += (l << 1), ++g) {
+				for (ull *x = k; x < k + l; ++x) {
+					int o = x[l] % Mod;
+					x[l] = 1ll * (*x + Mod - o) **g % Mod, *x += o;
+				}
+			}
+		}
+		int iv = pow(lim, Mod - 2);
+		for (int i = 0; i < lim; ++i) A[i] = 1ll * tmp[i] % Mod * iv % Mod;
+		std::reverse(A + 1, A + lim);
+	}
+	void DIF(int *A, int lim) {
+		for (int i = 0; i < lim; ++i) tmp[i] = A[i];
+		for (int l = lim / 2; l >= 1; l >>= 1) {
+			ull *k = tmp;
+			for (int *g = gw; k < tmp + lim; k += (l << 1), ++g) {
+				for (ull *x = k; x < k + l; ++x) {
+					int o = 1ll * x[l] **g % Mod;
+					x[l] = *x + Mod - o, *x += o;
+				}
+			}
+		}
+		for (int i = 0; i < lim; ++i) A[i] = tmp[i] % Mod;
+	}
+	Poly mult(const Poly &A, int n, const Poly &B, int m) {
+		if (n + m < 255) {
+			Poly ans(n + m - 1);
+			std::fill(tmp, tmp + n + m, 0);
+			for (int i = 0; i < n; ++i)
+				for (int j = 0; j < m; ++j) tmp[i + j] += 1ll * A[i] * B[j] % Mod;
+			for (int i = 0; i < n + m - 1; ++i) ans[i] = tmp[i] % Mod;
+			return ans;
+		}
+		int lim = 1;
+		while (lim < (n + m - 1)) lim <<= 1;
+		static int tA[N], tB[N];
+		std::copy_n(A.begin(), n, tA), std::fill(tA + n, tA + lim, 0);
+		std::copy_n(B.begin(), m, tB), std::fill(tB + m, tB + lim, 0);
+		DIF(tA, lim), DIF(tB, lim);
+		for (int i = 0; i < lim; ++i) tA[i] = 1ll * tA[i] * tB[i] % Mod;
+		DIT(tA, lim);
+		Poly ans(n + m - 1);
+		std::copy_n(tA, n + m - 1, ans.begin());
+		return ans;
+	}
+	Poly Tmul(const Poly &A, int n, const Poly &B, int m) {
+		if (n + m < 255) {
+			Poly ans(m - n + 1);
+			std::fill(tmp, tmp + m - n + 2, 0);
+			for (int i = 0; i < m; ++i)
+				for (int j = i; j < n; ++j) tmp[j - i] += 1ll * B[i] * A[j] % Mod;
+			for (int i = 0; i < m - n + 1; ++i) ans[i] = tmp[i] % Mod;
+		}
+		int lim = 1;
+		while (lim < m) lim <<= 1;
+		static int tA[N], tB[N];
+		std::reverse_copy(A.begin(), A.begin() + n, tA), std::fill(tA + n, tA + lim, 0);
+		std::copy_n(B.begin(), m, tB), std::fill(tB + m, tB + lim, 0);
+		DIF(tA, lim), DIF(tB, lim);
+		for (int i = 0; i < lim; ++i) tA[i] = 1ll * tA[i] * tB[i] % Mod;
+		DIT(tA, lim);
+		Poly ans(m - n + 1);
+		std::copy_n(tA + n - 1, m - n + 1, ans.begin());
+		return ans;
+	}
+	Poly inv(Poly A, int n) {
+		int lim = 1;
+		while (lim < (n << 1)) lim <<= 1;
+		Poly F(lim), G(lim);
+		A.resize(lim);
+		G[0] = pow(A[0], Mod - 2);
+		int now = 1;
+		static int tA[N], tB[N];
+		while (now < n) {
+			std::copy_n(A.begin(), now << 1, F.begin());
+			int lim = now << 2;
+			std::copy_n(G.begin(), lim, tA);
+			std::copy_n(F.begin(), lim, tB);
+			DIF(tA, lim), DIF(tB, lim);
+			for (int i = 0; i < lim; ++i) tA[i] = 1ll * sub(2, 1ll * tA[i] * tB[i] % Mod) * tA[i] % Mod;
+			DIT(tA, lim);
+			std::copy_n(tA, now << 1, G.begin());
+			now <<= 1;
+		}
+		G.resize(n);
+		return G;
+	}
+	Poly drv(const Poly &A, int n) {
+		Poly ans(n - 1);
+		for (int i = 0; i < n - 1; ++i) ans[i] = 1ll * A[i + 1] * (i + 1) % Mod;
+		return ans;
+	}
+	Poly itg(const Poly &A, int n) {
+		Poly ans(n + 1);
+		for (int i = 0; i < n; ++i) ans[i + 1] = 1ll * A[i] * iv[i + 1] % Mod;
+		return ans;
+	}
+	Poly ln(const Poly &A, int n) {
+		Poly F = drv(A, n), G = inv(A, n);
+		F = mult(F, n - 1, G, n);
+		F.resize(n - 1);
+		F = itg(F, n - 1);
+		return F;
+	}
+	Poly exp(Poly A, int n) {
+		int lim = 1;
+		while (lim < (n << 1)) lim <<= 1;
+		A.resize(lim);
+		Poly L(lim);
+		int now = 1;
+		static int tF[N], tG[N], tL[N];
+		std::fill(tG, tG + lim, 0), std::fill(tF, tF + lim, 0);
+		tG[0] = 1;
+		while (now < n) {
+			int lim = now << 2;
+			std::copy_n(tG, now, L.begin());
+			L = ln(L, std::min(now << 1, n));
+			L.resize(lim);
+			std::copy_n(A.begin(), now << 1, tF);
+			std::copy_n(L.begin(), lim, tL);
+			DIF(tF, lim), DIF(tG, lim), DIF(tL, lim);
+			for (int i = 0; i < lim; ++i) tG[i] = 1ll * tG[i] * sub(add(1, tF[i]), tL[i]) % Mod;
+			DIT(tG, lim);
+			std::fill(tG + (now << 1), tG + lim, 0);
+			now <<= 1;
+		}
+		Poly G(n);
+		std::copy_n(tG, n, G.begin());
+		return G;
+	}
+	void getg(int x, int xl, int xr, const Poly &f, int m) {
+		if (xl == xr) {
+			G[x].resize(2);
+			G[x][0] = 1;
+			if (xl >= m)
+				G[x][1] = 0;
+			else
+				G[x][1] = Mod - f[xl];
+			return;
+		}
+		int xm = (xl + xr) >> 1;
+		getg(x << 1, xl, xm, f, m), getg(x << 1 | 1, xm + 1, xr, f, m);
+		G[x] = mult(G[x << 1], xm - xl + 2, G[x << 1 | 1], xr - xm + 1);
+	}
+	void getans(int x, int xl, int xr, Poly &ans, int m, const Poly &h) {
+		if (xl >= m) return;
+		if (xl == xr) return void(ans[xl] = h[0]);
+		int xm = (xl + xr) >> 1;
+		Poly hl = Tmul(G[x << 1 | 1], xr - xm + 1, h, xr - xl + 1);
+		getans(x << 1, xl, xm, ans, m, hl);
+		Poly hr = Tmul(G[x << 1], xm - xl + 2, h, xr - xl + 1);
+		getans(x << 1 | 1, xm + 1, xr, ans, m, hr);
+	}
+	Poly getv(Poly A, int n, const std::vector<int> &f, int m) {
+		n = std::max(n, m);
+		A.resize(n);
+		getg(1, 0, n - 1, f, m);
+		Poly now = inv(G[1], n);
+		std::reverse(now.begin(), now.begin() + n);
+		Poly h = mult(now, n, A, n);
+		for (int i = 0; i < n; ++i) h[i] = h[i + n - 1];
+		h.resize(n);
+		Poly ans(m);
+		getans(1, 0, n - 1, ans, m, h);
+		return ans;
+	}
+	void init_Poly(int n) {
+		int t = 1;
+		while ((1 << t) < n) ++t;
+		t = std::min(t - 1, 21);
+		gw[0] = 1, gw[1 << t] = pow(31, 1 << (21 - t));
+		for (int i = t; i; --i) gw[1 << (i - 1)] = 1ll * gw[1 << i] * gw[1 << i] % Mod;
+		for (int i = 1; i < (1 << t); ++i) gw[i] = 1ll * gw[i & (i - 1)] * gw[i & -i] % Mod;
+		--n;
+		fac[0] = 1;
+		for (int i = 1; i <= n; ++i) fac[i] = 1ll * fac[i - 1] * i % Mod;
+		ifac[n] = Pol::pow(fac[n], Mod - 2);
+		for (int i = n - 1; i >= 0; --i) ifac[i] = 1ll * ifac[i + 1] * (i + 1) % Mod;
+		for (int i = 1; i <= n; ++i) iv[i] = 1ll * ifac[i] * fac[i - 1] % Mod;
+	}
+	int pow(int a, int b, int ans) {
+		while (b) {
+			if (b & 1) ans = 1ll * ans * a % Mod;
+			a = 1ll * a * a % Mod;
+			b >>= 1;
+		}
+		return ans;
+	}
+}  // namespace Pol
+```
+
+</p></details>
+"></div>
+					<div class="post-footer">
+	<ul class="post-copyright">
+		<li class="post-copyright-author">
+			<strong class="language" data-lan="author">本文作者：</strong>Exber
+		</li>
+		<li class="post-copyright-link">
+			<strong class="language" data-lan="link">本文链接：</strong>
+			<a href="https://exber.qzz.io/post/%E5%A4%9A%E9%A1%B9%E5%BC%8F%E5%85%A8%E5%AE%B6%E6%A1%B6%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0" title="多项式全家桶学习笔记">https://exber.qzz.io/post/%E5%A4%9A%E9%A1%B9%E5%BC%8F%E5%85%A8%E5%AE%B6%E6%A1%B6%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0</a>
+		</li>
+		<li class="post-copyright-license">
+			<strong class="language" data-lan="copyright">版权声明： </strong>
+			本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+		</li>
+	</ul>
+	<div class="tags">
+		
+			<a href="https://exber.qzz.io/tags"># 学习笔记</a>
+		
+			<a href="https://exber.qzz.io/tags"># 数学</a>
+		
+			<a href="https://exber.qzz.io/tags"># 组合计数</a>
+		
+			<a href="https://exber.qzz.io/tags"># 多项式、生成函数</a>
+		
+	</div>
+</div>
+				</div>
+			</div>
+			<script>
+	// 处理目录
+	function work_with_toc() {
+		let lastTop = 0, lList = [], hList = [], postBody, lastIndex = -1;
+		let active = 'active-show', activeClass = 'active-current';
+		let tocWrapper = document.querySelector('#toc_wrapper');
+		let tocContent = tocWrapper.children[0];
+		let autoNumber = tocWrapper && tocWrapper.classList.contains('auto-number');
+
+		function addTocNumber(elem, deep) {
+			if (!elem) {
+				return;
+			}
+			let prop = elem.__proto__;
+
+			if (prop === HTMLUListElement.prototype) {
+				for (let i = 0; i < elem.children.length; i++) {
+					addTocNumber(elem.children[i], deep + (i + 1) + '.');
+				}
+			} else if (prop === HTMLLIElement.prototype) {
+				// 保存li元素
+				if (elem.children[0] && elem.children[0].__proto__ === HTMLAnchorElement.prototype) {
+					lList.push(elem);
+				}
+				for (let i = 0; i < elem.children.length; i++) {
+					let cur = elem.children[i];
+					if (cur.__proto__ === HTMLAnchorElement.prototype) {
+						if (autoNumber) {
+							cur.text = deep + ' ' + cur.text;
+						}
+					} else if (cur.__proto__ === HTMLUListElement.prototype) {
+						addTocNumber(cur, deep);
+					}
+				}
+			}
+		}
+
+		function removeParentActiveClass() {
+			let parents = tocContent.querySelectorAll('.' + active)
+			parents.forEach(function (elem) {
+				elem.classList.remove(active);
+			});
+		}
+
+		function addActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.add(activeClass);
+			}
+		}
+
+		function removeActiveClass(index) {
+			if (index >= 0 && index < hList.length) {
+				lList[index].classList.remove(activeClass);
+			}
+		}
+
+		function addActiveLiElemment(elem, parent) {
+			if (!elem || elem === parent) {
+				return;
+			} else {
+				if (elem.__proto__ === HTMLLIElement.prototype) {
+					elem.classList.add(active);
+				}
+				addActiveLiElemment(elem.parentElement, parent);
+			}
+		}
+
+		function showToc() {
+			if (tocWrapper) {
+				postBody = document.querySelector('#post_body');
+				for (let i = 0; i < postBody.children.length; i++) {
+					if (postBody.children[i].__proto__ === HTMLHeadingElement.prototype) {
+						hList.push(postBody.children[i]);
+					}
+				}
+				if (tocWrapper.classList.contains('compress')) {
+					tocContent.classList.add('closed');
+				} else if (tocWrapper.classList.contains('no_compress')) {
+					tocContent.classList.add('expanded');
+				} else {
+					if (hList.length > 10) {
+						active = 'active-hidden'
+						tocContent.classList.add('closed');
+					} else {
+						tocContent.classList.add('expanded');
+					}
+				}
+			}
+		}
+
+		(function () {
+			// 处理不是从一级标题开始目录
+			while (tocContent.children.length === 1 && tocContent.children[0].__proto__ === HTMLUListElement.prototype) {
+				let con = tocContent.children[0];
+				tocContent.innerHTML = con.innerHTML;
+			}
+			addTocNumber(tocContent, '');
+		})();
+
+		document.addEventListener('scroll', function (e) {
+			if (lList.length <= 0) {
+				return;
+			}
+			let scrollTop = document.scrollingElement.scrollTop + 10;
+			let dir;
+
+			if (lastTop - scrollTop > 0) {
+				dir = 'up';
+			} else {
+				dir = 'down';
+			}
+
+			lastTop = scrollTop;
+			if (scrollTop <= 0) {
+				if (lastIndex >= 0 && lastIndex < hList.length) {
+					lList[lastIndex].classList.remove(activeClass);
+				}
+				return;
+			}
+
+			let current = 0, hasFind = false;
+			for (let i = 0; i < hList.length; i++) {
+				if (hList[i].offsetTop > scrollTop) {
+					current = i;
+					hasFind = true;
+					break;
+				}
+			}
+			if (!hasFind && scrollTop > lList[lList.length - 1].offsetTop) {
+				current = hList.length - 1;
+			} else {
+				current--;
+			}
+			if (dir === 'down') {
+				if (current > lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex)
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			} else {
+				if (current < lastIndex) {
+					addActiveClass(current);
+					removeActiveClass(lastIndex);
+					lastIndex = current;
+					removeParentActiveClass();
+					lList[current] && addActiveLiElemment(lList[current].parentElement, tocContent);
+				}
+			}
+		});
+
+
+		window.addEventListener('load', function () {
+			showToc();
+			document.querySelector('#sidebar').style = 'display: block;';
+			tocWrapper.classList.add('toc-active');
+			setTimeout(function () {
+				if ("createEvent" in document) {
+					let evt = document.createEvent("HTMLEvents");
+					evt.initEvent("scroll", false, true);
+					document.dispatchEvent(evt);
+				}
+				else {
+					document.fireEvent("scroll");
+				}
+			}, 500)
+		})
+		
+		const SIDEBAR_TITLE_ACTIVE = 'sidebar-title-active';
+		const SIDEBAR_BODY_ACTIVE = 'sidebar-body-active';
+		const SLIDE_UP_IN = 'slide-up-in';
+
+		let tocSideBar = document.querySelector('#tocSideBar'),
+		metaSideBar = document.querySelector('#metaSideBar'),
+		postToc = document.querySelector('#post_toc'),
+		postSiteMeta = document.querySelector('#post_side_meta'),
+		sidebarTitle = document.querySelector('.sidebar-title'),
+		sidebarBody = document.querySelector('#sidebar_body');
+
+		tocSideBar && tocSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		metaSideBar && metaSideBar.addEventListener('click', (e) => {
+			toggleSidebar(e);
+		});
+
+		function toggleSidebar(e) {
+			let currentTitle = document.querySelector("."+SIDEBAR_TITLE_ACTIVE);
+			if (currentTitle == e.srcElement) {
+				return ;
+			}
+			let current, showElement, hideElement;
+			if (e.srcElement == metaSideBar) {
+				showElement = postSiteMeta;
+				hideElement = postToc;
+			} else if (e.srcElement == tocSideBar){
+				showElement = postToc;
+				hideElement = postSiteMeta;
+			}
+			currentTitle.classList.remove(SIDEBAR_TITLE_ACTIVE);
+			e.srcElement.classList.add(SIDEBAR_TITLE_ACTIVE);
+
+			jQuery.Velocity(hideElement, 'stop');
+			jQuery.Velocity(hideElement, 'transition.slideUpOut', {
+				display: 'none',
+				duration: 200,
+				complete: function () {
+					jQuery.Velocity(showElement, 'transition.slideDownIn', {
+						duration: 200
+					});
+				}
+			})
+			hideElement.classList.remove(SIDEBAR_BODY_ACTIVE);
+			showElement.classList.add(SIDEBAR_BODY_ACTIVE);
+		}
+
+		postToc && postToc.addEventListener('transitionend', function() {
+			this.classList.remove(SLIDE_UP_IN);
+		});
+	}
+</script>
+<script>
+	// 没有目录时删除侧边栏目录相关
+	function remove_toc(){
+		document.querySelector('#sidebar-selector').remove();
+		document.querySelector('#post_toc').remove();
+		document.querySelector('#post_side_meta').classList.remove("post-side-meta");
+	}
+</script>
+<script>
+	// 渲染文章 markdown 并生成目录
+	function render_post_markdown(content)
+	{
+		let markdown = window.markdownit({ html: true })
+				.use(markdownItLinkEncodeFixed)
+				.use(window.markdownItAnchor, {
+					permalink: false,
+					permalinkBefore: false
+				})
+				.use(window.texmath, {
+					engine: katex,
+					delimiters: 'dollars'
+				});
+		// 处理图片路径
+		let temp_container = document.createElement('div');
+		temp_container.innerHTML = markdown.render(content);
+		{
+			let images = temp_container.querySelectorAll('img[src^="../post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('../post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		{
+			let images = temp_container.querySelectorAll('img[src^="https://exber.qzz.io/post/post-images"]');
+			images.forEach(img => {
+				img.src = img.src.replace('https://exber.qzz.io/post/post-images', "https://exber.qzz.io/post-images");
+			});
+		}
+		return temp_container.innerHTML;
+	}
+	function generateToc() {
+		const contentElement = document.getElementById('post_body');
+		const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+		const tocElement = document.getElementById('toc_wrapper');
+		
+		if (headings.length === 0) {
+			return false;
+		}
+		let toc_ul = "<ul style='list-style: none;'>";
+		let toc_li = "<li style='list-style: none;'>";
+		let tocHtml = toc_ul;
+		let currentLevel = 1;
+		let stack = [0];
+		
+		headings.forEach((heading, index) => {
+			const level = parseInt(heading.tagName.substring(1));
+			const id = heading.id || `heading-${index}`;
+			heading.id = id;
+			
+			// 提取包含公式的 HTML 内容
+			let headingContent = heading.innerHTML;
+			
+			// 调整层级逻辑
+			if (level > currentLevel) {
+				for (let i = currentLevel; i < level; i++) {
+					tocHtml += toc_ul;
+					stack[i] = 0;
+				}
+			} else if (level < currentLevel) {
+				for (let i = currentLevel; i > level; i--) {
+					tocHtml += '</ul></li>';
+					stack.pop();
+				}
+			} else if (index > 0) {
+				tocHtml += '</li>';
+			}
+			
+			stack[level-1] = (stack[level-1] || 0) + 1;
+			for (let i = level; i < stack.length; i++) {
+				stack[i] = 0;
+			}
+			
+			// 使用渲染后的内容（包含已处理的公式）
+			tocHtml += toc_li+`<a href="#${id}">${headingContent}</a>`;
+			currentLevel = level;
+		});
+		
+		for (let i = 1; i < currentLevel; i++) {
+			tocHtml += '</ul></li>';
+		}
+		if (headings.length > 0) {
+			tocHtml += '</li>';
+		}
+		
+		tocHtml += '</ul>';
+		tocElement.innerHTML = tocHtml;
+		
+		return true;
+	}
+</script>
+<script>
+	!function () {
+		const post_body = document.querySelector('div[data-post-markdown]');
+		
+		try {
+			const markdownContent = post_body.getAttribute('data-post-markdown');
+			
+			if (markdownContent) {
+				const renderedHTML = render_post_markdown(markdownContent);
+				post_body.innerHTML = renderedHTML;
+				post_body.removeAttribute('data-post-markdown');
+				if(generateToc()) work_with_toc();
+				else remove_toc();
+			}
+		} catch (error) {
+			post_body.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+		}
+	}();
+</script>
+		</div>
+	</div>
+	
+
+
+
+
+
+
+<div class="footer-box">
+	<footer class="footer">
+		<center id="runTimeBox">
+			已运行: <span id="run_time"></span>
+		</center>
+		<script>
+			BirthDay = new Date('2023-03-01');
+			if (BirthDay.getTime()) {
+				function runTime() {
+					str = "";
+					today = new Date();
+					timeold = today.getTime() - BirthDay.getTime();
+					msPerDay = 24 * 60 * 60 * 1000;
+					e_daysold = timeold / msPerDay;
+					daysold = Math.floor(e_daysold);
+					str += daysold + " 天";
+					return str;
+				}
+				setInterval(function () {
+					$("#run_time").html(runTime());
+				}, 1000);
+			} else {
+				document.querySelector('.footer').removeChild(document.querySelector('#runTimeBox'));
+			}
+		</script>
+		<div class="poweredby">
+			Powered by Exber
+		</div>
+	</footer>
+	<div class="pisces back-to-top" id="back_to_top">
+		<i class="fa fa-arrow-up"></i>
+		<span class="scrollpercent">
+			<span id="back_to_top_text">0</span>%
+		</span>
+	</div>
+</div>
+<script>
+	// back2top
+	let back2Top = document.querySelector("#back_to_top"),
+		back2TopText = document.querySelector("#back_to_top_text");
+
+	function scrollAnimation(currentY, targetY) {
+		let needScrollTop = targetY - currentY;
+		let _currentY = currentY;
+		setTimeout(() => {
+			const dist = Math.ceil(needScrollTop / 10);
+			_currentY += dist;
+			window.scrollTo(_currentY, currentY);
+			if (needScrollTop > 10 || needScrollTop < -10) {
+				scrollAnimation(_currentY, targetY);
+			} else {
+				window.scrollTo(_currentY, targetY);
+			}
+		}, 1);
+	}
+
+	back2Top.addEventListener("click", function(e) {
+		scrollAnimation(document.scrollingElement.scrollTop, 0);
+		e.stopPropagation();
+		return false;
+	});
+
+	window.addEventListener("scroll", function(e) {
+		let percent =
+			(document.scrollingElement.scrollTop /
+				(document.scrollingElement.scrollHeight -
+					document.scrollingElement.clientHeight)) *
+			100;
+		if (percent > 1 && !back2Top.classList.contains("back-top-active")) {
+			back2Top.classList.add("back-top-active");
+		}
+		if (percent == 0) {
+			back2Top.classList.remove("back-top-active");
+		}
+		if (back2TopText) {
+			back2TopText.textContent = Math.floor(percent);
+		}
+	});
+</script>
+	</div>
+</body>
+
+
+
+
+
+
+
+<input hidden id="copy" />
+<link rel="stylesheet" href="https://exber.qzz.io/media/css/jquery.fancybox.css" />
+<script src="https://exber.qzz.io/media/js/jquery.fancybox.js"></script>
+<script>
+	// 渲染所有带有 data-markdown 属性的 div 元素
+	!function () {
+		const markdownElements = document.querySelectorAll('div[data-markdown]');
+		
+		markdownElements.forEach((element, index) => {
+			try {
+				const markdownContent = element.getAttribute('data-markdown');
+				
+				if (markdownContent) {
+					const renderedHTML = render_markdown(markdownContent);
+					element.innerHTML = renderedHTML;
+					element.removeAttribute('data-markdown');
+				}
+			} catch (error) {
+				element.innerHTML = `<div>Markdown 渲染失败: ${error.message}</div>`;
+			}
+		});
+	}();
+</script>
+<script>
+	document.querySelectorAll(".section img").forEach((image) => {
+		var parent = image.parentElement;
+		var next = image.nextElementSibling;
+		parent.removeChild(image);
+		var aelem = document.createElement("a");
+		aelem.href = image.src;
+		aelem.dataset["fancybox"] = "images";
+		aelem.dataset["rel"] = "fancybox-button";
+		aelem.classList.add("fancybox");
+		aelem.appendChild(image);
+		parent.insertBefore(aelem, next);
+	});
+	
+	!function () {
+		let times = document.querySelectorAll('.publish-time');
+		for (let i = 0; i < times.length; i++) {
+			let date = times[i].dataset.t;
+			let time = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+			if (time < 60) {
+				str = time + '秒之前';
+			} else if (time < 3600) {
+				str = Math.floor(time / 60) + '分钟之前';
+			} else if (time >= 3600 && time < 86400) {
+				str = Math.floor(time / 3600) + '小时之前';
+			} else if (time >= 86400 && time < 259200) {
+				str = Math.floor(time / 86400) + '天之前';
+			} else {
+				str = times[i].textContent;
+			}
+			times[i].textContent = str;
+		}
+	}();
+	
+	let language = '';
+	if (language !== '') {
+		let map = new Map();
+		if (language === 'en') {
+			map.set('search', 'Search');
+			map.set('category', 'Categories');
+			map.set('article', 'Articles');
+			map.set('tag', 'Tags');
+			map.set('top', 'Top');
+			map.set('publish', 'published');
+			map.set('minute', ' minutes');
+			map.set('read-more', 'Read More');
+			map.set('view', 'View');
+			map.set('words', ' words');
+			map.set('category-in', 'category in');
+			map.set('preview', 'Meta');
+			map.set('index', 'Toc');
+			map.set('no-archives', "You haven't created yet");
+			map.set('archives', " articles in total");
+			map.set('cloud-tags', " tags in total");
+			map.set('copyright', "Copyright: ");
+			map.set('author', "Author: ");
+			map.set('link', "Link: ");
+			map.set('leave-message', "Leave a message");
+			map.set('format', "Links Format");
+			map.set('site-name', "Name: ");
+			map.set('site-link', "Link: ");
+			map.set('site-desc', "Desc: ");
+			map.set('stat', " related results, taking ");
+			map.set('stat-time', " ms");
+			map.set('site-img', "Image: ");
+			map.set('copy-markdown', "Copy Markdown");
+		}
+
+		if (map.size > 0) {
+			let lanElems = document.querySelectorAll('.language');
+			lanElems.forEach(elem => {
+				let lan = elem.dataset.lan, text = map.get(lan);
+				if (elem.__proto__ === HTMLInputElement.prototype) {
+					elem.placeholder = text
+				} else {
+					if (elem.dataset.count) {
+						text = elem.dataset.count + text;
+					}
+					elem.textContent = text;
+				}
+			})
+		}
+	}
+
+	function copyCode(e) {
+		if (e.srcElement.tagName === 'SPAN' && e.srcElement.classList.contains('copy-code')) {
+			let code = e.currentTarget.querySelector('code');
+			var text = code.innerText;
+			if (e.srcElement.textContent === '复制成功') {
+				return;
+			}
+			e.srcElement.textContent = '复制成功';
+			(function (elem) {
+				setTimeout(() => {
+					if (elem.textContent === '复制成功') {
+						elem.textContent = '复制代码'
+					}
+				}, 1000);
+			})(e.srcElement)
+			Clipboard.copy(text);
+		}
+	}
+
+	let pres = document.querySelectorAll('pre');
+	pres.forEach(pre => {
+		let code = pre.querySelector('code');
+		let copyElem = document.createElement('span');
+		copyElem.classList.add('copy-code');
+		copyElem.textContent = '复制代码';
+		pre.appendChild(copyElem);
+		pre.onclick = copyCode
+	})
+</script>
+<script src="https://exber.qzz.io/media/js/motion.js"></script>
+<script src="https://cdn.jsdmirror.com/gh/cferdinandi/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+<script>
+	var scroll = new SmoothScroll('a[href*="#"]', {
+		speed: 200
+	});
+</script>
+<script>
+	// 动态调整站点概览位置
+	let hasCacu = false;
+	window.addEventListener("resize", function(e) {
+		calcuHeight();
+	});
+
+	function calcuHeight() {
+		if (!hasCacu) {
+			let sideBar = document.querySelector(".sidebar");
+			let navUl = document.querySelector("#site_nav");
+			sideBar.style =
+				"margin-top:" + (navUl.offsetHeight + navUl.offsetTop + 15) + "px;";
+			hasCacu = true;
+		}
+	}
+	calcuHeight();
+	
+	// 侧边栏固定逻辑
+	let sidebar = document.querySelector('.sidebar');
+	let sidebarWrapper = document.querySelector('#sidebar');
+	if (sidebar) {
+		let hasFix = false;
+		document.addEventListener('scroll', function(e) {
+		  if (document.scrollingElement.scrollTop > parseInt(sidebar.style.marginTop) + 15) {
+			if (!hasFix) {
+				sidebarWrapper.classList.add('sidebar-fixed')
+				hasFix = true;
+			}
+		  } else {
+			if (hasFix) {
+				sidebarWrapper.classList.remove('sidebar-fixed')
+				hasFix = false;
+			}
+		  }
+		});
+	}
+</script>
+<script>
+	// 链接跳转
+	let newWindow = "true";
+	if (newWindow === "true") {
+		let links = document.querySelectorAll(".post-body a");
+		links.forEach((item) => {
+			if (!item.classList.contains("btn")) {
+				item.setAttribute("target", "_blank");
+			}
+		});
+	}
+
+	// 代码高亮
+	hljs.initHighlightingOnLoad();
+
+	// 离开当前页title变化
+	var leaveTitle = "";
+	var normal_title = document.title;
+	if (leaveTitle) {
+		document.addEventListener("visibilitychange", function() {
+			if (document.visibilityState == "hidden") {
+				normal_title = document.title;
+				document.title = leaveTitle;
+			} else {
+				document.title = normal_title;
+			}
+		});
+	}
+</script>
+</html>
